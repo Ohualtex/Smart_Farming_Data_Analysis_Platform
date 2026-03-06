@@ -1,7 +1,8 @@
-#Akıllı Tarım Veri Analizi Platformu
+# Akıllı Tarım Veri Analizi Platformu
 Çiftçilerin tarımsal verimliliğini en üst düzeye çıkarmak amacıyla toprak sensörleri, hava durumu verileri ve bitki sağlığı görüntülerini entegre bir şekilde analiz eden kapsamlı bir veri analizi ve karar destek platformudur. Bu sistem, elde edilen verileri işleyerek sulama optimizasyonu, gübreleme önerileri ve erken hastalık tahmini gibi kritik konularda çiftçilere eyleme dönüştürülebilir içgörüler sunar.
 
-#🌟 Temel Özellikler
+# 🌟 Temel Özellikler
+
 💧 Sulama Optimizasyonu: Toprak nem sensörleri ve anlık hava durumu verilerini kullanarak su israfını önler ve bitkinin ihtiyacı olan optimum su miktarını belirler.
 
 🌱 Akıllı Gübreleme Önerileri: Toprak analizi verilerine dayanarak verimi artıracak en uygun gübre karışımlarını ve uygulama zamanlarını tavsiye eder.
@@ -10,7 +11,7 @@
 
 📊 Görselleştirme ve Raporlama: Karmaşık tarımsal verileri anlaşılır grafiklere, ısı haritalarına ve periyodik raporlara dönüştürür.
 
-#🛠️ Kullanılan Teknolojiler
+# 🛠️ Kullanılan Teknolojiler
 Platform, güçlü ve ölçeklenebilir bir mimari üzerine inşa edilmiştir:
 
 Programlama Dili: Python
@@ -23,7 +24,7 @@ Veritabanı Yönetimi: SQL (PostgreSQL/MySQL)
 
 Bulut Bilişim (Cloud Computing): AWS / Azure / GCP (Sunucu yönetimi, model dağıtımı ve veri depolama için)
 
-#📦 Proje Modülleri ve Teslim Edilenler
+# 📦 Proje Modülleri ve Teslim Edilenler
 Bu depo (repository) aşağıdaki temel bileşenleri ve altyapıları içermektedir:
 
 Veri Toplama ve İşleme Altyapısı (/data_pipeline): IoT toprak sensörlerinden ve hava durumu API'lerinden gelen ham verilerin toplanması, temizlenmesi ve veritabanına aktarılmasını sağlayan ETL süreçleri.
@@ -36,7 +37,7 @@ API Entegrasyonları (/api): Dış hava durumu servisleriyle haberleşen ve ön 
 
 Raporlama Araçları (/reporting): SQL sorguları ve Python kütüphaneleri ile desteklenen, dinamik gösterge panelleri (dashboard) oluşturan modüller.
 
-#🚀 Kurulum ve Çalıştırma
+# 🚀 Kurulum ve Çalıştırma
 Platformu yerel ortamınızda çalıştırmak için aşağıdaki adımları izleyin:
 
 1. Depoyu klonlayın:
