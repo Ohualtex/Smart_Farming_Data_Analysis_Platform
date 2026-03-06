@@ -1,4 +1,4 @@
-# Akıllı Tarım Veri Analizi Platformu
+# Akıllı Tarım Veri Analizi Platformu (SFDAP)
 Çiftçilerin tarımsal verimliliğini en üst düzeye çıkarmak amacıyla toprak sensörleri, hava durumu verileri ve bitki sağlığı görüntülerini entegre bir şekilde analiz eden kapsamlı bir veri analizi ve karar destek platformudur. Bu sistem, elde edilen verileri işleyerek sulama optimizasyonu, gübreleme önerileri ve erken hastalık tahmini gibi kritik konularda çiftçilere eyleme dönüştürülebilir içgörüler sunar.
 
 # 🌟 Temel Özellikler
