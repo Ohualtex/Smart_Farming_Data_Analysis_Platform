@@ -1,4 +1,11 @@
 # 🌾 Akıllı Tarım Veri Analizi Platformu
+
+| Hazırlayan | Görev | Tarih |
+| :--- | :--- | :--- |
+| **Mehmet Sait Taysi** | Veri Seti İncelemesi ve Ön İşleme Adımları | 08.03.2026 |
+
+---
+
 ## 📊 Veri İnceleme ve Ön İşleme Stratejisi Raporu
 
 Bu belge, Akıllı Tarım Veri Analizi Platformu kapsamında kullanılacak ham veri setlerinin incelenmesi ve makine öğrenimi (ML) modellerinin (sulama optimizasyonu, gübreleme önerileri, hastalık tahmini) eğitilmeden önce uygulanacak **veri ön işleme** adımlarını tanımlar.
