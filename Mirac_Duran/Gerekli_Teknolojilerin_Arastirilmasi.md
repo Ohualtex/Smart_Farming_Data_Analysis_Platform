@@ -38,9 +38,9 @@ Hastalık tahmini gibi karmaşık işlemler için standart algoritmalar yetersiz
 **📌 Teknoloji ve Özellik Eşleştirme Tablosu**
 Aşağıdaki tablo, proje isterlerinin hangi teknolojiyle çözüleceğini özetler:
 
-Proje Özelliği	Kullanılacak Veri Tipi	Önerilen Teknoloji / Kütüphane
-Veri Toplama & Temizleme	Sensör, Hava Durumu	Python, Pandas, SQL
-Sulama Optimizasyonu	Sayısal (Nem, Sıcaklık)	Scikit-Learn (Regresyon Modelleri)
-Hastalık Tahmini	Görsel (Yaprak Fotoları)	OpenCV, TensorFlow / Keras
-Veritabanı Yönetimi	Tablo / İlişkisel	PostgreSQL, Cloud SQL (GCP/AWS)
-Görselleştirme & Arayüz	Tüm Çıktılar	Streamlit, Matplotlib
+  Proje Özelliği Kullanılacak Veri Tipi Önerilen Teknoloji / Kütüphane
+- Veri Toplama & Temizleme	Sensör, Hava Durumu	Python, Pandas, SQL
+- Sulama Optimizasyonu	Sayısal (Nem, Sıcaklık)	Scikit-Learn (Regresyon Modelleri)
+- Hastalık Tahmini	Görsel (Yaprak Fotoları)	OpenCV, TensorFlow / Keras
+- Veritabanı Yönetimi	Tablo / İlişkisel	PostgreSQL, Cloud SQL (GCP/AWS)
+- Görselleştirme & Arayüz	Tüm Çıktılar	Streamlit, Matplotlib
