@@ -1,5 +1,5 @@
 ## 1. Hafta (5 - 12 Mart)
-**MİRAÇ DURAN (Scrum Master / Manager): Proje Temellerinin Oluşturulması**
+**MİRAÇ DURAN (Scrum Master / Manager) : Proje Temellerinin Oluşturulması**
 GitHub reposu oluşturuldu, branch koruma kuralları (main) ayarlandı. Ekibe iş akışı eğitimi verildi. Proje akış dokümanı oluşturuldu.
 
 **MİRAÇ DURAN : Gerekli Teknolojilerin Araştırılması**
