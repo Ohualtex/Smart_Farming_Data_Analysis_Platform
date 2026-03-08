@@ -1,12 +1,12 @@
-## 📊 Akıllı Tarım Platformu Teknoloji Raporu
+# $\color{red}{\textbf{📊 Akıllı Tarım Platformu Teknoloji Raporu}}$
 
 Bu proje temel olarak iki farklı veri tipiyle çalışacak: Tablo verileri (sensörlerden gelen nem, sıcaklık vb.) ve Görüntü verileri (bitki sağlığı için yaprak fotoğrafları). Seçilecek teknolojiler bu iki veri tipini de en verimli şekilde işleyebilmelidir.
 
-<span style="color: red;">**1. Ana Programlama Dili**</span>
+$\color{purple}{\textbf{1. Ana Programlama Dili}}$
 ---
 •	Python: Veri bilimi ve makine öğrenimi dünyasının tartışmasız lideridir. Ekibinin geniş kütüphane desteği ve zengin dokümantasyon sayesinde karşılaştığı hataları kolayca çözebilmesi için en doğru tercih olacaktır.
 
-<span style="color: red;">**2. Veri Madenciliği ve Ön İşleme Kütüphaneleri (Data Mining)**</span>
+$\color{purple}{\textbf{2. Veri Madenciliği ve Ön İşleme Kütüphaneleri (Data Mining)}}$
 ---
 Toprak sensörlerinden ve hava durumu API'lerinden gelen veriler genellikle kirli veya eksik olur. Modele girmeden önce temizlenmeleri gerekir.
 
@@ -16,7 +16,7 @@ Toprak sensörlerinden ve hava durumu API'lerinden gelen veriler genellikle kirl
 
 •	Scikit-Learn (Sklearn): Makine öğrenimine giriş için en ideal kütüphanedir. Verileri ölçeklendirmek (normalization), eksik verileri doldurmak ve sulama optimizasyonu gibi konularda temel regresyon/sınıflandırma algoritmalarını (Rastgele Orman, Karar Ağaçları) kurmak için kullanılacaktır.
 
-<span style="color: red;">**3. Makine Öğrenimi ve Derin Öğrenme Araçları (Deep Learning)**</span>
+$\color{purple}{\textbf{3. Makine Öğrenimi ve Derin Öğrenme Araçları (Deep Learning)}}$
 ---
 Hastalık tahmini gibi karmaşık işlemler için standart algoritmalar yetersiz kalır, derin öğrenmeye ihtiyaç duyulur.
 
@@ -24,15 +24,16 @@ Hastalık tahmini gibi karmaşık işlemler için standart algoritmalar yetersiz
 
 •	OpenCV: Görüntüleri TensorFlow modeline sokmadan önce boyutlarını ayarlamak, renkleri düzenlemek veya gürültüyü azaltmak için kullanılacak temel görüntü işleme kütüphanesidir.
 
-<span style="color: red;">**4. Veritabanı ve Bulut Bilişim (Storage & Cloud)**</span>
+$\color{purple}{\textbf{4. Veritabanı ve Bulut Bilişim (Storage \ Cloud)}}$
 ---
+
 •	PostgreSQL (SQL): Sensörlerden akan zaman serisi verilerini (time-series data) ve kullanıcı bilgilerini güvenli bir şekilde tutmak için en güçlü açık kaynaklı ilişkisel veritabanlarından biridir.
 
 •	Bulut Platformu Seçimi (AWS / GCP / Azure): Öğrenci kredileri ve sunduğu kolaylıklar açısından AWS (Amazon Web Services) veya GCP (Google Cloud Platform) tercih edilebilir. AWS üzerinde S3 (görüntüleri depolamak için) ve RDS (SQL veritabanını barındırmak için) başlangıç için ideal hizmetlerdir.
 
 
 
-<span style="color: red;">**5. Görselleştirme ve Arayüz Araçları**</span>
+$\color{purple}{\textbf{5. Görselleştirme ve Arayüz Araçları}}$
 ---
 •	Streamlit veya Dash: Bir web arayüzü istendiği için, ekibin sıfırdan HTML/CSS/JavaScript öğrenmekle vakit kaybetmesini istemiyorsan, doğrudan Python kodlarıyla harika veri panoları (dashboard) ve web arayüzleri oluşturabilen bu kütüphaneleri kullanabilirsiniz.
 
@@ -40,7 +41,8 @@ Hastalık tahmini gibi karmaşık işlemler için standart algoritmalar yetersiz
 
 
 
-**📌 Teknoloji ve Özellik Eşleştirme Tablosu**
+## 📌 $\color{red}{\textbf{Teknoloji ve Özellik Eşleştirme Tablosu}}$
+
 Aşağıdaki tablo, proje isterlerinin hangi teknolojiyle çözüleceğini özetler:
 
   Proje Özelliği Kullanılacak Veri Tipi Önerilen Teknoloji / Kütüphane
