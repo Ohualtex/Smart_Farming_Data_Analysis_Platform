@@ -43,4 +43,3 @@ Sulama Optimizasyonu	Sayısal (Nem, Sıcaklık)	Scikit-Learn (Regresyon Modeller
 Hastalık Tahmini	Görsel (Yaprak Fotoları)	OpenCV, TensorFlow / Keras
 Veritabanı Yönetimi	Tablo / İlişkisel	PostgreSQL, Cloud SQL (GCP/AWS)
 Görselleştirme & Arayüz	Tüm Çıktılar	Streamlit, Matplotlib
-
