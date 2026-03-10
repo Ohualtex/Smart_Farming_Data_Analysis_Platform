@@ -1,11 +1,18 @@
-# Örnek Proje Akışı ve Haftalık İlerleme
+## 1. Hafta (5 - 12 Mart)
+**MİRAÇ DURAN (Scrum Master / Manager) : Proje Temellerinin Oluşturulması**
+GitHub reposu oluşturuldu, branch koruma kuralları (main) ayarlandı. Ekibe iş akışı eğitimi verildi. Proje akış dokümanı oluşturuldu.
 
-Bu dosya, A takımının haftalık proje ilerlemesini ve üyelerin görev dağılımlarını içermektedir.
-## 1. Hafta (Örn: 5 - 12 Mart)
-*(Scrum Master / Yönetici):* GitHub reposu oluşturuldu, branch koruma kuralları (main) ayarlandı. Ekibe iş akışı eğitimi verildi. Proje akış dokümanı oluşturuldu.
-*[Ekip Arkadaşının Adı]:* Bu hafta ne yaptığı buraya yazılacak
-*[Ekip Arkadaşının Adı]:* Bu hafta ne yaptığı buraya yazılacak
+**MİRAÇ DURAN : Gerekli Teknolojilerin Araştırılması**
+Projede kullanılacak uygun veri madenciliği ve makine öğrenimi teknolojilerini (programlama dilleri, kütüphaneler, araçlar) araştırın ve bir rapor hazırlayın.
 
-## 2. Hafta * (İlerleyen haftalarda doldurulacak)
-*[Ekip Arkadaşının Adı]:* Bu hafta ne yaptığı buraya yazılacak
-*[Ekip Arkadaşının Adı]:* Bu hafta ne yaptığı buraya yazılacak
+**EMİRHAN GÜNAY : Proje Analizi ve Kapsam Tanımlama**
+Projenin amacını, hedeflerini ve kapsamını detaylı bir şekilde analiz edin. Kullanılacak veri kaynaklarını ve beklenen sonuçları belirleyin.
+
+**AYŞE ESLEM ÇEKİCİ : Gereksinim Toplama ve Belgeleme**
+Proje için gerekli olan tüm gereksinimleri (işlevsel, işlevsel olmayan, veri, kullanıcı) toplayın ve detaylı bir şekilde dokümante edin.
+
+**ECENUR ÜNER : Geliştirme Ortamının Kurulumu**
+Gerekli tüm yazılımları ve araçları (IDE, veri tabanı, kütüphaneler) kurarak geliştirme ortamını hazır hale getirin. Kurulum adımlarını dokümante edin.
+
+**MEHMET SAİT TAYŞİ : Veri Seti İncelemesi ve Ön İşleme Adımları**
+Kullanılacak veri setini inceleyin ve ön işleme adımlarını (eksik veri tamamlama, aykırı değer tespiti, veri dönüşümü) belirleyin.
