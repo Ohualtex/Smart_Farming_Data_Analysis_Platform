@@ -1,4 +1,4 @@
-## 1. Hafta (5 - 12 Mart)
+## Cycle 1 (5 - 12 Mart)
 **MİRAÇ DURAN (Scrum Master / Manager) : Proje Temellerinin Oluşturulması**
 GitHub reposu oluşturuldu, branch koruma kuralları (main) ayarlandı. Ekibe iş akışı eğitimi verildi. Proje akış dokümanı oluşturuldu.
 
@@ -16,3 +16,39 @@ Gerekli tüm yazılımları ve araçları (IDE, veri tabanı, kütüphaneler) ku
 
 **MEHMET SAİT TAYŞİ : Veri Seti İncelemesi ve Ön İşleme Adımları**
 Kullanılacak veri setini inceleyin ve ön işleme adımlarını (eksik veri tamamlama, aykırı değer tespiti, veri dönüşümü) belirleyin.
+
+## Cycle 2 (12 - 21 Mart)
+
+**MİRAÇ DURAN :**
+
+**EMİRHAN GÜNAY :**
+
+**AYŞE ESLEM ÇEKİCİ :**
+
+**ECENUR ÜNER :**
+
+**MEHMET SAİT TAYŞİ :**
+
+## Cycle 3 (21 Mart - 1 Nisan)
+
+**MİRAÇ DURAN :**
+
+**EMİRHAN GÜNAY :**
+
+**AYŞE ESLEM ÇEKİCİ :**
+
+**ECENUR ÜNER :**
+
+**MEHMET SAİT TAYŞİ :**
+
+## Cycle 4 (1 Nisan - 13 Nisan)
+
+**MİRAÇ DURAN :**
+
+**EMİRHAN GÜNAY :**
+
+**AYŞE ESLEM ÇEKİCİ :**
+
+**ECENUR ÜNER :**
+
+**MEHMET SAİT TAYŞİ :**
