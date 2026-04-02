@@ -44,7 +44,7 @@ Hafta 1'de kurulan geliştirme ortamı ile uyumlu olarak, proje kapsamındaki ve
 
 İncelediğimiz veri setindeki değişkenlerin dağılımlarını, birbirleriyle olan ilişkilerini ve hedef değişkenle olan korelasyonlarını detaylı bir şekilde analiz edin. Bu analiz sonucunda, hangi makine öğrenimi algoritmalarının bu veri seti için uygun olabileceğine dair bir ön değerlendirme raporu hazırlayın. Rapor, seçilen algoritmaların güçlü ve zayıf yönlerini, veri setinin özellikleriyle nasıl eşleştiğini ve beklenen performansı içermelidir.
 
-## Cycle 3 (21 Mart - 1 Nisan)
+## Cycle 3 (21 Mart - 2 Nisan)
 
 **MİRAÇ DURAN : API Tasarımı ve Dokümantasyonu**
 
@@ -64,7 +64,7 @@ Mevcut görev yok.
 **MEHMET SAİT TAYŞİ :**
 Mevcut görev yok.
 
-## Cycle 4 (1 Nisan - 13 Nisan)
+## Cycle 4 (2 Nisan - 13 Nisan)
 
 **MİRAÇ DURAN : Makine Öğrenimi Modeli: Basit Sulama Optimizasyon Modeli Geliştirme**
 
