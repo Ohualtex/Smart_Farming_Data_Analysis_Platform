@@ -1,4 +1,5 @@
 ## Cycle 1 (5 - 12 Mart)
+
 **MİRAÇ DURAN (Scrum Master / Manager) : Proje Temellerinin Oluşturulması**
 GitHub reposu oluşturuldu, branch koruma kuralları (main) ayarlandı. Ekibe iş akışı eğitimi verildi. Proje akış dokümanı oluşturuldu.
 
