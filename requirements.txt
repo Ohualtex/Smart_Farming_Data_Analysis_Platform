@@ -1,0 +1,32 @@
+﻿# ========================
+# SFDAP API Dependencies
+# ========================
+
+# Web Framework
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Data Validation
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Data Processing
+pandas>=2.2.0
+numpy>=1.26.0
+
+# Machine Learning
+scikit-learn>=1.4.0
+joblib>=1.3.0
+
+# Environment & Config
+python-dotenv>=1.0.0
+
+# CORS & Security
+python-multipart>=0.0.6
+
+# HTTP Client (for weather API)
+httpx>=0.27.0
