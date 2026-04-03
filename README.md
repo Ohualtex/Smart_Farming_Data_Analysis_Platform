@@ -1,64 +1,150 @@
-# Akıllı Tarım Veri Analizi Platformu (Smart Farming Data Analysis Platform / SFDAP)
-Çiftçilerin tarımsal verimliliğini en üst düzeye çıkarmak amacıyla toprak sensörleri, hava durumu verileri ve bitki sağlığı görüntülerini entegre bir şekilde analiz eden kapsamlı bir veri analizi ve karar destek platformudur. Bu sistem, elde edilen verileri işleyerek sulama optimizasyonu, gübreleme önerileri ve erken hastalık tahmini gibi kritik konularda çiftçilere eyleme dönüştürülebilir içgörüler sunar.
+﻿# 🌾 Akıllı Tarım Veri Analizi Platformu (SFDAP)
 
-# 🌟 Temel Özellikler
-💧 Sulama Optimizasyonu: Toprak nem sensörleri ve anlık hava durumu verilerini kullanarak su israfını önler ve bitkinin ihtiyacı olan optimum su miktarını belirler.
+Çiftçilerin tarımsal verimliliğini en üst düzeye çıkarmak amacıyla toprak sensörleri, hava durumu verileri ve bitki sağlığı görüntülerini entegre bir şekilde analiz eden kapsamlı bir veri analizi ve karar destek platformudur.
 
-🌱 Akıllı Gübreleme Önerileri: Toprak analizi verilerine dayanarak verimi artıracak en uygun gübre karışımlarını ve uygulama zamanlarını tavsiye eder.
+---
 
-🦠 Erken Hastalık Tahmini: Bitki sağlığı görüntülerini makine öğrenimi teknikleriyle analiz ederek potansiyel hastalıkları ve zararlıları önceden tespit eder.
+## 🚀 Hızlı Başlangıç
 
-📊 Görselleştirme ve Raporlama: Karmaşık tarımsal verileri anlaşılır grafiklere, ısı haritalarına ve periyodik raporlara dönüştürür.
+### Gereksinimler
+- Python 3.12+
+- Git
 
-# 🛠️ Kullanılan Teknolojiler
-Platform, güçlü ve ölçeklenebilir bir mimari üzerine inşa edilmiştir:
+### Kurulum
 
-Programlama Dili: Python
-
-Makine Öğrenimi: TensorFlow, Keras
-
-Veri İşleme ve Analiz: Pandas, NumPy
-
-Veritabanı Yönetimi: SQL
-
-Bulut Bilişim (Cloud Computing): AWS / Azure / GCP (Sunucu yönetimi, model dağıtımı ve veri depolama için)
-
-# 📦 Proje Modülleri ve Teslim Edilenler
-Bu depo aşağıdaki temel bileşenleri ve altyapıları içermektedir:
-
-Veri Toplama ve İşleme Altyapısı: IoT toprak sensörlerinden ve hava durumu API'lerinden gelen ham verilerin toplanması, temizlenmesi ve veritabanına aktarılmasını sağlayan veri boru hatları (data pipelines).
-
-Makine Öğrenimi Modelleri: Görüntü işleme ve tahmine dayalı analizler için TensorFlow kullanılarak geliştirilmiş modeller.
-
-Web Tabanlı Kullanıcı Arayüzü: Çiftçilerin platformla etkileşime girebileceği kullanıcı dostu önyüz.
-
-API Entegrasyonları: Dış servislerle haberleşen ve ön yüz ile arka yüz arasındaki iletişimi sağlayan uç noktalar.
-
-Raporlama ve Görselleştirme Araçları: SQL sorguları ve Python veri analizi kütüphaneleri ile desteklenen dinamik paneller.
-
-# 🚀 Kurulum ve Çalıştırma
-Platformu yerel ortamınızda çalıştırmak için aşağıdaki adımları izleyin:
-
-1. Depoyu klonlayın:
-
-Bash
+```bash
+# 1. Repoyu klonla
 git clone https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform.git
 cd Smart_Farming_Data_Analysis_Platform
 
-2. Gerekli kütüphaneleri yükleyin:
-Proje dizininde sanal ortamınızı (virtual environment) oluşturduktan sonra bağımlılıkları yükleyin:
+# 2. Sanal ortam oluştur
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Mac/Linux
 
-Bash
+# 3. Bağımlılıkları yükle
 pip install -r requirements.txt
 
-3. Çevresel değişkenleri (Environment Variables) ayarlayın:
-Gerekli .env dosyasını oluşturarak içerisine kendi SQL veritabanı bağlantı bilgilerinizi ve bulut API anahtarlarınızı girin.
+# 4. Ortam değişkenlerini ayarla
+copy .env.example .env
+# .env dosyasını düzenle
 
-4. Uygulamayı başlatın:
-(Kullandığınız web framework'üne göre başlatma komutunu buraya ekleyebilirsiniz, örneğin Flask/Django veya FastAPI)
+# 5. API'yi başlat
+uvicorn app.main:app --reload
+```
 
-Bash
-python main.py
+API çalışınca şu adreslerde erişebilirsin:
+- 📡 **API:** http://localhost:8000
+- 📖 **Swagger Dokümantasyon:** http://localhost:8000/docs
+- 🌾 **Dashboard:** Ecenur_Uner/index.html (tarayıcıda aç)
 
-# 🤝 Katkıda Bulunma
-Projeye katkıda bulunmak isterseniz, lütfen bir "Pull Request" oluşturmadan önce ilgili dokümantasyonları inceleyin. Her türlü geri bildirim ve hata bildirimi için projenin Issues sekmesini kullanabilirsiniz.
+---
+
+## 🌟 Temel Özellikler
+
+| Özellik | Açıklama |
+|:--------|:---------|
+| 💧 Sulama Optimizasyonu | ML modeli ile toprak nemi ve hava verisi analizi |
+| 🌱 Akıllı Gübreleme | NPK analizi bazlı öneri sistemi |
+| 🦠 Hastalık Tespiti | CNN modeli ile bitki sağlığı görüntü analizi |
+| 📊 Görselleştirme | Gerçek zamanlı dashboard ve grafikler |
+
+---
+
+## 📡 API Endpoint Listesi
+
+### Health Check
+| Method | Endpoint | Açıklama |
+|:-------|:---------|:---------|
+| GET | `/api/health` | Sistem durumu kontrolü |
+
+### Sensör Verileri
+| Method | Endpoint | Açıklama |
+|:-------|:---------|:---------|
+| GET | `/api/sensors/` | Tüm sensörleri listele |
+| POST | `/api/sensors/` | Yeni sensör ekle |
+| GET | `/api/sensors/{id}` | Sensör detayı |
+| DELETE | `/api/sensors/{id}` | Sensör sil |
+| POST | `/api/sensors/readings` | Okuma verisi ekle |
+| GET | `/api/sensors/{id}/readings` | Sensör okumaları |
+
+### Hava Durumu
+| Method | Endpoint | Açıklama |
+|:-------|:---------|:---------|
+| GET | `/api/weather/` | Hava durumu verileri |
+| POST | `/api/weather/` | Hava verisi ekle |
+| GET | `/api/weather/latest/{farm_id}` | Son hava durumu |
+
+### Sulama Optimizasyonu (ML)
+| Method | Endpoint | Açıklama |
+|:-------|:---------|:---------|
+| POST | `/api/irrigation/predict` | **ML sulama tahmini** |
+| GET | `/api/irrigation/schedules` | Sulama takvimi |
+| POST | `/api/irrigation/schedules` | Sulama planı oluştur |
+
+### Bitki Sağlığı
+| Method | Endpoint | Açıklama |
+|:-------|:---------|:---------|
+| GET | `/api/plants/health-images` | Bitki görselleri |
+| POST | `/api/plants/health-images` | Görsel yükle |
+
+---
+
+## 🛠️ Kullanılan Teknolojiler
+
+| Katman | Teknoloji |
+|:-------|:---------|
+| Backend / API | Python, FastAPI, Uvicorn |
+| Veritabanı | SQLAlchemy, SQLite (dev) / PostgreSQL (prod) |
+| Makine Öğrenimi | Scikit-learn, NumPy, Pandas |
+| Veri Doğrulama | Pydantic |
+| Frontend | HTML5, CSS3, JavaScript, Chart.js |
+| Versiyon Kontrol | Git, GitHub |
+
+---
+
+## 👥 Ekip
+
+| İsim | Rol | Cycle 4 Görevi |
+|:-----|:----|:--------------|
+| **Miraç Duran** | Scrum Master | API Tasarımı + ML Sulama Modeli |
+| **Emirhan Günay** | Backend | Toprak Sensörü Veri Entegrasyonu |
+| **Ayşe Eslem Çekici** | Veri İşleme | Hava Durumu Verisi Temizleme |
+| **Ecenur Üner** | Frontend | Web Arayüzü Veri Görselleştirme |
+| **Mehmet Sait Taysi** | ML / API | Temel Veri Erişim API'si |
+
+---
+
+## 📦 Proje Yapısı
+
+```
+Smart_Farming_Data_Analysis_Platform/
+├── app/
+│   ├── main.py              # FastAPI giriş noktası
+│   ├── config.py            # Ayar yönetimi
+│   ├── database.py          # Veritabanı bağlantısı
+│   ├── models/              # SQLAlchemy ORM modelleri
+│   ├── schemas/             # Pydantic şemaları
+│   ├── routers/             # API endpoint'leri
+│   └── ml/                  # Makine öğrenimi modelleri
+├── database/
+│   └── sfdap_schema.sql     # Veritabanı şeması
+├── Ecenur_Uner/
+│   └── index.html           # Dashboard arayüzü
+├── tests/                   # Test dosyaları
+├── requirements.txt         # Python bağımlılıkları
+└── .env.example             # Ortam değişkenleri şablonu
+```
+
+---
+
+## 📋 Sprint Planı
+
+| Cycle | Tarih | Durum |
+|:------|:------|:-----:|
+| Cycle 1 | 5 - 12 Mart | ✅ Tamamlandı |
+| Cycle 2 | 12 - 21 Mart | ✅ Tamamlandı |
+| Cycle 3 | 21 Mart - 2 Nisan | ✅ Tamamlandı |
+| Cycle 4 | 2 - 13 Nisan | 🔄 Devam Ediyor |
+
+Detaylı görev dağılımı için [projeakisi.md](projeakisi.md) dosyasına bakınız.
