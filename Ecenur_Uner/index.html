@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Akilli Tarim Paneli</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f4f4f4; }
+        .chart-container { width: 600px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-top: 50px; }
+        h1 { color: #2c3e50; }
+    </style>
+    </head>
+    <body>
+
+        <h1>Akıllı Tarım Veri Görselleştirme</h1>
+    
+    <div class="chart-container">
+        <canvas id="toprakNemGrafigi"></canvas>
+    </div>
+
+    <script>
+        // Grafik verilerini hazırlıyoruz
+        const ctx = document.getElementById('toprakNemGrafigi').getContext('2d');
+        new Chart(ctx, {
+            type: 'line', // Çizgi grafik tipi
+            data: {
+                labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'], // Saatler
+                datasets: [{
+                    label: 'Toprak Nem Oranı (%)',
+                    data: [45, 42, 38, 35, 48, 50], // Nem değerleri
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                    borderWidth: 3,
+                    tension: 0.4 // Çizgiyi yumuşatır
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true, max: 100 } }
+            }
+        });
+    </script>
+</body>
+</html>
