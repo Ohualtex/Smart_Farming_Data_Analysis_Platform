@@ -13,4 +13,4 @@ Bu hafta, Akıllı Tarım Platformu projesi kapsamında sensörlerden gelen veri
 * Kullanıcı dostu, sade ve mobil uyumlu bir Dashboard tasarımı hedeflendi.
 
 ## 4. EKRAN GÖRÜNTÜSÜ
-![Akıllı Tarım Grafiği](Ekran%20görüntüsü%202026-04-03%20132416.png)
+![Akıllı Tarım Grafiği](Akilli_Tarim_Grafik.png)
