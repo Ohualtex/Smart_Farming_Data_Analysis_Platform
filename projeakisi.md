@@ -1,4 +1,4 @@
-## Cycle 1 (5 - 12 Mart)
+## Cycle 1 (24 Şubat – 10 Mart 2026)
 
 **MİRAÇ DURAN (Scrum Master / Manager) : Proje Temellerinin Oluşturulması**
 
@@ -24,7 +24,7 @@ Gerekli tüm yazılımları ve araçları (IDE, veri tabanı, kütüphaneler) ku
 
 Kullanılacak veri setini inceleyin ve ön işleme adımlarını (eksik veri tamamlama, aykırı değer tespiti, veri dönüşümü) belirleyin.
 
-## Cycle 2 (12 - 21 Mart)
+## Cycle 2 (11 – 24 Mart 2026)
 
 **MİRAÇ DURAN : Web Kazıma Projesi İçin Veri Yapısının ve Saklama Yöntemlerinin Planlanması**
 
@@ -44,7 +44,7 @@ Hafta 1'de kurulan geliştirme ortamı ile uyumlu olarak, proje kapsamındaki ve
 
 İncelediğimiz veri setindeki değişkenlerin dağılımlarını, birbirleriyle olan ilişkilerini ve hedef değişkenle olan korelasyonlarını detaylı bir şekilde analiz edin. Bu analiz sonucunda, hangi makine öğrenimi algoritmalarının bu veri seti için uygun olabileceğine dair bir ön değerlendirme raporu hazırlayın. Rapor, seçilen algoritmaların güçlü ve zayıf yönlerini, veri setinin özellikleriyle nasıl eşleştiğini ve beklenen performansı içermelidir.
 
-## Cycle 3 (21 Mart - 2 Nisan)
+## Cycle 3 (25 Mart – 1 Nisan 2026)
 
 **MİRAÇ DURAN : API Tasarımı ve Dokümantasyonu**
 
@@ -64,7 +64,7 @@ Mevcut görev yok.
 **MEHMET SAİT TAYŞİ :**
 Mevcut görev yok.
 
-## Cycle 4 (2 Nisan - 13 Nisan)
+## Cycle 4 (2 - 13 Nisan 2026)
 
 **MİRAÇ DURAN : Makine Öğrenimi Modeli: Basit Sulama Optimizasyon Modeli Geliştirme**
 
