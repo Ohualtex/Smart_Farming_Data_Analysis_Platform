@@ -103,18 +103,6 @@ API çalışınca şu adreslerde erişebilirsin:
 
 ---
 
-## 👥 Ekip
-
-| İsim | Rol | Cycle 4 Görevi |
-|:-----|:----|:--------------|
-| **Miraç Duran** | Scrum Master | API Tasarımı + ML Sulama Modeli |
-| **Emirhan Günay** | Backend | Toprak Sensörü Veri Entegrasyonu |
-| **Ayşe Eslem Çekici** | Veri İşleme | Hava Durumu Verisi Temizleme |
-| **Ecenur Üner** | Frontend | Web Arayüzü Veri Görselleştirme |
-| **Mehmet Sait Taysi** | ML / API | Temel Veri Erişim API'si |
-
----
-
 ## 📦 Proje Yapısı
 
 ```
