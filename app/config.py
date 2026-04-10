@@ -1,8 +1,11 @@
-﻿from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from typing import Optional
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
+
     DATABASE_URL: str = "sqlite:///./sfdap_dev.db"
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
@@ -14,9 +17,6 @@ class Settings(BaseSettings):
     OPENWEATHERMAP_API_KEY: Optional[str] = None
     MODEL_PATH: str = "app/ml/models/"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-
 
 settings = Settings()
+

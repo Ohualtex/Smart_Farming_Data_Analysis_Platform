@@ -1,4 +1,4 @@
-# ========================
+﻿# ========================
 # Dependencies
 # ========================
 node_modules/
@@ -10,7 +10,7 @@ bower_components/
 # ========================
 __pycache__/
 *.py[cod]
-*$py.class
+*.class
 *.so
 *.egg
 *.egg-info/
@@ -104,11 +104,20 @@ coverage.xml
 # ========================
 *.sqlite3
 *.db
+*.sqlite
 
 # ========================
 # Docker
 # ========================
 docker-compose.override.yml
+
+# ========================
+# ML Models (buyuk binary dosyalar)
+# ========================
+*.pkl
+*.h5
+*.joblib
+app/ml/models/
 
 # ========================
 # Misc

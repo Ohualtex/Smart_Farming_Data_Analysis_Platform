@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -7,6 +7,7 @@ from app.schemas.schemas import (
     SensorCreate, SensorResponse,
     SensorReadingCreate, SensorReadingResponse
 )
+from app.middleware.auth import verify_api_key
 
 router = APIRouter(prefix="/api/sensors", tags=["Sensor Verileri"])
 
@@ -24,7 +25,7 @@ def get_sensor(sensor_id: int, db: Session = Depends(get_db)):
     return sensor
 
 
-@router.post("/", response_model=SensorResponse, status_code=201)
+@router.post("/", response_model=SensorResponse, status_code=201, dependencies=[Depends(verify_api_key)])
 def create_sensor(sensor: SensorCreate, db: Session = Depends(get_db)):
     db_sensor = Sensor(**sensor.model_dump())
     db.add(db_sensor)
@@ -33,7 +34,7 @@ def create_sensor(sensor: SensorCreate, db: Session = Depends(get_db)):
     return db_sensor
 
 
-@router.delete("/{sensor_id}")
+@router.delete("/{sensor_id}", dependencies=[Depends(verify_api_key)])
 def delete_sensor(sensor_id: int, db: Session = Depends(get_db)):
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
@@ -44,7 +45,7 @@ def delete_sensor(sensor_id: int, db: Session = Depends(get_db)):
 
 
 # ===== SENSOR READINGS =====
-@router.post("/readings", response_model=SensorReadingResponse, status_code=201)
+@router.post("/readings", response_model=SensorReadingResponse, status_code=201, dependencies=[Depends(verify_api_key)])
 def create_reading(reading: SensorReadingCreate, db: Session = Depends(get_db)):
     db_reading = SoilMoistureReading(**reading.model_dump())
     db.add(db_reading)
