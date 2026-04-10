@@ -138,3 +138,8 @@ Web arayüzüne, toprak sensörü ve hava durumu verilerini görselleştiren tem
 
 Platformun temel veri erişim API'sini geliştir. API, toprak sensörü ve hava durumu verilerine erişim sağlamalıdır. API'yi Python (örneğin Flask/FastAPI) kullanarak geliştir. API'nin güvenliğini sağlamak için temel kimlik doğrulama mekanizmaları (örneğin API anahtarı) kullan. API'nin dokümantasyonunu oluştur (örneğin Swagger/OpenAPI).
 
+---
+
+## 🟣 Cycle 5 — Veri Planlama ve Analiz
+
+📅 **11 – 24 Nisan 2026**
