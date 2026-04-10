@@ -1,7 +1,3 @@
-# 🌾 SFDAP — Proje Akış Planı
-
-> Akıllı Tarım Veri Analizi Platformu — Sprint bazlı görev dağılımı ve ilerleme takibi
-
 ---
 
 ## 🟢 Cycle 1 — Proje Temelleri 
@@ -42,6 +38,8 @@ Gerekli tüm yazılımları ve araçları (IDE, veri tabanı, kütüphaneler) ku
 
 Kullanılacak veri setini inceleyin ve ön işleme adımlarını (eksik veri tamamlama, aykırı değer tespiti, veri dönüşümü) belirleyin.
 
+---
+
 ## 🔵 Cycle 2 — Veri Planlama ve Analiz
 
 📅 **11 – 24 Mart 2026**
@@ -72,6 +70,8 @@ Hafta 1'de kurulan geliştirme ortamı ile uyumlu olarak, proje kapsamındaki ve
 
 İncelediğimiz veri setindeki değişkenlerin dağılımlarını, birbirleriyle olan ilişkilerini ve hedef değişkenle olan korelasyonlarını detaylı bir şekilde analiz edin. Bu analiz sonucunda, hangi makine öğrenimi algoritmalarının bu veri seti için uygun olabileceğine dair bir ön değerlendirme raporu hazırlayın. Rapor, seçilen algoritmaların güçlü ve zayıf yönlerini, veri setinin özellikleriyle nasıl eşleştiğini ve beklenen performansı içermelidir.
 
+---
+
 ## 🟡 Cycle 3 — Tasarım ve Mimari
 
 📅 **25 Mart – 1 Nisan 2026**
@@ -101,6 +101,8 @@ Kullanıcı arayüzü ve kullanıcı deneyimi tasarımının yapılması, intera
 ### 👤 MEHMET SAİT TAYŞİ
 
 > ⏸️ *Mevcut görev yok.*
+
+---
 
 ## 🔴 Cycle 4 — Geliştirme ve Entegrasyon
 
