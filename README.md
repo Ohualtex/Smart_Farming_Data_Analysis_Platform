@@ -1,4 +1,4 @@
-﻿# 🌾 Akıllı Tarım Veri Analizi Platformu (SFDAP)
+# 🌾 Akıllı Tarım Veri Analizi Platformu (SFDAP)
 
 Çiftçilerin tarımsal verimliliğini en üst düzeye çıkarmak amacıyla toprak sensörleri, hava durumu verileri ve bitki sağlığı görüntülerini entegre bir şekilde analiz eden kapsamlı bir veri analizi ve karar destek platformudur.
 
@@ -48,45 +48,64 @@ API çalışınca şu adreslerde erişebilirsin:
 | 🌱 Akıllı Gübreleme | NPK analizi bazlı öneri sistemi |
 | 🦠 Hastalık Tespiti | CNN modeli ile bitki sağlığı görüntü analizi |
 | 📊 Görselleştirme | Gerçek zamanlı dashboard ve grafikler |
+| 🔐 API Güvenliği | API Key tabanlı kimlik doğrulama |
+| 🌤️ Veri Pipeline | Hava durumu veri temizleme ve dönüştürme |
+
+---
+
+## 🔐 API Kimlik Doğrulama
+
+Yazma (POST/DELETE) endpoint'leri `X-API-Key` header'ı gerektirir. Okuma (GET) endpoint'leri herkese açıktır.
+
+```bash
+# Korumalı endpoint'lere erişim örneği
+curl -X POST http://localhost:8000/api/sensors/ \
+  -H "X-API-Key: dev-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"field_id": 1, "sensor_type": "soil_moisture", "serial_number": "S-001"}'
+```
 
 ---
 
 ## 📡 API Endpoint Listesi
 
 ### Health Check
-| Method | Endpoint | Açıklama |
-|:-------|:---------|:---------|
-| GET | `/api/health` | Sistem durumu kontrolü |
+| Method | Endpoint | Açıklama | Auth |
+|:-------|:---------|:---------|:----:|
+| GET | `/api/health` | Sistem durumu kontrolü | ❌ |
 
 ### Sensör Verileri
-| Method | Endpoint | Açıklama |
-|:-------|:---------|:---------|
-| GET | `/api/sensors/` | Tüm sensörleri listele |
-| POST | `/api/sensors/` | Yeni sensör ekle |
-| GET | `/api/sensors/{id}` | Sensör detayı |
-| DELETE | `/api/sensors/{id}` | Sensör sil |
-| POST | `/api/sensors/readings` | Okuma verisi ekle |
-| GET | `/api/sensors/{id}/readings` | Sensör okumaları |
+| Method | Endpoint | Açıklama | Auth |
+|:-------|:---------|:---------|:----:|
+| GET | `/api/sensors/` | Tüm sensörleri listele | ❌ |
+| POST | `/api/sensors/` | Yeni sensör ekle | ✅ |
+| GET | `/api/sensors/{id}` | Sensör detayı | ❌ |
+| DELETE | `/api/sensors/{id}` | Sensör sil | ✅ |
+| POST | `/api/sensors/readings` | Okuma verisi ekle | ✅ |
+| GET | `/api/sensors/{id}/readings` | Sensör okumaları | ❌ |
 
 ### Hava Durumu
-| Method | Endpoint | Açıklama |
-|:-------|:---------|:---------|
-| GET | `/api/weather/` | Hava durumu verileri |
-| POST | `/api/weather/` | Hava verisi ekle |
-| GET | `/api/weather/latest/{farm_id}` | Son hava durumu |
+| Method | Endpoint | Açıklama | Auth |
+|:-------|:---------|:---------|:----:|
+| GET | `/api/weather/` | Hava durumu verileri | ❌ |
+| POST | `/api/weather/` | Hava verisi ekle | ✅ |
+| GET | `/api/weather/latest/{farm_id}` | Son hava durumu | ❌ |
+| POST | `/api/weather/fetch/{farm_id}` | **Dış API'den veri çek** | ❌ |
+| GET | `/api/weather/stats/{farm_id}` | **İstatistikler** | ❌ |
+| POST | `/api/weather/clean` | **Veri temizleme testi** | ❌ |
 
 ### Sulama Optimizasyonu (ML)
-| Method | Endpoint | Açıklama |
-|:-------|:---------|:---------|
-| POST | `/api/irrigation/predict` | **ML sulama tahmini** |
-| GET | `/api/irrigation/schedules` | Sulama takvimi |
-| POST | `/api/irrigation/schedules` | Sulama planı oluştur |
+| Method | Endpoint | Açıklama | Auth |
+|:-------|:---------|:---------|:----:|
+| POST | `/api/irrigation/predict` | **ML sulama tahmini** | ❌ |
+| GET | `/api/irrigation/schedules` | Sulama takvimi | ❌ |
+| POST | `/api/irrigation/schedules` | Sulama planı oluştur | ✅ |
 
 ### Bitki Sağlığı
-| Method | Endpoint | Açıklama |
-|:-------|:---------|:---------|
-| GET | `/api/plants/health-images` | Bitki görselleri |
-| POST | `/api/plants/health-images` | Görsel yükle |
+| Method | Endpoint | Açıklama | Auth |
+|:-------|:---------|:---------|:----:|
+| GET | `/api/plants/health-images` | Bitki görselleri | ❌ |
+| POST | `/api/plants/health-images` | Görsel yükle | ✅ |
 
 ---
 
@@ -99,6 +118,7 @@ API çalışınca şu adreslerde erişebilirsin:
 | Makine Öğrenimi | Scikit-learn, NumPy, Pandas |
 | Veri Doğrulama | Pydantic |
 | Frontend | HTML5, CSS3, JavaScript, Chart.js |
+| HTTP Client | httpx (dış API entegrasyonu) |
 | Versiyon Kontrol | Git, GitHub |
 
 ---
@@ -114,6 +134,10 @@ Smart_Farming_Data_Analysis_Platform/
 │   ├── models/              # SQLAlchemy ORM modelleri
 │   ├── schemas/             # Pydantic şemaları
 │   ├── routers/             # API endpoint'leri
+│   ├── services/            # İş mantığı servisleri
+│   │   └── weather_service.py  # Hava durumu pipeline
+│   ├── middleware/           # Güvenlik katmanı
+│   │   └── auth.py          # API Key doğrulama
 │   └── ml/                  # Makine öğrenimi modelleri
 ├── database/
 │   └── sfdap_schema.sql     # Veritabanı şeması
@@ -136,3 +160,4 @@ Smart_Farming_Data_Analysis_Platform/
 | Cycle 4 | 2 - 13 Nisan | 🔄 Devam Ediyor |
 
 Detaylı görev dağılımı için [projeakisi.md](projeakisi.md) dosyasına bakınız.
+

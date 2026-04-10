@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -12,13 +12,13 @@ class UserCreate(BaseModel):
     phone: Optional[str] = None
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     email: str
     role: str
     created_at: datetime
-    class Config:
-        from_attributes = True
 
 
 # ========== FARM ==========
@@ -31,6 +31,8 @@ class FarmCreate(BaseModel):
     region: Optional[str] = None
 
 class FarmResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     name: str
@@ -39,8 +41,6 @@ class FarmResponse(BaseModel):
     area_hectares: Optional[float]
     city: Optional[str]
     region: Optional[str]
-    class Config:
-        from_attributes = True
 
 
 # ========== FIELD ==========
@@ -51,13 +51,13 @@ class FieldCreate(BaseModel):
     elevation_m: Optional[float] = None
 
 class FieldResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     farm_id: int
     name: str
     area_hectares: Optional[float]
     soil_type: Optional[str]
-    class Config:
-        from_attributes = True
 
 
 # ========== SENSOR ==========
@@ -70,13 +70,13 @@ class SensorCreate(BaseModel):
     lng: Optional[float] = None
 
 class SensorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     field_id: int
     sensor_type: str
     serial_number: str
     status: str
-    class Config:
-        from_attributes = True
 
 
 # ========== SENSOR READING ==========
@@ -88,13 +88,13 @@ class SensorReadingCreate(BaseModel):
     electrical_conductivity: Optional[float] = None
 
 class SensorReadingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     sensor_id: int
     reading_timestamp: datetime
     moisture_percent: float
     soil_temperature_c: Optional[float]
-    class Config:
-        from_attributes = True
 
 
 # ========== WEATHER ==========
@@ -106,14 +106,14 @@ class WeatherDataCreate(BaseModel):
     wind_speed_kmh: Optional[float] = None
 
 class WeatherDataResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     farm_id: Optional[int]
     recorded_at: datetime
     temperature_c: Optional[float]
     humidity_percent: Optional[float]
     precipitation_mm: Optional[float]
-    class Config:
-        from_attributes = True
 
 
 # ========== IRRIGATION ==========
@@ -124,13 +124,13 @@ class IrrigationCreate(BaseModel):
     water_amount_liters: Optional[float] = None
 
 class IrrigationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     field_id: int
     scheduled_date: datetime
     water_amount_liters: Optional[float]
     status: str
-    class Config:
-        from_attributes = True
 
 class IrrigationPredictionRequest(BaseModel):
     soil_moisture: float

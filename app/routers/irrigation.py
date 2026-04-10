@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -8,6 +8,7 @@ from app.schemas.schemas import (
     IrrigationPredictionRequest, IrrigationPredictionResponse
 )
 from app.ml.irrigation_model import irrigation_optimizer
+from app.middleware.auth import verify_api_key
 
 router = APIRouter(prefix="/api/irrigation", tags=["Sulama Optimizasyonu"])
 
@@ -32,7 +33,7 @@ def get_schedules(field_id: int = None, limit: int = 20, db: Session = Depends(g
     return query.order_by(IrrigationSchedule.scheduled_date.desc()).limit(limit).all()
 
 
-@router.post("/schedules", response_model=IrrigationResponse, status_code=201)
+@router.post("/schedules", response_model=IrrigationResponse, status_code=201, dependencies=[Depends(verify_api_key)])
 def create_schedule(schedule: IrrigationCreate, db: Session = Depends(get_db)):
     db_schedule = IrrigationSchedule(**schedule.model_dump())
     db.add(db_schedule)

@@ -1,9 +1,12 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+import httpx
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.database import get_db
 from app.models.models import WeatherData
 from app.schemas.schemas import WeatherDataCreate, WeatherDataResponse
+from app.services.weather_service import weather_service
+from app.middleware.auth import verify_api_key
 
 router = APIRouter(prefix="/api/weather", tags=["Hava Durumu"])
 
@@ -16,7 +19,7 @@ def get_weather_data(farm_id: int = None, limit: int = 50, db: Session = Depends
     return query.order_by(WeatherData.recorded_at.desc()).limit(limit).all()
 
 
-@router.post("/", response_model=WeatherDataResponse, status_code=201)
+@router.post("/", response_model=WeatherDataResponse, status_code=201, dependencies=[Depends(verify_api_key)])
 def create_weather_data(data: WeatherDataCreate, db: Session = Depends(get_db)):
     db_weather = WeatherData(**data.model_dump())
     db.add(db_weather)
@@ -33,3 +36,62 @@ def get_latest_weather(farm_id: int, db: Session = Depends(get_db)):
     if not weather:
         raise HTTPException(status_code=404, detail="Hava durumu verisi bulunamadi")
     return weather
+
+
+@router.post("/fetch/{farm_id}")
+async def fetch_weather_from_api(
+    farm_id: int,
+    lat: float = Query(..., description="Enlem"),
+    lon: float = Query(..., description="Boylam"),
+    db: Session = Depends(get_db),
+):
+    """
+    OpenWeatherMap API'den anlık hava durumu verisini çeker,
+    temizler ve veritabanına kaydeder.
+    """
+    try:
+        raw_data = await weather_service.fetch_current_weather(lat, lon)
+        record = weather_service.save_weather_record(db, farm_id, raw_data)
+        return {
+            "message": "Hava durumu verisi basariyla cekildi ve kaydedildi",
+            "record_id": record.id,
+            "data": {
+                "temperature_c": record.temperature_c,
+                "humidity_percent": record.humidity_percent,
+                "precipitation_mm": record.precipitation_mm,
+                "wind_speed_kmh": record.wind_speed_kmh,
+            },
+        }
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Dis API hatasi: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sunucu hatasi: {str(e)}")
+
+
+@router.get("/stats/{farm_id}")
+def get_weather_stats(
+    farm_id: int,
+    days: int = Query(default=7, ge=1, le=90, description="Son kac gun"),
+    db: Session = Depends(get_db),
+):
+    """
+    Belirli bir çiftliğin son N günlük hava durumu istatistiklerini döndürür.
+    Ortalama, min, max sıcaklık, nem ve toplam yağış bilgilerini içerir.
+    """
+    return weather_service.get_weather_stats(db, farm_id, days)
+
+
+@router.post("/clean")
+def clean_weather_record(data: dict):
+    """
+    Gönderilen hava durumu verisini temizler ve eksik alanları doldurur.
+    Veri pipeline'ı test etmek için kullanılır.
+    """
+    cleaned = weather_service.clean_weather_data(data)
+    filled = weather_service.fill_missing_fields(cleaned)
+    return {
+        "original": data,
+        "cleaned": cleaned,
+        "filled": filled,
+    }
+

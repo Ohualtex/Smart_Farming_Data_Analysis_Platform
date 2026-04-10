@@ -48,5 +48,7 @@ def client(db):
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
+        # Korumalı endpoint'ler için varsayılan API key ekle
+        c.headers["X-API-Key"] = "dev-api-key"
         yield c
     app.dependency_overrides.clear()

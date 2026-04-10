@@ -1,8 +1,9 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models.models import PlantHealthImage
+from app.middleware.auth import verify_api_key
 
 router = APIRouter(prefix="/api/plants", tags=["Bitki Sagligi"])
 
@@ -27,7 +28,7 @@ def get_health_images(field_id: int = None, limit: int = 20, db: Session = Depen
     ]
 
 
-@router.post("/health-images", status_code=201)
+@router.post("/health-images", status_code=201, dependencies=[Depends(verify_api_key)])
 def upload_health_image(
     field_id: int,
     image_url: str,
