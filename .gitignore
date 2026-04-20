@@ -1,4 +1,4 @@
-﻿# ========================
+# ========================
 # Dependencies
 # ========================
 node_modules/
@@ -127,3 +127,12 @@ app/ml/models/
 *.temp
 *.cache
 .cache/
+
+# ========================
+# SFDAP Specific
+# ========================
+.ruff_cache/
+alembic/versions/*.py
+*_old.html
+*_backup.*
+
