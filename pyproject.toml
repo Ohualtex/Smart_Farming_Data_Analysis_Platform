@@ -1,0 +1,62 @@
+# ============================================================
+# SFDAP — Proje Konfigürasyonu
+# ============================================================
+
+[project]
+name = "sfdap"
+version = "1.0.0"
+description = "Akıllı Tarım Veri Analizi Platformu"
+requires-python = ">=3.12"
+
+# ──── pytest konfigürasyonu ────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+# ──── coverage konfigürasyonu ──────────────────────────────
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "app/__pycache__/*",
+    "app/ml/models/*",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "pass",
+]
+
+# ──── ruff linter konfigürasyonu ───────────────────────────
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort (import sıralaması)
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # satır uzunluğu (line-length ile yönetiliyor)
+    "B008",   # Depends() function call in argument defaults (FastAPI pattern)
+    "N805",   # first argument of a method should be named 'self' (Pydantic validators)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011", "SIM"]   # test dosyalarında assert True/False ve basit yapılar OK
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
