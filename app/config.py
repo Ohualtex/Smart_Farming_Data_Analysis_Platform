@@ -1,6 +1,5 @@
-from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
-from typing import Optional
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -14,9 +13,8 @@ class Settings(BaseSettings):
     API_VERSION: str = "1.0.0"
     API_KEY: str = "dev-api-key"
     SECRET_KEY: str = "dev-secret-key"
-    OPENWEATHERMAP_API_KEY: Optional[str] = None
+    OPENWEATHERMAP_API_KEY: str | None = None
     MODEL_PATH: str = "app/ml/models/"
 
 
 settings = Settings()
-

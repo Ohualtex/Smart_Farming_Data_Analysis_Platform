@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.config import settings
 from app.database import init_db
-from app.routers import health, sensors, weather, irrigation, plants
+from app.routers import health, irrigation, plants, sensors, weather
 
 
 # Lifespan event handler (on_event yerine modern yaklaşım)
@@ -58,4 +60,3 @@ def root():
         "docs": "/docs",
         "version": settings.API_VERSION,
     }
-

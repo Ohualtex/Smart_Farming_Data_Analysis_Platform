@@ -1,18 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+
 from app.database import get_db
-from app.models.models import Sensor, SoilMoistureReading
-from app.schemas.schemas import (
-    SensorCreate, SensorResponse,
-    SensorReadingCreate, SensorReadingResponse
-)
 from app.middleware.auth import verify_api_key
+from app.models.models import Sensor, SoilMoistureReading
+from app.schemas.schemas import SensorCreate, SensorReadingCreate, SensorReadingResponse, SensorResponse
 
 router = APIRouter(prefix="/api/sensors", tags=["Sensor Verileri"])
 
 
-@router.get("/", response_model=List[SensorResponse])
+@router.get("/", response_model=list[SensorResponse])
 def get_all_sensors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return db.query(Sensor).offset(skip).limit(limit).all()
 
@@ -54,8 +51,12 @@ def create_reading(reading: SensorReadingCreate, db: Session = Depends(get_db)):
     return db_reading
 
 
-@router.get("/{sensor_id}/readings", response_model=List[SensorReadingResponse])
+@router.get("/{sensor_id}/readings", response_model=list[SensorReadingResponse])
 def get_sensor_readings(sensor_id: int, limit: int = 50, db: Session = Depends(get_db)):
-    return db.query(SoilMoistureReading).filter(
-        SoilMoistureReading.sensor_id == sensor_id
-    ).order_by(SoilMoistureReading.reading_timestamp.desc()).limit(limit).all()
+    return (
+        db.query(SoilMoistureReading)
+        .filter(SoilMoistureReading.sensor_id == sensor_id)
+        .order_by(SoilMoistureReading.reading_timestamp.desc())
+        .limit(limit)
+        .all()
+    )

@@ -4,8 +4,6 @@ Health Endpoint Testleri
 GET /api/health
 """
 
-import pytest
-
 
 def test_health_check_returns_200(client):
     """Health endpoint 200 döndürmeli."""

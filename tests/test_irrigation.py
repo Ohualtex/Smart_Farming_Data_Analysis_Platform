@@ -6,9 +6,6 @@ GET  /api/irrigation/schedules
 POST /api/irrigation/schedules
 """
 
-import pytest
-
-
 SAMPLE_PREDICTION_REQUEST = {
     "soil_moisture": 35.0,
     "soil_temperature": 18.5,

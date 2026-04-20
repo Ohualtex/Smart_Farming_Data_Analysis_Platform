@@ -1,1 +1,1 @@
-﻿# SFDAP API
+# SFDAP API

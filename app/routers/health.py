@@ -1,12 +1,8 @@
-﻿from fastapi import APIRouter
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/api", tags=["Health Check"])
 
 
 @router.get("/health")
 def health_check():
-    return {
-        "status": "healthy",
-        "service": "SFDAP API",
-        "version": "1.0.0"
-    }
+    return {"status": "healthy", "service": "SFDAP API", "version": "1.0.0"}

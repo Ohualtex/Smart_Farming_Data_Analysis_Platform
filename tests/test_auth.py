@@ -4,8 +4,6 @@ API Key Authentication Testleri
 API Key doğrulama mekanizması test edilir.
 """
 
-import pytest
-
 
 # ───── API KEY OLMADAN ERİŞİM ────────────────────────────────────────────────
 class TestUnauthorizedAccess:
@@ -15,9 +13,7 @@ class TestUnauthorizedAccess:
         original_headers = client.headers.copy()
         client.headers.pop("X-API-Key", None)
 
-        response = client.post("/api/sensors/", json={
-            "field_id": 1, "sensor_type": "test", "serial_number": "T-001"
-        })
+        response = client.post("/api/sensors/", json={"field_id": 1, "sensor_type": "test", "serial_number": "T-001"})
         assert response.status_code == 401
 
         # Header'ı geri koy
@@ -59,16 +55,12 @@ class TestForbiddenAccess:
 class TestAuthorizedAccess:
     def test_post_sensor_with_valid_key_returns_201(self, client):
         """Doğru API key ile sensör ekleme çalışmalı."""
-        response = client.post("/api/sensors/", json={
-            "field_id": 1, "sensor_type": "test", "serial_number": "T-004"
-        })
+        response = client.post("/api/sensors/", json={"field_id": 1, "sensor_type": "test", "serial_number": "T-004"})
         assert response.status_code == 201
 
     def test_post_weather_with_valid_key_returns_201(self, client):
         """Doğru API key ile hava verisi ekleme çalışmalı."""
-        response = client.post("/api/weather/", json={
-            "farm_id": 1, "temperature_c": 25.0, "humidity_percent": 55.0
-        })
+        response = client.post("/api/weather/", json={"farm_id": 1, "temperature_c": 25.0, "humidity_percent": 55.0})
         assert response.status_code == 201
 
 
@@ -109,10 +101,10 @@ class TestPublicEndpoints:
         original_headers = client.headers.copy()
         client.headers.pop("X-API-Key", None)
 
-        response = client.post("/api/irrigation/predict", json={
-            "soil_moisture": 35, "soil_temperature": 22,
-            "humidity": 45, "temperature": 28, "precipitation": 0
-        })
+        response = client.post(
+            "/api/irrigation/predict",
+            json={"soil_moisture": 35, "soil_temperature": 22, "humidity": 45, "temperature": 28, "precipitation": 0},
+        )
         assert response.status_code == 200
 
         client.headers.update(original_headers)

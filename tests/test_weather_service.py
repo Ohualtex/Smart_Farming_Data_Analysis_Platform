@@ -6,6 +6,7 @@ ve enterpolasyon fonksiyonları test edilir.
 """
 
 import pytest
+
 from app.services.weather_service import WeatherService
 
 
@@ -207,12 +208,15 @@ class TestWeatherStatsEndpoint:
         """Veri olan çiftlik için istatistikler dönmeli."""
         # Önce veri ekle
         for temp in [20.0, 25.0, 30.0]:
-            client.post("/api/weather/", json={
-                "farm_id": 1,
-                "temperature_c": temp,
-                "humidity_percent": 55.0,
-                "precipitation_mm": 2.0,
-            })
+            client.post(
+                "/api/weather/",
+                json={
+                    "farm_id": 1,
+                    "temperature_c": temp,
+                    "humidity_percent": 55.0,
+                    "precipitation_mm": 2.0,
+                },
+            )
         response = client.get("/api/weather/stats/1?days=7")
         body = response.json()
         assert body["record_count"] == 3
