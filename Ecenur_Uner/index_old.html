@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SFDAP — Akıllı Tarım Veri Paneli</title>
+    <meta name="description" content="Akıllı Tarım Veri Analizi Platformu - Toprak sensörleri, hava durumu ve ML tabanlı sulama optimizasyonu dashboard'u">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #16a34a;
+            --primary-light: #22c55e;
+            --primary-dark: #15803d;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-2: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* HEADER */
+        header {
+            background: linear-gradient(135deg, #0f2d1a 0%, #1a4a2e 100%);
+            border-bottom: 1px solid #1e4d2e;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .logo h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .logo p {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(22, 163, 74, 0.15);
+            border: 1px solid rgba(22, 163, 74, 0.3);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--primary-light);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--primary-light);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        #api-status {
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-muted);
+        }
+
+        /* MAIN */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        /* FILTERS BAR */
+        .filters-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 16px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filters-bar label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-group select,
+        .filter-group input[type="date"] {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--text);
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .filter-group select:focus,
+        .filter-group input[type="date"]:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .filter-apply-btn {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .filter-apply-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* STAT CARDS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(22, 163, 74, 0.1);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .stat-icon.green  { background: rgba(22,163,74,0.15); }
+        .stat-icon.blue   { background: rgba(59,130,246,0.15); }
+        .stat-icon.yellow { background: rgba(245,158,11,0.15); }
+        .stat-icon.red    { background: rgba(239,68,68,0.15); }
+        .stat-icon.purple { background: rgba(168,85,247,0.15); }
+
+        .stat-info h3 { font-size: 22px; font-weight: 700; }
+        .stat-info p  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .stat-info small { font-size: 11px; margin-top: 4px; display: block; }
+        .up   { color: var(--primary-light); }
+        .down { color: var(--danger); }
+
+        /* CHARTS GRID */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .chart-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .chart-title span { font-size: 18px; }
+
+        .refresh-btn {
+            background: rgba(22,163,74,0.1);
+            border: 1px solid rgba(22,163,74,0.2);
+            color: var(--primary-light);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(22,163,74,0.2);
+        }
+
+        canvas { max-height: 280px; }
+
+        /* IRRIGATION SECTION */
+        .irrigation-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+
+        .input-group label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .input-group input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .predict-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border: none;
+            color: white;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .predict-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .prediction-result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .prediction-result.show { display: block; }
+        .result-needed   { border-color: var(--info); }
+        .result-ok       { border-color: var(--primary); }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .result-icon { font-size: 32px; }
+
+        .result-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .result-detail {
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .result-detail .val {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-light);
+        }
+
+        .result-detail .lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* SCHEDULE TABLE */
+        .schedule-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 16px;
+        }
+
+        .schedule-table th {
+            background: var(--bg);
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .schedule-table th:first-child { border-radius: 8px 0 0 0; }
+        .schedule-table th:last-child { border-radius: 0 8px 0 0; }
+
+        .schedule-table td {
+            padding: 12px 16px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+            transition: background 0.15s;
+        }
+
+        .schedule-table tr:hover td {
+            background: rgba(22, 163, 74, 0.04);
+        }
+
+        .schedule-table .status-badge-cell {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .status-pending { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .status-completed { background: rgba(22,163,74,0.15); color: #22c55e; }
+        .status-model { background: rgba(59,130,246,0.15); color: #3b82f6; }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .empty-state span { font-size: 32px; display: block; margin-bottom: 8px; }
+
+        /* FOOTER */
+        footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* LOADING */
+        .loading { color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; }
+
+        @media (max-width: 768px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            header { padding: 12px 16px; }
+            main { padding: 16px; }
+            .filters-bar { flex-direction: column; align-items: stretch; }
+            .result-details { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">
+        <div class="logo-icon">🌾</div>
+        <div>
+            <h1>SFDAP Dashboard</h1>
+            <p>Akıllı Tarım Veri Analizi Platformu</p>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            Canlı İzleme
+        </div>
+        <div id="api-status">API: Bağlanıyor...</div>
+    </div>
+</header>
+
+<main>
+    <!-- FILTERS -->
+    <div class="filters-bar" id="filters-bar">
+        <div class="filter-group">
+            <label>Sensör Seçimi</label>
+            <select id="sensor-select">
+                <option value="all">Tüm Sensörler</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Başlangıç Tarihi</label>
+            <input type="date" id="date-start">
+        </div>
+        <div class="filter-group">
+            <label>Bitiş Tarihi</label>
+            <input type="date" id="date-end">
+        </div>
+        <div class="filter-group">
+            <label>Veri Limiti</label>
+            <select id="data-limit">
+                <option value="8">Son 8 Kayıt</option>
+                <option value="24" selected>Son 24 Kayıt</option>
+                <option value="48">Son 48 Kayıt</option>
+                <option value="100">Son 100 Kayıt</option>
+            </select>
+        </div>
+        <button class="filter-apply-btn" onclick="applyFilters()">🔍 Filtrele</button>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon green">💧</div>
+            <div class="stat-info">
+                <h3 id="stat-moisture">--%</h3>
+                <p>Toprak Nemi</p>
+                <small class="up" id="stat-moisture-trend">↑ Son güncelleme bekleniyor</small>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow">🌡️</div>
+            <div class="stat-info">
+                <h3 id="stat-temp">--°C</h3>
+                <p>Hava Sıcaklığı</p>
+                <small class="up" id="stat-temp-trend">↑ Son güncelleme bekleniyor</small>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue">🌧️</div>
+            <div class="stat-info">
+                <h3 id="stat-humidity">--%</h3>
+                <p>Nem Oranı</p>
+                <small class="up" id="stat-humidity-trend">Son güncelleme bekleniyor</small>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red">⚠️</div>
+            <div class="stat-info">
+                <h3 id="stat-sensors">0</h3>
+                <p>Aktif Sensör</p>
+                <small class="up">Sistemde kayıtlı</small>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">🌧️</div>
+            <div class="stat-info">
+                <h3 id="stat-precip">-- mm</h3>
+                <p>Toplam Yağış</p>
+                <small class="up" id="stat-precip-trend">Son 24 saat</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title"><span>💧</span> Toprak Nem Oranı</div>
+                <button class="refresh-btn" onclick="loadSensorReadings()">↻ Yenile</button>
+            </div>
+            <canvas id="moistureChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title"><span>🌤️</span> Hava Durumu</div>
+                <button class="refresh-btn" onclick="loadWeatherData()">↻ Yenile</button>
+            </div>
+            <canvas id="weatherChart"></canvas>
+        </div>
+        <div class="chart-card full-width">
+            <div class="chart-header">
+                <div class="chart-title"><span>🌧️</span> Yağış Verileri (Bar Grafik)</div>
+                <button class="refresh-btn" onclick="loadWeatherData()">↻ Yenile</button>
+            </div>
+            <canvas id="precipChart"></canvas>
+        </div>
+    </div>
+
+    <!-- SULAMA TAHMİN -->
+    <div class="irrigation-section">
+        <div class="section-title"><span>🤖</span> Yapay Zeka — Sulama Tavsiyesi</div>
+        <div class="input-grid">
+            <div class="input-group">
+                <label>Toprak Nemi (%)</label>
+                <input type="number" id="inp-moisture" value="35" min="0" max="100" step="1">
+            </div>
+            <div class="input-group">
+                <label>Toprak Sıcaklığı (°C)</label>
+                <input type="number" id="inp-soil-temp" value="22" min="-10" max="60">
+            </div>
+            <div class="input-group">
+                <label>Nem (%)</label>
+                <input type="number" id="inp-humidity" value="45" min="0" max="100">
+            </div>
+            <div class="input-group">
+                <label>Hava Sıcaklığı (°C)</label>
+                <input type="number" id="inp-temp" value="28" min="-20" max="50">
+            </div>
+            <div class="input-group">
+                <label>Yağış (mm)</label>
+                <input type="number" id="inp-precip" value="0" min="0" max="200">
+            </div>
+        </div>
+        <button class="predict-btn" onclick="predictIrrigation()">🤖 Sulama Tavsiyesi Al</button>
+        <div class="prediction-result" id="prediction-result">
+            <div class="result-header">
+                <div class="result-icon" id="result-icon">💧</div>
+                <div>
+                    <h3 id="result-title" style="font-size:16px; font-weight:600;">--</h3>
+                    <p id="result-message" style="color:var(--text-muted); font-size:13px; margin-top:4px;">--</p>
+                </div>
+            </div>
+            <div class="result-details">
+                <div class="result-detail">
+                    <div class="val" id="result-water">-- L</div>
+                    <div class="lbl">Önerilen Su Miktarı</div>
+                </div>
+                <div class="result-detail">
+                    <div class="val" id="result-confidence">--%</div>
+                    <div class="lbl">Model Güveni</div>
+                </div>
+                <div class="result-detail">
+                    <div class="val" id="result-needed">--</div>
+                    <div class="lbl">Sulama Gerekli mi?</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SULAMA GEÇMİŞİ TABLOSU -->
+    <div class="schedule-section">
+        <div class="section-title"><span>📋</span> Sulama Geçmişi</div>
+        <table class="schedule-table" id="schedule-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tarla</th>
+                    <th>Tarih</th>
+                    <th>Su (L)</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+            <tbody id="schedule-tbody">
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <span>📋</span>
+                            Henüz sulama kaydı bulunmamaktadır
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<footer>
+    <p>🌾 SFDAP — Akıllı Tarım Veri Analizi Platformu | Ecenur Üner — Veri Görselleştirme Modülü</p>
+</footer>
+
+<script>
+    const API_BASE = 'http://localhost:8000';
+    let moistureChart = null;
+    let weatherChart = null;
+    let precipChart = null;
+
+    const CHART_DEFAULTS = {
+        plugins: { legend: { labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
+        scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
+        }
+    };
+
+    // ──── YARDIMCI FONKSİYONLAR ───────────────────────────────────────
+
+    function getDataLimit() {
+        return parseInt(document.getElementById('data-limit').value || '24');
+    }
+
+    function generateDemoData(count, base, variance) {
+        return Array.from({ length: count }, () =>
+            Math.round((base + (Math.random() - 0.5) * variance) * 10) / 10
+        );
+    }
+
+    function getTimeLabels(count) {
+        const labels = [];
+        const now = new Date();
+        for (let i = count - 1; i >= 0; i--) {
+            const d = new Date(now - i * 2 * 60 * 60 * 1000);
+            labels.push(d.getHours().toString().padStart(2,'0') + ':00');
+        }
+        return labels;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '--';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+               ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // ──── FİLTRELER ───────────────────────────────────────────────────
+
+    function applyFilters() {
+        loadSensorReadings();
+        loadWeatherData();
+        loadSchedules();
+    }
+
+    // ──── API BAĞLANTI KONTROLÜ ───────────────────────────────────────
+
+    async function checkApiStatus() {
+        try {
+            const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(3000) });
+            const data = await res.json();
+            const el = document.getElementById('api-status');
+            el.textContent = 'API: ✅ Bağlı';
+            el.style.color = '#22c55e';
+            el.style.borderColor = 'rgba(22,163,74,0.4)';
+        } catch {
+            const el = document.getElementById('api-status');
+            el.textContent = 'API: ⚠️ Demo Modu';
+            el.style.color = '#f59e0b';
+            el.style.borderColor = 'rgba(245,158,11,0.3)';
+        }
+    }
+
+    // ──── SENSÖR LİSTESİ ──────────────────────────────────────────────
+
+    async function loadSensorList() {
+        try {
+            const res = await fetch(`${API_BASE}/api/sensors/`, { signal: AbortSignal.timeout(3000) });
+            const sensors = await res.json();
+            const select = document.getElementById('sensor-select');
+
+            // Mevcut seçenekleri temizle (ilk "Tüm Sensörler" hariç)
+            while (select.options.length > 1) select.remove(1);
+
+            sensors.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `#${s.id} — ${s.sensor_type} (${s.serial_number})`;
+                select.appendChild(opt);
+            });
+
+            document.getElementById('stat-sensors').textContent = sensors.length;
+        } catch {
+            document.getElementById('stat-sensors').textContent = '0';
+        }
+    }
+
+    // ──── TOPRAK NEMİ GRAFİĞİ ────────────────────────────────────────
+
+    async function loadSensorReadings() {
+        const limit = getDataLimit();
+        const sensorId = document.getElementById('sensor-select').value;
+        let labels, data;
+
+        try {
+            const endpoint = sensorId === 'all'
+                ? `${API_BASE}/api/sensors/1/readings?limit=${limit}`
+                : `${API_BASE}/api/sensors/${sensorId}/readings?limit=${limit}`;
+
+            const res = await fetch(endpoint, { signal: AbortSignal.timeout(3000) });
+            const readings = await res.json();
+            if (readings.length > 0) {
+                readings.reverse();
+                labels = readings.map(r => r.reading_timestamp
+                    ? new Date(r.reading_timestamp).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})
+                    : '--');
+                data = readings.map(r => r.moisture_percent);
+                document.getElementById('stat-moisture').textContent = data[data.length-1] + '%';
+                document.getElementById('stat-moisture-trend').textContent = '↑ Canlı veri';
+                document.getElementById('stat-moisture-trend').className = 'up';
+            } else { throw new Error('no data'); }
+        } catch {
+            labels = getTimeLabels(limit);
+            data = generateDemoData(limit, 45, 20);
+            document.getElementById('stat-moisture').textContent = data[data.length-1] + '%';
+            document.getElementById('stat-moisture-trend').textContent = '↑ Demo verisi';
+        }
+
+        const ctx = document.getElementById('moistureChart').getContext('2d');
+        if (moistureChart) moistureChart.destroy();
+        moistureChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Toprak Nemi (%)',
+                    data,
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34,197,94,0.08)',
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#22c55e',
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                }]
+            },
+            options: {
+                ...CHART_DEFAULTS,
+                responsive: true,
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    ...CHART_DEFAULTS.scales,
+                    y: { ...CHART_DEFAULTS.scales.y, min: 0, max: 100 }
+                }
+            }
+        });
+    }
+
+    // ──── HAVA DURUMU GRAFİĞİ ─────────────────────────────────────────
+
+    async function loadWeatherData() {
+        const limit = getDataLimit();
+        let labels, tempData, humidData, precipData;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/weather/?limit=${limit}`, { signal: AbortSignal.timeout(3000) });
+            const weather = await res.json();
+            if (weather.length > 0) {
+                weather.reverse();
+                labels = weather.map(w => w.recorded_at
+                    ? new Date(w.recorded_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})
+                    : '--');
+                tempData = weather.map(w => w.temperature_c);
+                humidData = weather.map(w => w.humidity_percent);
+                precipData = weather.map(w => w.precipitation_mm || 0);
+
+                document.getElementById('stat-temp').textContent = tempData[tempData.length-1] + '°C';
+                document.getElementById('stat-humidity').textContent = humidData[humidData.length-1] + '%';
+                document.getElementById('stat-temp-trend').textContent = '↑ Canlı veri';
+                document.getElementById('stat-humidity-trend').textContent = 'Canlı veri';
+
+                const totalPrecip = precipData.reduce((a, b) => a + b, 0);
+                document.getElementById('stat-precip').textContent = totalPrecip.toFixed(1) + ' mm';
+            } else { throw new Error('no data'); }
+        } catch {
+            labels = getTimeLabels(limit);
+            tempData = generateDemoData(limit, 24, 6);
+            humidData = generateDemoData(limit, 55, 15);
+            precipData = generateDemoData(limit, 3, 6).map(v => Math.max(0, v));
+
+            document.getElementById('stat-temp').textContent = tempData[tempData.length-1] + '°C';
+            document.getElementById('stat-humidity').textContent = humidData[humidData.length-1] + '%';
+            document.getElementById('stat-temp-trend').textContent = '↑ Demo verisi';
+            document.getElementById('stat-humidity-trend').textContent = 'Demo verisi';
+            document.getElementById('stat-precip').textContent =
+                precipData.reduce((a, b) => a + b, 0).toFixed(1) + ' mm';
+            document.getElementById('stat-precip-trend').textContent = 'Demo verisi';
+        }
+
+        // Çizgi Grafik — Sıcaklık + Nem
+        const ctx = document.getElementById('weatherChart').getContext('2d');
+        if (weatherChart) weatherChart.destroy();
+        weatherChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Sıcaklık (°C)', data: tempData,
+                        borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.05)',
+                        borderWidth: 2.5, tension: 0.4, yAxisID: 'y',
+                        pointRadius: 3, pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Nem (%)', data: humidData,
+                        borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.05)',
+                        borderWidth: 2.5, tension: 0.4, yAxisID: 'y1',
+                        pointRadius: 3, pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: { ...CHART_DEFAULTS.plugins },
+                scales: {
+                    x: CHART_DEFAULTS.scales.x,
+                    y: { ...CHART_DEFAULTS.scales.y, position: 'left', title: { display: true, text: '°C', color: '#94a3b8' } },
+                    y1: { ...CHART_DEFAULTS.scales.y, position: 'right', title: { display: true, text: '%', color: '#94a3b8' }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+
+        // Bar Grafik — Yağış
+        const ctx2 = document.getElementById('precipChart').getContext('2d');
+        if (precipChart) precipChart.destroy();
+        precipChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Yağış (mm)',
+                    data: precipData,
+                    backgroundColor: precipData.map(v =>
+                        v > 10 ? 'rgba(59,130,246,0.7)' :
+                        v > 5 ? 'rgba(59,130,246,0.5)' :
+                        v > 0 ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.1)'
+                    ),
+                    borderColor: '#3b82f6',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { ...CHART_DEFAULTS.plugins },
+                scales: {
+                    x: CHART_DEFAULTS.scales.x,
+                    y: {
+                        ...CHART_DEFAULTS.scales.y,
+                        beginAtZero: true,
+                        title: { display: true, text: 'mm', color: '#94a3b8' }
+                    }
+                }
+            }
+        });
+    }
+
+    // ──── SULAMA GEÇMİŞİ ──────────────────────────────────────────────
+
+    async function loadSchedules() {
+        try {
+            const res = await fetch(`${API_BASE}/api/irrigation/schedules?limit=10`, { signal: AbortSignal.timeout(3000) });
+            const schedules = await res.json();
+            const tbody = document.getElementById('schedule-tbody');
+
+            if (schedules.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span>📋</span>Henüz sulama kaydı bulunmamaktadır</div></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = schedules.map(s => {
+                const statusClass = s.status === 'completed' ? 'status-completed' :
+                                   s.source === 'model' ? 'status-model' : 'status-pending';
+                const statusLabel = s.status === 'completed' ? '✅ Tamamlandı' :
+                                   s.status === 'pending' ? '⏳ Bekliyor' : s.status;
+                return `<tr>
+                    <td>#${s.id}</td>
+                    <td>Tarla ${s.field_id}</td>
+                    <td>${formatDate(s.scheduled_date)}</td>
+                    <td>${s.water_amount_liters ? s.water_amount_liters + ' L' : '-'}</td>
+                    <td><span class="schedule-table .status-badge-cell ${statusClass}">${statusLabel}</span></td>
+                </tr>`;
+            }).join('');
+        } catch {
+            // API kapalıysa demo veri
+            const tbody = document.getElementById('schedule-tbody');
+            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span>📋</span>API bağlantısı bekleniyor...</div></td></tr>`;
+        }
+    }
+
+    // ──── ML SULAMA TAHMİNİ ───────────────────────────────────────────
+
+    async function predictIrrigation() {
+        const payload = {
+            soil_moisture: parseFloat(document.getElementById('inp-moisture').value),
+            soil_temperature: parseFloat(document.getElementById('inp-soil-temp').value),
+            humidity: parseFloat(document.getElementById('inp-humidity').value),
+            temperature: parseFloat(document.getElementById('inp-temp').value),
+            precipitation: parseFloat(document.getElementById('inp-precip').value)
+        };
+
+        try {
+            const res = await fetch(`${API_BASE}/api/irrigation/predict`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(5000)
+            });
+            const result = await res.json();
+
+            const el = document.getElementById('prediction-result');
+            el.classList.add('show');
+            el.className = 'prediction-result show ' + (result.irrigation_needed ? 'result-needed' : 'result-ok');
+            document.getElementById('result-icon').textContent = result.irrigation_needed ? '💧' : '✅';
+            document.getElementById('result-title').textContent = result.irrigation_needed ? 'Sulama Öneriliyor' : 'Sulama Gerekmez';
+            document.getElementById('result-message').textContent = result.message;
+            document.getElementById('result-water').textContent = result.recommended_water_liters + ' L';
+            document.getElementById('result-confidence').textContent = Math.round(result.confidence * 100) + '%';
+            document.getElementById('result-needed').textContent = result.irrigation_needed ? '✅ Evet' : '❌ Hayır';
+        } catch {
+            alert('API bağlantısı kurulamadı. Sunucunun çalıştığından emin olun.');
+        }
+    }
+
+    // ──── SAYFA YÜKLEME ───────────────────────────────────────────────
+
+    // Varsayılan tarih aralığı: son 7 gün
+    (function setDefaultDates() {
+        const now = new Date();
+        const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+        document.getElementById('date-end').value = now.toISOString().split('T')[0];
+        document.getElementById('date-start').value = weekAgo.toISOString().split('T')[0];
+    })();
+
+    (async () => {
+        await checkApiStatus();
+        await loadSensorList();
+        await Promise.all([loadSensorReadings(), loadWeatherData(), loadSchedules()]);
+    })();
+
+    // Her 30 sn'de otomatik yenile
+    setInterval(() => {
+        loadSensorReadings();
+        loadWeatherData();
+        loadSchedules();
+    }, 30000);
+</script>
+</body>
+</html>

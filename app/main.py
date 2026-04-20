@@ -1,7 +1,9 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
@@ -80,5 +82,11 @@ def root():
     return {
         "message": "SFDAP - Akilli Tarim Veri Analizi Platformu API",
         "docs": "/docs",
+        "dashboard": "/dashboard",
         "version": settings.API_VERSION,
     }
+
+
+_dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Ecenur_Uner")
+if os.path.isdir(_dashboard_dir):
+    app.mount("/dashboard", StaticFiles(directory=_dashboard_dir, html=True), name="dashboard")
