@@ -2,10 +2,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import init_db
-from app.routers import health, irrigation, plants, sensors, weather
+from app.middleware.exceptions import register_exception_handlers
+from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
+from app.middleware.request_logger import RequestLoggerMiddleware
+from app.routers import fertilizer, health, irrigation, plants, sensors, weather
 
 
 # Lifespan event handler (on_event yerine modern yaklaşım)
@@ -35,22 +39,40 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS ayarlari
+# ─── MIDDLEWARE KONFİGÜRASYONU ──────────────────────────────────
+
+# Rate Limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+# Request Logger
+app.add_middleware(RequestLoggerMiddleware)
+
+# CORS ayarlari (güvenli: spesifik origin'ler)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:8000",
+        "http://localhost:3000",
+        "http://127.0.0.1:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ─── GLOBAL EXCEPTION HANDLER ───────────────────────────────────
 
-# Router'lari kaydet
+register_exception_handlers(app)
+
+# ─── ROUTER'LARI KAYDET ─────────────────────────────────────────
+
 app.include_router(health.router)
 app.include_router(sensors.router)
 app.include_router(weather.router)
 app.include_router(irrigation.router)
 app.include_router(plants.router)
+app.include_router(fertilizer.router)
 
 
 @app.get("/", tags=["Root"])

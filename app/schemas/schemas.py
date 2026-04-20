@@ -153,3 +153,44 @@ class IrrigationPredictionResponse(BaseModel):
     irrigation_needed: bool
     confidence: float
     message: str
+
+
+# ========== FERTILIZER (Gübreleme) ==========
+class FertilizerRecommendRequest(BaseModel):
+    crop_type: str
+    soil_nitrogen: float  # mg/kg
+    soil_phosphorus: float  # mg/kg
+    soil_potassium: float  # mg/kg
+    area_hectares: float
+
+
+class FertilizerRecommendResponse(BaseModel):
+    crop_type: str
+    crop_name_tr: str
+    area_hectares: float
+    soil_analysis: dict
+    deficit: dict
+    nitrogen_needed_kg: float
+    phosphorus_needed_kg: float
+    potassium_needed_kg: float
+    total_fertilizer_kg: float
+    recommendation: str
+
+
+class FertilizerScheduleRequest(BaseModel):
+    crop_type: str
+    planting_date: str  # YYYY-MM-DD
+    area_hectares: float
+    soil_nitrogen: float = 0.0
+    soil_phosphorus: float = 0.0
+    soil_potassium: float = 0.0
+
+
+class FertilizerScheduleResponse(BaseModel):
+    phase: str
+    timing: str
+    target_date: str
+    fertilizer_type: str
+    amount_kg_per_hectare: float
+    total_amount_kg: float
+    notes: str
