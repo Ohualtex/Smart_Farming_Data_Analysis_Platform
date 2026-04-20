@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -60,7 +60,7 @@ class CropType(Base):
 class Sensor(Base):
     __tablename__ = "sensors"
     id = Column(Integer, primary_key=True, index=True)
-    field_id = Column(Integer, ForeignKey("fields.id"), nullable=False)
+    field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
     sensor_type = Column(String(50), nullable=False)
     serial_number = Column(String(100), unique=True)
     installation_date = Column(DateTime)
@@ -83,6 +83,8 @@ class SoilMoistureReading(Base):
     electrical_conductivity = Column(Float)
     sensor = relationship("Sensor", back_populates="readings")
 
+    __table_args__ = (Index("ix_readings_sensor_timestamp", "sensor_id", "reading_timestamp"),)
+
 
 class WeatherData(Base):
     __tablename__ = "weather_data"
@@ -96,11 +98,13 @@ class WeatherData(Base):
     solar_radiation = Column(Float)
     uv_index = Column(Float)
 
+    __table_args__ = (Index("ix_weather_farm_recorded", "farm_id", "recorded_at"),)
+
 
 class IrrigationSchedule(Base):
     __tablename__ = "irrigation_schedules"
     id = Column(Integer, primary_key=True, index=True)
-    field_id = Column(Integer, ForeignKey("fields.id"), nullable=False)
+    field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
     scheduled_date = Column(DateTime, nullable=False)
     duration_min = Column(Integer)
     water_amount_liters = Column(Float)
