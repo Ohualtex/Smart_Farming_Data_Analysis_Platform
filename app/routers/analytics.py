@@ -83,6 +83,7 @@ def get_analytics_summary(
                 "farm_id": farm.id,
                 "farm_name": farm.name,
                 "city": farm.city,
+                "region": farm.region,
                 "temperature": {
                     "avg": round(sum(temps) / len(temps), 1) if temps else None,
                     "min": round(min(temps), 1) if temps else None,
@@ -130,6 +131,7 @@ def get_analytics_summary(
             "farm_id": farm.id,
             "farm_name": farm.name,
             "city": farm.city,
+            "region": farm.region,
             "days": [],
         }
 

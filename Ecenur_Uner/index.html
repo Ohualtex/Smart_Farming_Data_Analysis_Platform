@@ -648,24 +648,41 @@ function renderSensorTypeChart(dist) {
 
 function renderFarmTempChart(comparison) {
     if (!comparison.length) return;
-    const labels = comparison.map(f => f.city || f.farm_name);
+    // Bölge bazlı gruplama (81 il → 7 bölge)
+    const regionMap = {};
+    comparison.forEach(f => {
+        const region = f.region || 'Diğer';
+        if (!regionMap[region]) regionMap[region] = { temps: [], hums: [], precips: [], count: 0 };
+        regionMap[region].temps.push(f.temperature.avg);
+        regionMap[region].hums.push(f.humidity?.avg || 0);
+        regionMap[region].count++;
+    });
+    const regions = Object.keys(regionMap);
+    const avgByRegion = regions.map(r => {
+        const t = regionMap[r].temps;
+        return { region: r, avg: +(t.reduce((a,b) => a+b, 0) / t.length).toFixed(1),
+            min: +Math.min(...t).toFixed(1), max: +Math.max(...t).toFixed(1), count: regionMap[r].count };
+    });
+    avgByRegion.sort((a, b) => b.avg - a.avg);
+    const labels = avgByRegion.map(r => `${r.region} (${r.count})`);
     if (charts.farmTemp) charts.farmTemp.destroy();
     charts.farmTemp = new Chart(document.getElementById('farmTempChart'), {
         type: 'bar',
         data: {
             labels,
             datasets: [
-                { label: 'Min °C', data: comparison.map(f => f.temperature.min), backgroundColor: analyticsColors.blue + '99' },
-                { label: 'Ort °C', data: comparison.map(f => f.temperature.avg), backgroundColor: analyticsColors.amber + '99' },
-                { label: 'Max °C', data: comparison.map(f => f.temperature.max), backgroundColor: analyticsColors.red + '99' },
+                { label: 'Min °C', data: avgByRegion.map(r => r.min), backgroundColor: analyticsColors.blue + '99' },
+                { label: 'Ort °C', data: avgByRegion.map(r => r.avg), backgroundColor: analyticsColors.amber + '99' },
+                { label: 'Max °C', data: avgByRegion.map(r => r.max), backgroundColor: analyticsColors.red + '99' },
             ]
         },
         options: {
-            responsive: true,
-            plugins: { legend: { labels: { color: '#9ca3af' } } },
+            responsive: true, indexAxis: 'y',
+            plugins: { legend: { labels: { color: '#9ca3af' } },
+                title: { display: true, text: 'Bölge Bazlı Sıcaklık Karşılaştırması', color: '#9ca3af', font: { size: 13 } } },
             scales: {
-                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
-                y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' }, title: { display: true, text: '°C', color: '#6b7280' } }
+                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' }, title: { display: true, text: '°C', color: '#6b7280' } },
+                y: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { color: '#1f2937' } }
             }
         }
     });
@@ -717,22 +734,45 @@ function renderNpkRadarChart(profiles) {
 
 function renderDailyTrendChart(trends) {
     if (!trends.length) return;
-    const farmColors = [analyticsColors.red, analyticsColors.blue, analyticsColors.green, analyticsColors.violet];
-    const datasets = trends.map((farm, i) => ({
-        label: farm.city || farm.farm_name,
-        data: farm.days.map(d => d.temp_avg),
-        borderColor: farmColors[i % farmColors.length],
-        backgroundColor: farmColors[i % farmColors.length] + '15',
-        fill: true, tension: 0.4, pointRadius: 2,
-    }));
-    const labels = trends[0].days.map(d => d.date.slice(5));
+    // Bölge bazlı gruplama: Her bölge için ortalama günlük sıcaklık
+    const regionTrends = {};
+    trends.forEach(farm => {
+        const region = farm.region || 'Diğer';
+        if (!regionTrends[region]) regionTrends[region] = { days: {} };
+        farm.days.forEach(d => {
+            if (!regionTrends[region].days[d.date]) regionTrends[region].days[d.date] = { temps: [], hums: [] };
+            if (d.temp_avg != null) regionTrends[region].days[d.date].temps.push(d.temp_avg);
+        });
+    });
+    const regionColors = [
+        analyticsColors.red, analyticsColors.blue, analyticsColors.green,
+        analyticsColors.violet, analyticsColors.amber, analyticsColors.cyan, analyticsColors.pink
+    ];
+    const regionNames = Object.keys(regionTrends);
+    // İlk bölgenin tarihlerini al
+    const allDates = Object.keys(regionTrends[regionNames[0]]?.days || {}).sort();
+    const datasets = regionNames.map((region, i) => {
+        const data = allDates.map(date => {
+            const day = regionTrends[region].days[date];
+            if (!day || !day.temps.length) return null;
+            return +(day.temps.reduce((a,b) => a+b, 0) / day.temps.length).toFixed(1);
+        });
+        return {
+            label: region, data,
+            borderColor: regionColors[i % regionColors.length],
+            backgroundColor: regionColors[i % regionColors.length] + '15',
+            fill: false, tension: 0.4, pointRadius: 3, borderWidth: 2,
+        };
+    });
+    const labels = allDates.map(d => d.slice(5));
     if (charts.dailyTrend) charts.dailyTrend.destroy();
     charts.dailyTrend = new Chart(document.getElementById('dailyTrendChart'), {
         type: 'line',
         data: { labels, datasets },
         options: {
             responsive: true,
-            plugins: { legend: { labels: { color: '#9ca3af' } } },
+            plugins: { legend: { labels: { color: '#9ca3af', font: { size: 11 } } },
+                title: { display: true, text: 'Bölge Bazlı Günlük Sıcaklık Trendi', color: '#9ca3af', font: { size: 13 } } },
             scales: {
                 x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
                 y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' }, title: { display: true, text: '°C', color: '#6b7280' } }

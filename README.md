@@ -52,14 +52,15 @@ API çalışınca şu adreslerde erişebilirsin:
 
 | Özellik | Açıklama |
 |:--------|:---------|
+| 🌍 Ulusal Ölçek | Tüm Türkiye (81 il) için 7500+ kayıtlık mega veritabanı |
 | 💧 Sulama Optimizasyonu | ML modeli ile toprak nemi ve hava verisi analizi |
-| 🌱 Akıllı Gübreleme | NPK analizi bazlı 8 bitki türü için öneri sistemi |
+| 🌱 Akıllı Gübreleme | NPK analizi ve toprak yapısı bazlı 15 bitki türü için öneri sistemi |
 | 🦠 Hastalık Tespiti | CNN modeli ile bitki sağlığı görüntü analizi |
 | 📊 Dashboard | Dark tema SPA, Chart.js grafikleri, responsive |
-| 📈 Analitik Panosu | 6 farklı grafik ile veri görselleştirme ve içgörü |
+| 📈 Analitik Panosu | Bölge bazlı gruplanmış (7 bölge) veri görselleştirme ve içgörü |
 | 🔐 API Güvenliği | API Key auth, rate limiting, request logging |
 | 🌤️ Veri Pipeline | Hava durumu veri temizleme ve dönüştürme |
-| 🗄️ Migration | Alembic veritabanı migration altyapısı |
+| 🗄️ Migration | Alembic veritabanı migration altyapısı (12 Tablo) |
 
 ---
 
@@ -180,7 +181,7 @@ Smart_Farming_Data_Analysis_Platform/
 │   ├── main.py              # FastAPI giriş noktası
 │   ├── config.py            # Ayar yönetimi (pydantic-settings)
 │   ├── database.py          # SQLAlchemy engine & session
-│   ├── models/              # ORM modelleri (9 tablo)
+│   ├── models/              # ORM modelleri (12 tablo)
 │   ├── schemas/             # Pydantic şemaları
 │   ├── routers/             # API endpoint'leri
 │   │   ├── sensors.py       # Sensör CRUD

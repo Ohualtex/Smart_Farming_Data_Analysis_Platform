@@ -196,3 +196,78 @@ class FertilizerScheduleResponse(BaseModel):
     amount_kg_per_hectare: float
     total_amount_kg: float
     notes: str
+
+
+# ========== SOIL ANALYSIS (Toprak Analizi) ==========
+class SoilAnalysisCreate(BaseModel):
+    field_id: int
+    ph_level: float | None = None
+    organic_matter_pct: float | None = None
+    nitrogen_mg_kg: float | None = None
+    phosphorus_mg_kg: float | None = None
+    potassium_mg_kg: float | None = None
+    calcium_mg_kg: float | None = None
+    magnesium_mg_kg: float | None = None
+    texture_class: str | None = None
+    notes: str | None = None
+
+
+class SoilAnalysisResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    field_id: int
+    analysis_date: datetime
+    ph_level: float | None
+    organic_matter_pct: float | None
+    nitrogen_mg_kg: float | None
+    phosphorus_mg_kg: float | None
+    potassium_mg_kg: float | None
+    texture_class: str | None
+
+
+# ========== CROP PLANTING (Ekim Takibi) ==========
+class CropPlantingCreate(BaseModel):
+    field_id: int
+    crop_id: int
+    planting_date: datetime
+    expected_harvest_date: datetime | None = None
+    season: str | None = None
+
+
+class CropPlantingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    field_id: int
+    crop_id: int
+    planting_date: datetime
+    expected_harvest_date: datetime | None
+    season: str | None
+    yield_kg_per_hectare: float | None
+    status: str
+
+
+# ========== FERTILIZER RECOMMENDATION LOG ==========
+class FertilizerRecommendationLogCreate(BaseModel):
+    field_id: int
+    crop_id: int
+    nitrogen_kg: float
+    phosphorus_kg: float
+    potassium_kg: float
+    total_fertilizer_kg: float
+    recommendation_text: str | None = None
+
+
+class FertilizerRecommendationLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    field_id: int
+    crop_id: int
+    recommended_at: datetime
+    nitrogen_kg: float
+    phosphorus_kg: float
+    potassium_kg: float
+    total_fertilizer_kg: float
+    is_applied: bool
