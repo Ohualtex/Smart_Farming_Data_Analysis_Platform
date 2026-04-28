@@ -142,7 +142,7 @@ Platformun temel veri erişim API'sini geliştir. API, toprak sensörü ve hava 
 
 ## 🟣 Cycle 5 — Test, İyileştirme ve Canlıya Çıkarma Hazırlığı
 
-📅 **11 – 30 Nisan 2026**
+📅 **11 – 28 Nisan 2026**
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
@@ -173,3 +173,41 @@ Dashboard UI'ını yenile: modern, dark-mode destekli tasarım ve responsive lay
 #### 📌 API Güvenlik Güçlendirme ve Dokümantasyon
 
 API güvenlik iyileştirmeleri yap: rate limiting ekleme (slowapi), request logging middleware (hangi endpoint'e kim, ne zaman erişti), input validation güçlendirme (Pydantic field validators) ve CORS ayarlarını daraltma (wildcard * yerine spesifik origin'ler). Hata yönetimini standardize et: global exception handler oluştur, tutarlı hata response formatı (error code, message, detail) belirle ve custom exception sınıfları (NotFound, Unauthorized, ValidationError) yaz. Kapsamlı API kullanım dokümantasyonu hazırla: her endpoint için örnek request/response, Postman Collection export'u ve Swagger/OpenAPI açıklamalarını zenginleştir.
+
+## 🟠 Cycle 6 -
+
+📅 **28 Nisan – 7 Mayıs 2026**
+
+### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
+
+#### 📌 Veri Görselleştirme Panosu Oluşturma
+
+Elde edilen içgörüleri ve model sonuçlarını görsel olarak temsil eden bir veri görselleştirme panosu oluştur. Panoyu kullanıcı dostu ve anlaşılır hale getir.
+
+### 👤 EMİRHAN GÜNAY
+
+#### 📌 Veri Temizleme ve Dönüştürme İşlemlerini İyileştirme
+
+Ouşturulan yapılan veri temizleme ve dönüştürme işlemlerini gözden geçir. Eksik veya hatalı verileri tespit etmek için ek kontroller ekle ve dönüşüm sürecini daha verimli hale getir.
+
+### 👤 AYŞE ESLEM ÇEKİCİ
+
+#### 📌 Makine Öğrenimi Modelini Değerlendirme ve Geliştirme
+
+Eğitilen makine öğrenimi modelinin performansını değerlendir. Modelin doğruluğunu artırmak için farklı algoritmalar dene veya mevcut algoritmanın parametrelerini optimize et. Sonuçları raporla.
+
+### 👤 ECENUR ÜNER
+
+#### 📌 Veri Hattı İzleme ve Uyarı Sistemini Entegre Etme
+
+Veri hattının performansını izlemek ve olası sorunları erken tespit etmek için bir izleme ve uyarı sistemi entegre et. Sistemde oluşabilecek hatalara karşı uyarı mekanizmalarını yapılandır.
+
+### 👤 MEHMET SAİT TAYŞİ
+
+#### 📌 Model Performansını İzleme ve Raporlama Altyapısı Kurma
+
+Modelin performansını düzenli olarak izlemek ve raporlamak için bir altyapı kur. Bu altyapı, modelin zaman içindeki performansını takip etmeyi ve iyileştirme alanlarını belirlemeyi sağlayacak.
+
+
+
+
