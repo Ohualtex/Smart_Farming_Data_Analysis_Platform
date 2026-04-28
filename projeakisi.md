@@ -174,6 +174,8 @@ Dashboard UI'ını yenile: modern, dark-mode destekli tasarım ve responsive lay
 
 API güvenlik iyileştirmeleri yap: rate limiting ekleme (slowapi), request logging middleware (hangi endpoint'e kim, ne zaman erişti), input validation güçlendirme (Pydantic field validators) ve CORS ayarlarını daraltma (wildcard * yerine spesifik origin'ler). Hata yönetimini standardize et: global exception handler oluştur, tutarlı hata response formatı (error code, message, detail) belirle ve custom exception sınıfları (NotFound, Unauthorized, ValidationError) yaz. Kapsamlı API kullanım dokümantasyonu hazırla: her endpoint için örnek request/response, Postman Collection export'u ve Swagger/OpenAPI açıklamalarını zenginleştir.
 
+---
+
 ## 🟠 Cycle 6 -
 
 📅 **28 Nisan – 7 Mayıs 2026**

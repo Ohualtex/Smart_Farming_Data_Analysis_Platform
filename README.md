@@ -3,16 +3,16 @@
 Çiftçilerin tarımsal verimliliğini en üst düzeye çıkarmak amacıyla toprak sensörleri, hava durumu verileri ve bitki sağlığı görüntülerini entegre bir şekilde analiz eden kapsamlı bir veri analizi ve karar destek platformudur.
 
 [![CI](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions)
-![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue)
+![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue)
 ![Coverage 91%](https://img.shields.io/badge/Coverage-91%25-brightgreen)
-![Tests 114](https://img.shields.io/badge/Tests-114%20passed-success)
+![Tests 124](https://img.shields.io/badge/Tests-124%20passed-success)
 
 ---
 
 ## 🚀 Hızlı Başlangıç
 
 ### Gereksinimler
-- Python 3.12+
+- Python 3.9+
 - Git
 
 ### Kurulum
@@ -56,6 +56,7 @@ API çalışınca şu adreslerde erişebilirsin:
 | 🌱 Akıllı Gübreleme | NPK analizi bazlı 8 bitki türü için öneri sistemi |
 | 🦠 Hastalık Tespiti | CNN modeli ile bitki sağlığı görüntü analizi |
 | 📊 Dashboard | Dark tema SPA, Chart.js grafikleri, responsive |
+| 📈 Analitik Panosu | 6 farklı grafik ile veri görselleştirme ve içgörü |
 | 🔐 API Güvenliği | API Key auth, rate limiting, request logging |
 | 🌤️ Veri Pipeline | Hava durumu veri temizleme ve dönüştürme |
 | 🗄️ Migration | Alembic veritabanı migration altyapısı |
@@ -123,6 +124,13 @@ curl -X POST http://localhost:8000/api/sensors/ \
 | GET | `/api/plants/health-images` | Bitki görselleri | ❌ |
 | POST | `/api/plants/health-images` | Görsel yükle | ✅ |
 
+### Analitik & Görselleştirme
+| Method | Endpoint | Açıklama | Auth |
+|:-------|:---------|:---------|:----:|
+| GET | `/api/analytics/summary` | Toplu istatistik ve içgörü verileri | ❌ |
+
+> `days` query parametresi ile süre filtrelenebilir (varsayılan: 30 gün). Sensör dağılımı, çiftlik bazlı hava karşılaştırması, sulama durumu, günlük trendler, NPK profilleri ve sensör okuma istatistiklerini döndürür.
+
 ---
 
 ## 🧪 Test ve Kalite
@@ -141,8 +149,8 @@ ruff format app/ tests/
 
 | Metrik | Değer |
 |:-------|:------|
-| Toplam Test | 114 |
-| Coverage | %91 |
+| Toplam Test | 124 |
+| Coverage | %91+ |
 | Linting | Ruff (All checks passed) |
 | CI/CD | GitHub Actions (Ruff + Pytest) |
 
@@ -180,6 +188,7 @@ Smart_Farming_Data_Analysis_Platform/
 │   │   ├── irrigation.py    # ML sulama tahmini
 │   │   ├── fertilizer.py    # NPK gübreleme önerisi
 │   │   ├── plants.py        # Bitki sağlığı
+│   │   ├── analytics.py     # Analitik & görselleştirme verileri
 │   │   └── health.py        # Health check
 │   ├── services/            # İş mantığı
 │   │   ├── weather_service.py    # Veri pipeline
@@ -196,8 +205,8 @@ Smart_Farming_Data_Analysis_Platform/
 │   ├── sfdap_schema.sql     # SQL şeması
 │   └── seed_data.py         # Demo veri scripti
 ├── Ecenur_Uner/
-│   └── index.html           # SPA Dashboard
-├── tests/                   # 114 test (9 dosya)
+│   └── index.html           # SPA Dashboard (6 sayfa + Analitik)
+├── tests/                   # 124 test (10 dosya)
 ├── .github/workflows/       # CI/CD pipeline
 ├── requirements.txt         # Production bağımlılıkları
 ├── requirements-dev.txt     # Development bağımlılıkları
@@ -211,9 +220,9 @@ Smart_Farming_Data_Analysis_Platform/
 
 | Üye | Görev Alanı |
 |:----|:-----------|
-| Miraç Duran | Proje yönetimi, teknoloji araştırması, integration testler |
-| Ayşe Eslem Çekici | UI/UX wireframe, gübreleme servisi |
-| Ecenur Üner | Dashboard, veri görselleştirme |
+| Miraç Duran | Proje yönetimi, analitik dashboard, CI/CD, integration testler |
+| Ayşe Eslem Çekici | UI/UX wireframe, gübreleme servisi, hava durumu pipeline |
+| Ecenur Üner | Dashboard SPA, veri görselleştirme |
 | Emirhan Günay | Veritabanı tasarımı, sensör entegrasyonu, seed data |
 | Mehmet Sait Tayşı | API geliştirme, güvenlik, rate limiting |
 
@@ -227,6 +236,7 @@ Smart_Farming_Data_Analysis_Platform/
 | Cycle 2 | 12 – 21 Mart | ✅ Tamamlandı |
 | Cycle 3 | 21 Mart – 2 Nisan | ✅ Tamamlandı |
 | Cycle 4 | 2 – 13 Nisan | ✅ Tamamlandı |
-| Cycle 5 | 13 – 30 Nisan | ✅ Tamamlandı |
+| Cycle 5 | 13 – 28 Nisan | ✅ Tamamlandı |
+| Cycle 6 | 28 Nisan – 7 Mayıs | 🔄 Devam Ediyor |
 
 Detaylı görev dağılımı için [projeakisi.md](projeakisi.md) dosyasına bakınız.

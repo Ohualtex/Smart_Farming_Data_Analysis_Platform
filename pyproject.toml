@@ -52,6 +52,7 @@ ignore = [
     "E501",   # satır uzunluğu (line-length ile yönetiliyor)
     "B008",   # Depends() function call in argument defaults (FastAPI pattern)
     "N805",   # first argument of a method should be named 'self' (Pydantic validators)
+    "UP017",  # datetime.UTC alias — Python 3.9 uyumluluğu için timezone.utc kullanılıyor
 ]
 
 [tool.ruff.lint.per-file-ignores]

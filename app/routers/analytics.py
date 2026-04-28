@@ -59,14 +59,8 @@ def get_analytics_summary(
     }
 
     # ─── SENSÖR TİPİ DAĞILIMI ────────────────────────────────────
-    sensor_types_raw = (
-        db.query(Sensor.sensor_type, func.count(Sensor.id))
-        .group_by(Sensor.sensor_type)
-        .all()
-    )
-    sensor_type_distribution = [
-        {"type": row[0], "count": row[1]} for row in sensor_types_raw
-    ]
+    sensor_types_raw = db.query(Sensor.sensor_type, func.count(Sensor.id)).group_by(Sensor.sensor_type).all()
+    sensor_type_distribution = [{"type": row[0], "count": row[1]} for row in sensor_types_raw]
 
     # ─── ÇİFTLİK BAZLI HAVA DURUMU KARŞILAŞTIRMASI ───────────────
     farms = db.query(Farm).all()
@@ -74,9 +68,7 @@ def get_analytics_summary(
 
     for farm in farms:
         weather_records = (
-            db.query(WeatherData)
-            .filter(WeatherData.farm_id == farm.id, WeatherData.recorded_at >= since)
-            .all()
+            db.query(WeatherData).filter(WeatherData.farm_id == farm.id, WeatherData.recorded_at >= since).all()
         )
 
         if not weather_records:
@@ -86,33 +78,31 @@ def get_analytics_summary(
         hums = [r.humidity_percent for r in weather_records if r.humidity_percent is not None]
         precips = [r.precipitation_mm for r in weather_records if r.precipitation_mm is not None]
 
-        farm_weather_comparison.append({
-            "farm_id": farm.id,
-            "farm_name": farm.name,
-            "city": farm.city,
-            "temperature": {
-                "avg": round(sum(temps) / len(temps), 1) if temps else None,
-                "min": round(min(temps), 1) if temps else None,
-                "max": round(max(temps), 1) if temps else None,
-            },
-            "humidity": {
-                "avg": round(sum(hums) / len(hums), 1) if hums else None,
-                "min": round(min(hums), 1) if hums else None,
-                "max": round(max(hums), 1) if hums else None,
-            },
-            "precipitation_total_mm": round(sum(precips), 1) if precips else 0,
-            "record_count": len(weather_records),
-        })
+        farm_weather_comparison.append(
+            {
+                "farm_id": farm.id,
+                "farm_name": farm.name,
+                "city": farm.city,
+                "temperature": {
+                    "avg": round(sum(temps) / len(temps), 1) if temps else None,
+                    "min": round(min(temps), 1) if temps else None,
+                    "max": round(max(temps), 1) if temps else None,
+                },
+                "humidity": {
+                    "avg": round(sum(hums) / len(hums), 1) if hums else None,
+                    "min": round(min(hums), 1) if hums else None,
+                    "max": round(max(hums), 1) if hums else None,
+                },
+                "precipitation_total_mm": round(sum(precips), 1) if precips else 0,
+                "record_count": len(weather_records),
+            }
+        )
 
     # ─── SULAMA DURUMU DAĞILIMI ───────────────────────────────────
     irrigation_status_raw = (
-        db.query(IrrigationSchedule.status, func.count(IrrigationSchedule.id))
-        .group_by(IrrigationSchedule.status)
-        .all()
+        db.query(IrrigationSchedule.status, func.count(IrrigationSchedule.id)).group_by(IrrigationSchedule.status).all()
     )
-    irrigation_status_distribution = [
-        {"status": row[0], "count": row[1]} for row in irrigation_status_raw
-    ]
+    irrigation_status_distribution = [{"status": row[0], "count": row[1]} for row in irrigation_status_raw]
 
     # ─── GÜNLÜK SICAKLIK TRENDİ (ÇİFTLİK BAZLI) ──────────────────
     daily_trends = []
@@ -148,20 +138,18 @@ def get_analytics_summary(
             temps = [r.temperature_c for r in day_records if r.temperature_c is not None]
             hums = [r.humidity_percent for r in day_records if r.humidity_percent is not None]
 
-            farm_trend["days"].append({
-                "date": day_key,
-                "temp_avg": round(sum(temps) / len(temps), 1) if temps else None,
-                "humidity_avg": round(sum(hums) / len(hums), 1) if hums else None,
-            })
+            farm_trend["days"].append(
+                {
+                    "date": day_key,
+                    "temp_avg": round(sum(temps) / len(temps), 1) if temps else None,
+                    "humidity_avg": round(sum(hums) / len(hums), 1) if hums else None,
+                }
+            )
 
         daily_trends.append(farm_trend)
 
     # ─── SENSÖR OKUMA İSTATİSTİKLERİ ──────────────────────────────
-    recent_readings = (
-        db.query(SoilMoistureReading)
-        .filter(SoilMoistureReading.reading_timestamp >= since)
-        .all()
-    )
+    recent_readings = db.query(SoilMoistureReading).filter(SoilMoistureReading.reading_timestamp >= since).all()
 
     moisture_values = [r.moisture_percent for r in recent_readings if r.moisture_percent is not None]
     soil_temps = [r.soil_temperature_c for r in recent_readings if r.soil_temperature_c is not None]

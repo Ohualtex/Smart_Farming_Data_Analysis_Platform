@@ -22,35 +22,47 @@ from app.models.models import (
 def _seed_demo_data(db):
     """Test için minimum demo veri oluşturur."""
     user = User(
-        name="Test User", email="test@sfdap.com",
-        password_hash="hashed_pw", role="farmer",
+        name="Test User",
+        email="test@sfdap.com",
+        password_hash="hashed_pw",
+        role="farmer",
     )
     db.add(user)
     db.flush()
 
     farm = Farm(
-        user_id=user.id, name="Test Çiftliği",
-        location_lat=37.0, location_lng=35.0,
-        area_hectares=50.0, city="Adana", region="Akdeniz",
+        user_id=user.id,
+        name="Test Çiftliği",
+        location_lat=37.0,
+        location_lng=35.0,
+        area_hectares=50.0,
+        city="Adana",
+        region="Akdeniz",
     )
     db.add(farm)
     db.flush()
 
     field = Field(
-        farm_id=farm.id, name="Test Tarlası",
-        area_hectares=20.0, soil_type="killi-tınlı",
+        farm_id=farm.id,
+        name="Test Tarlası",
+        area_hectares=20.0,
+        soil_type="killi-tınlı",
     )
     db.add(field)
     db.flush()
 
     # 2 farklı tipte sensör
     sensor1 = Sensor(
-        field_id=field.id, sensor_type="soil_moisture",
-        serial_number="TEST-SM-001", status="active",
+        field_id=field.id,
+        sensor_type="soil_moisture",
+        serial_number="TEST-SM-001",
+        status="active",
     )
     sensor2 = Sensor(
-        field_id=field.id, sensor_type="soil_temperature",
-        serial_number="TEST-ST-001", status="active",
+        field_id=field.id,
+        sensor_type="soil_temperature",
+        serial_number="TEST-ST-001",
+        status="active",
     )
     db.add_all([sensor1, sensor2])
     db.flush()
@@ -58,37 +70,43 @@ def _seed_demo_data(db):
     # Sensör okumaları
     now = datetime.now(timezone.utc)
     for i in range(10):
-        db.add(SoilMoistureReading(
-            sensor_id=sensor1.id,
-            reading_timestamp=now - timedelta(days=i),
-            moisture_percent=40.0 + i,
-            soil_temperature_c=20.0 + i * 0.5,
-        ))
+        db.add(
+            SoilMoistureReading(
+                sensor_id=sensor1.id,
+                reading_timestamp=now - timedelta(days=i),
+                moisture_percent=40.0 + i,
+                soil_temperature_c=20.0 + i * 0.5,
+            )
+        )
     db.flush()
 
     # Hava durumu kayıtları
     for i in range(10):
-        db.add(WeatherData(
-            farm_id=farm.id,
-            recorded_at=now - timedelta(days=i),
-            temperature_c=22.0 + i * 0.3,
-            humidity_percent=55.0 + i,
-            precipitation_mm=i * 0.5,
-            wind_speed_kmh=10.0 + i,
-        ))
+        db.add(
+            WeatherData(
+                farm_id=farm.id,
+                recorded_at=now - timedelta(days=i),
+                temperature_c=22.0 + i * 0.3,
+                humidity_percent=55.0 + i,
+                precipitation_mm=i * 0.5,
+                wind_speed_kmh=10.0 + i,
+            )
+        )
     db.flush()
 
     # Sulama programları
     statuses = ["completed", "completed", "pending", "cancelled"]
     for i, status in enumerate(statuses):
-        db.add(IrrigationSchedule(
-            field_id=field.id,
-            scheduled_date=now - timedelta(days=i * 3),
-            duration_min=60,
-            water_amount_liters=2000.0,
-            source="model",
-            status=status,
-        ))
+        db.add(
+            IrrigationSchedule(
+                field_id=field.id,
+                scheduled_date=now - timedelta(days=i * 3),
+                duration_min=60,
+                water_amount_liters=2000.0,
+                source="model",
+                status=status,
+            )
+        )
     db.flush()
     db.commit()
 
