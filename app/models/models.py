@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import relationship
@@ -14,7 +14,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), default="farmer")
     phone = Column(String(20))
-    created_at = Column(DateTime, default=datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     farms = relationship("Farm", back_populates="owner")
 
 
@@ -76,7 +76,7 @@ class SoilMoistureReading(Base):
     __tablename__ = "soil_moisture_readings"
     id = Column(Integer, primary_key=True, index=True)
     sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False)
-    reading_timestamp = Column(DateTime, default=datetime.now(UTC), index=True)
+    reading_timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     moisture_percent = Column(Float, nullable=False)
     depth_cm = Column(Float)
     soil_temperature_c = Column(Float)
@@ -90,7 +90,7 @@ class WeatherData(Base):
     __tablename__ = "weather_data"
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"))
-    recorded_at = Column(DateTime, default=datetime.now(UTC), index=True)
+    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     temperature_c = Column(Float)
     humidity_percent = Column(Float)
     precipitation_mm = Column(Float)
@@ -117,7 +117,7 @@ class PlantHealthImage(Base):
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"))
     image_url = Column(String(500))
-    captured_at = Column(DateTime, default=datetime.now(UTC))
+    captured_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     diagnosis = Column(String(200))
     confidence_score = Column(Float)
     severity = Column(String(20))

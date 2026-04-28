@@ -16,7 +16,7 @@ Kullanım:
 """
 
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import numpy as np
@@ -53,7 +53,7 @@ def seed_database():
             return
 
         rng = np.random.default_rng(42)
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
 
         # ─── 1. KULLANICILAR ─────────────────────────────────────────
         print("  👤 Kullanıcılar oluşturuluyor...")

@@ -11,7 +11,7 @@ from app.database import init_db
 from app.middleware.exceptions import register_exception_handlers
 from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 from app.middleware.request_logger import RequestLoggerMiddleware
-from app.routers import fertilizer, health, irrigation, plants, sensors, weather
+from app.routers import analytics, fertilizer, health, irrigation, plants, sensors, weather
 
 
 # Lifespan event handler (on_event yerine modern yaklaşım)
@@ -75,6 +75,7 @@ app.include_router(weather.router)
 app.include_router(irrigation.router)
 app.include_router(plants.router)
 app.include_router(fertilizer.router)
+app.include_router(analytics.router)
 
 
 @app.get("/", tags=["Root"])

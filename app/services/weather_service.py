@@ -7,7 +7,9 @@ eksik veri enterpolasyonu işlemleri.
 Ayşe Eslem Çekici — Cycle 4 Görevi
 """
 
-from datetime import UTC, datetime, timedelta
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import numpy as np
@@ -95,7 +97,7 @@ class WeatherService:
             "wind_speed_kmh": round((wind.get("speed", 0) * 3.6), 2),  # m/s → km/h
             "solar_radiation": self._estimate_solar_radiation(clouds.get("all", 50)),
             "uv_index": None,  # Ayrı API çağrısı gerekir
-            "recorded_at": datetime.now(UTC),
+            "recorded_at": datetime.now(timezone.utc),
         }
 
     def _estimate_solar_radiation(self, cloud_cover_percent: float) -> float:
@@ -116,7 +118,7 @@ class WeatherService:
             "wind_speed_kmh": round(rng.uniform(0, 40), 1),
             "solar_radiation": round(rng.uniform(200, 900), 1),
             "uv_index": round(rng.uniform(1, 10), 1),
-            "recorded_at": datetime.now(UTC),
+            "recorded_at": datetime.now(timezone.utc),
         }
 
     # ─── VERİ TEMİZLEME ─────────────────────────────────────────────────
@@ -226,7 +228,7 @@ class WeatherService:
             wind_speed_kmh=filled["wind_speed_kmh"],
             solar_radiation=filled.get("solar_radiation"),
             uv_index=filled.get("uv_index"),
-            recorded_at=filled.get("recorded_at", datetime.now(UTC)),
+            recorded_at=filled.get("recorded_at", datetime.now(timezone.utc)),
         )
 
         db.add(record)
@@ -238,7 +240,7 @@ class WeatherService:
         """
         Belirli bir çiftliğin son N günlük hava durumu istatistiklerini döndürür.
         """
-        since = datetime.now(UTC) - timedelta(days=days)
+        since = datetime.now(timezone.utc) - timedelta(days=days)
 
         records = (
             db.query(WeatherData).filter(WeatherData.farm_id == farm_id).filter(WeatherData.recorded_at >= since).all()

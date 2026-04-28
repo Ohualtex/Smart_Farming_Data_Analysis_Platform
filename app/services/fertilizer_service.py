@@ -9,6 +9,8 @@ Kural tabanlı model: Bitki ihtiyacı - topraktaki mevcut değerler = eklenmesi 
 Ayşe Eslem Çekici — Cycle 5 Görevi
 """
 
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 
 

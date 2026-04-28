@@ -8,6 +8,8 @@ Tüm API hataları standart bir yapıda döndürülür:
 Mehmet Sait Tayşi — Cycle 5 Görevi
 """
 
+from __future__ import annotations
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
