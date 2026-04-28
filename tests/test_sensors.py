@@ -9,9 +9,6 @@ POST /api/sensors/readings
 GET  /api/sensors/{id}/readings
 """
 
-import pytest
-
-
 # ───── Yardımcı veri ─────────────────────────────────────────────────────────
 SAMPLE_SENSOR = {
     "serial_number": "SENSOR-001",

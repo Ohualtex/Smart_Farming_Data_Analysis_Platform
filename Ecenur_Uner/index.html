@@ -3,1051 +3,626 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SFDAP — Akıllı Tarım Veri Paneli</title>
-    <meta name="description" content="Akıllı Tarım Veri Analizi Platformu - Toprak sensörleri, hava durumu ve ML tabanlı sulama optimizasyonu dashboard'u">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="description" content="SFDAP - Akıllı Tarım Veri Analizi Platformu Dashboard">
+    <title>SFDAP — Akıllı Tarım Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        :root {
-            --primary: #16a34a;
-            --primary-light: #22c55e;
-            --primary-dark: #15803d;
-            --bg: #0f172a;
-            --surface: #1e293b;
-            --surface-2: #334155;
-            --text: #f1f5f9;
-            --text-muted: #94a3b8;
-            --border: #334155;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-        }
-
-        /* HEADER */
-        header {
-            background: linear-gradient(135deg, #0f2d1a 0%, #1a4a2e 100%);
-            border-bottom: 1px solid #1e4d2e;
-            padding: 16px 32px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            backdrop-filter: blur(12px);
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-light));
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-        .logo h1 {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text);
-        }
-
-        .logo p {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 400;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            background: rgba(22, 163, 74, 0.15);
-            border: 1px solid rgba(22, 163, 74, 0.3);
-            border-radius: 20px;
-            font-size: 12px;
-            color: var(--primary-light);
-        }
-
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            background: var(--primary-light);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        #api-status {
-            font-size: 12px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--text-muted);
-        }
-
-        /* MAIN */
-        main {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 32px 24px;
-        }
-
-        /* FILTERS BAR */
-        .filters-bar {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 24px;
-            padding: 16px 20px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            flex-wrap: wrap;
-        }
-
-        .filters-bar label {
-            font-size: 12px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .filter-group select,
-        .filter-group input[type="date"] {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 8px 12px;
-            color: var(--text);
-            font-size: 13px;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-
-        .filter-group select:focus,
-        .filter-group input[type="date"]:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .filter-apply-btn {
-            align-self: flex-end;
-            background: linear-gradient(135deg, var(--primary), var(--primary-light));
-            border: none;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
-            transition: all 0.2s;
-        }
-
-        .filter-apply-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-
-        /* STAT CARDS */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-            margin-bottom: 32px;
-        }
-
-        .stat-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary);
-            box-shadow: 0 8px 24px rgba(22, 163, 74, 0.1);
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            flex-shrink: 0;
-        }
-
-        .stat-icon.green  { background: rgba(22,163,74,0.15); }
-        .stat-icon.blue   { background: rgba(59,130,246,0.15); }
-        .stat-icon.yellow { background: rgba(245,158,11,0.15); }
-        .stat-icon.red    { background: rgba(239,68,68,0.15); }
-        .stat-icon.purple { background: rgba(168,85,247,0.15); }
-
-        .stat-info h3 { font-size: 22px; font-weight: 700; }
-        .stat-info p  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-        .stat-info small { font-size: 11px; margin-top: 4px; display: block; }
-        .up   { color: var(--primary-light); }
-        .down { color: var(--danger); }
-
-        /* CHARTS GRID */
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
-            gap: 20px;
-            margin-bottom: 32px;
-        }
-
-        .chart-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 24px;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .chart-card:hover {
-            border-color: var(--primary);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        }
-
-        .chart-card.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .chart-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .chart-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 15px;
-            font-weight: 600;
-        }
-
-        .chart-title span { font-size: 18px; }
-
-        .refresh-btn {
-            background: rgba(22,163,74,0.1);
-            border: 1px solid rgba(22,163,74,0.2);
-            color: var(--primary-light);
-            padding: 6px 14px;
-            border-radius: 8px;
-            font-size: 12px;
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
-            transition: all 0.2s;
-        }
-
-        .refresh-btn:hover {
-            background: rgba(22,163,74,0.2);
-        }
-
-        canvas { max-height: 280px; }
-
-        /* IRRIGATION SECTION */
-        .irrigation-section {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 32px;
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .input-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        .input-group { display: flex; flex-direction: column; gap: 6px; }
-
-        .input-group label {
-            font-size: 12px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .input-group input {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 14px;
-            color: var(--text);
-            font-size: 14px;
-            font-family: 'Inter', sans-serif;
-            transition: border-color 0.2s;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .predict-btn {
-            background: linear-gradient(135deg, var(--primary), var(--primary-light));
-            border: none;
-            color: white;
-            padding: 12px 28px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
-            transition: all 0.2s;
-            width: 100%;
-        }
-
-        .predict-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-
-        .prediction-result {
-            margin-top: 20px;
-            padding: 20px;
-            border-radius: 12px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .prediction-result.show { display: block; }
-        .result-needed   { border-color: var(--info); }
-        .result-ok       { border-color: var(--primary); }
-
-        .result-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .result-icon { font-size: 32px; }
-
-        .result-details {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-top: 12px;
-        }
-
-        .result-detail {
-            background: var(--surface);
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
-        }
-
-        .result-detail .val {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--primary-light);
-        }
-
-        .result-detail .lbl {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        /* SCHEDULE TABLE */
-        .schedule-section {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 32px;
-        }
-
-        .schedule-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-top: 16px;
-        }
-
-        .schedule-table th {
-            background: var(--bg);
-            color: var(--text-muted);
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 12px 16px;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .schedule-table th:first-child { border-radius: 8px 0 0 0; }
-        .schedule-table th:last-child { border-radius: 0 8px 0 0; }
-
-        .schedule-table td {
-            padding: 12px 16px;
-            font-size: 13px;
-            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
-            transition: background 0.15s;
-        }
-
-        .schedule-table tr:hover td {
-            background: rgba(22, 163, 74, 0.04);
-        }
-
-        .schedule-table .status-badge-cell {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .status-pending { background: rgba(245,158,11,0.15); color: #f59e0b; }
-        .status-completed { background: rgba(22,163,74,0.15); color: #22c55e; }
-        .status-model { background: rgba(59,130,246,0.15); color: #3b82f6; }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-
-        .empty-state span { font-size: 32px; display: block; margin-bottom: 8px; }
-
-        /* FOOTER */
-        footer {
-            text-align: center;
-            padding: 24px;
-            color: var(--text-muted);
-            font-size: 12px;
-            border-top: 1px solid var(--border);
-        }
-
-        /* LOADING */
-        .loading { color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; }
-
-        @media (max-width: 768px) {
-            .charts-grid { grid-template-columns: 1fr; }
-            header { padding: 12px 16px; }
-            main { padding: 16px; }
-            .filters-bar { flex-direction: column; align-items: stretch; }
-            .result-details { grid-template-columns: 1fr; }
-        }
+/* ============================================================
+   SFDAP Dashboard — Design System
+   Ecenur Üner — Cycle 5 Görevi
+   ============================================================ */
+:root {
+    --primary: #10b981; --primary-hover: #059669; --primary-glow: rgba(16,185,129,.15);
+    --bg: #0a0f1a; --surface: #111827; --surface-2: #1f2937; --surface-3: #374151;
+    --border: #1f2937; --border-light: #374151;
+    --text: #f9fafb; --text-muted: #9ca3af; --text-dim: #6b7280;
+    --accent-blue: #3b82f6; --accent-amber: #f59e0b; --accent-red: #ef4444;
+    --accent-violet: #8b5cf6; --accent-cyan: #06b6d4;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,.3);
+    --transition: .2s cubic-bezier(.4,0,.2,1);
+    --font: 'Inter', -apple-system, sans-serif;
+    --sidebar-w: 260px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+a { color: var(--primary); text-decoration: none; }
+button { font-family: var(--font); cursor: pointer; border: none; }
+input, select { font-family: var(--font); }
+
+/* ─── LAYOUT ─────────────────────────────────────── */
+.app { display: flex; min-height: 100vh; }
+.sidebar {
+    width: var(--sidebar-w); background: rgba(17,24,39,.85); backdrop-filter: blur(20px);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;
+    transition: transform .3s ease;
+}
+.main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
+.main-content { padding: 28px 32px; max-width: 1400px; }
+
+/* ─── SIDEBAR ────────────────────────────────────── */
+.sidebar-brand { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+.sidebar-brand h1 { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.sidebar-brand span { color: var(--primary); }
+.sidebar-brand p { font-size: .75rem; color: var(--text-muted); margin-top: 4px; }
+.sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+.nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    border-radius: var(--radius-sm); color: var(--text-muted);
+    transition: all var(--transition); font-size: .9rem; font-weight: 500;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: var(--primary-glow); color: var(--primary); font-weight: 600; }
+.nav-item .icon { font-size: 1.15rem; width: 24px; text-align: center; }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); font-size: .75rem; color: var(--text-dim); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.status-dot.online { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
+.status-dot.offline { background: var(--accent-red); }
+
+/* ─── HEADER BAR ─────────────────────────────────── */
+.header {
+    padding: 16px 32px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); background: rgba(17,24,39,.5);
+    backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50;
+}
+.header-left h2 { font-size: 1.4rem; font-weight: 600; }
+.header-left p { font-size: .8rem; color: var(--text-muted); margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 16px; }
+.refresh-badge { font-size: .75rem; color: var(--text-dim); background: var(--surface-2); padding: 4px 12px; border-radius: 20px; }
+.hamburger { display: none; background: none; color: var(--text); font-size: 1.5rem; padding: 8px; }
+
+/* ─── CARDS ──────────────────────────────────────── */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 28px; }
+.card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; transition: all var(--transition);
+}
+.card:hover { border-color: var(--border-light); transform: translateY(-2px); box-shadow: var(--shadow); }
+.card-icon { font-size: 1.8rem; margin-bottom: 8px; }
+.card-value { font-size: 1.8rem; font-weight: 700; margin: 4px 0; }
+.card-label { font-size: .8rem; color: var(--text-muted); }
+.card-change { font-size: .75rem; margin-top: 6px; }
+.card-change.up { color: var(--primary); }
+.card-change.down { color: var(--accent-red); }
+
+/* ─── CHART CONTAINERS ───────────────────────────── */
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+.chart-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px;
+}
+.chart-box h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.chart-box canvas { max-height: 280px; }
+
+/* ─── TABLES ─────────────────────────────────────── */
+.table-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 28px; overflow-x: auto; }
+.table-box h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+th { text-align: left; padding: 10px 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: 500; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+tr:hover td { background: var(--surface-2); }
+.badge { padding: 3px 10px; border-radius: 20px; font-size: .75rem; font-weight: 500; }
+.badge.active { background: rgba(16,185,129,.15); color: var(--primary); }
+.badge.pending { background: rgba(245,158,11,.15); color: var(--accent-amber); }
+.badge.completed { background: rgba(59,130,246,.15); color: var(--accent-blue); }
+.badge.cancelled { background: rgba(239,68,68,.15); color: var(--accent-red); }
+
+/* ─── FORMS ──────────────────────────────────────── */
+.form-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 28px; }
+.form-box h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: .8rem; color: var(--text-muted); font-weight: 500; }
+.form-group input, .form-group select {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 14px; color: var(--text); font-size: .9rem; outline: none; transition: border var(--transition);
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+.btn-primary {
+    background: var(--primary); color: #fff; padding: 12px 28px; border-radius: var(--radius-sm);
+    font-weight: 600; font-size: .9rem; transition: all var(--transition); margin-top: 8px;
+}
+.btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+/* ─── RESULT CARD ────────────────────────────────── */
+.result-card {
+    background: linear-gradient(135deg, rgba(16,185,129,.1), rgba(59,130,246,.1));
+    border: 1px solid var(--primary); border-radius: var(--radius); padding: 24px;
+    margin-top: 20px; animation: fadeIn .4s ease;
+}
+.result-card h4 { color: var(--primary); margin-bottom: 12px; }
+.result-card .value { font-size: 2rem; font-weight: 700; }
+
+/* ─── LOADING / EMPTY ────────────────────────────── */
+.skeleton { background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+    background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius-sm); }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+/* ─── TOAST ──────────────────────────────────────── */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 20px; font-size: .85rem; min-width: 280px; animation: slideIn .3s ease;
+    display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow);
+}
+.toast.success { border-left: 3px solid var(--primary); }
+.toast.error { border-left: 3px solid var(--accent-red); }
+.toast.info { border-left: 3px solid var(--accent-blue); }
+
+/* ─── PAGE SECTIONS ──────────────────────────────── */
+.page { display: none; animation: fadeIn .3s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ─── RESPONSIVE ─────────────────────────────────── */
+@media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .main-content { padding: 16px; }
+    .hamburger { display: block; }
+    .charts-row { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .cards-grid { grid-template-columns: repeat(2, 1fr); }
+    .header { padding: 12px 16px; }
+}
+@media (max-width: 480px) {
+    .cards-grid { grid-template-columns: 1fr; }
+    html { font-size: 14px; }
+}
     </style>
 </head>
 <body>
+<div class="app">
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h1>🌾 <span>SFDAP</span></h1>
+            <p>Akıllı Tarım Veri Analizi</p>
+        </div>
+        <nav class="sidebar-nav">
+            <a class="nav-item active" href="#dashboard" onclick="navigate('dashboard')">
+                <span class="icon">📊</span> Dashboard
+            </a>
+            <a class="nav-item" href="#sensors" onclick="navigate('sensors')">
+                <span class="icon">📡</span> Sensörler
+            </a>
+            <a class="nav-item" href="#weather" onclick="navigate('weather')">
+                <span class="icon">🌤️</span> Hava Durumu
+            </a>
+            <a class="nav-item" href="#irrigation" onclick="navigate('irrigation')">
+                <span class="icon">💧</span> Sulama
+            </a>
+            <a class="nav-item" href="#fertilizer" onclick="navigate('fertilizer')">
+                <span class="icon">🌱</span> Gübreleme
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <span class="status-dot online" id="statusDot"></span>
+            <span id="statusText">API Bağlı</span>
+            <div style="margin-top:6px;" id="clockDisplay"></div>
+        </div>
+    </aside>
 
-<header>
-    <div class="logo">
-        <div class="logo-icon">🌾</div>
-        <div>
-            <h1>SFDAP Dashboard</h1>
-            <p>Akıllı Tarım Veri Analizi Platformu</p>
-        </div>
-    </div>
-    <div class="header-right">
-        <div class="status-badge">
-            <div class="status-dot"></div>
-            Canlı İzleme
-        </div>
-        <div id="api-status">API: Bağlanıyor...</div>
-    </div>
-</header>
-
-<main>
-    <!-- FILTERS -->
-    <div class="filters-bar" id="filters-bar">
-        <div class="filter-group">
-            <label>Sensör Seçimi</label>
-            <select id="sensor-select">
-                <option value="all">Tüm Sensörler</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Başlangıç Tarihi</label>
-            <input type="date" id="date-start">
-        </div>
-        <div class="filter-group">
-            <label>Bitiş Tarihi</label>
-            <input type="date" id="date-end">
-        </div>
-        <div class="filter-group">
-            <label>Veri Limiti</label>
-            <select id="data-limit">
-                <option value="8">Son 8 Kayıt</option>
-                <option value="24" selected>Son 24 Kayıt</option>
-                <option value="48">Son 48 Kayıt</option>
-                <option value="100">Son 100 Kayıt</option>
-            </select>
-        </div>
-        <button class="filter-apply-btn" onclick="applyFilters()">🔍 Filtrele</button>
-    </div>
-
-    <!-- STAT CARDS -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon green">💧</div>
-            <div class="stat-info">
-                <h3 id="stat-moisture">--%</h3>
-                <p>Toprak Nemi</p>
-                <small class="up" id="stat-moisture-trend">↑ Son güncelleme bekleniyor</small>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon yellow">🌡️</div>
-            <div class="stat-info">
-                <h3 id="stat-temp">--°C</h3>
-                <p>Hava Sıcaklığı</p>
-                <small class="up" id="stat-temp-trend">↑ Son güncelleme bekleniyor</small>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon blue">🌧️</div>
-            <div class="stat-info">
-                <h3 id="stat-humidity">--%</h3>
-                <p>Nem Oranı</p>
-                <small class="up" id="stat-humidity-trend">Son güncelleme bekleniyor</small>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon red">⚠️</div>
-            <div class="stat-info">
-                <h3 id="stat-sensors">0</h3>
-                <p>Aktif Sensör</p>
-                <small class="up">Sistemde kayıtlı</small>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon purple">🌧️</div>
-            <div class="stat-info">
-                <h3 id="stat-precip">-- mm</h3>
-                <p>Toplam Yağış</p>
-                <small class="up" id="stat-precip-trend">Son 24 saat</small>
-            </div>
-        </div>
-    </div>
-
-    <!-- CHARTS -->
-    <div class="charts-grid">
-        <div class="chart-card">
-            <div class="chart-header">
-                <div class="chart-title"><span>💧</span> Toprak Nem Oranı</div>
-                <button class="refresh-btn" onclick="loadSensorReadings()">↻ Yenile</button>
-            </div>
-            <canvas id="moistureChart"></canvas>
-        </div>
-        <div class="chart-card">
-            <div class="chart-header">
-                <div class="chart-title"><span>🌤️</span> Hava Durumu</div>
-                <button class="refresh-btn" onclick="loadWeatherData()">↻ Yenile</button>
-            </div>
-            <canvas id="weatherChart"></canvas>
-        </div>
-        <div class="chart-card full-width">
-            <div class="chart-header">
-                <div class="chart-title"><span>🌧️</span> Yağış Verileri (Bar Grafik)</div>
-                <button class="refresh-btn" onclick="loadWeatherData()">↻ Yenile</button>
-            </div>
-            <canvas id="precipChart"></canvas>
-        </div>
-    </div>
-
-    <!-- SULAMA TAHMİN -->
-    <div class="irrigation-section">
-        <div class="section-title"><span>🤖</span> Yapay Zeka — Sulama Tavsiyesi</div>
-        <div class="input-grid">
-            <div class="input-group">
-                <label>Toprak Nemi (%)</label>
-                <input type="number" id="inp-moisture" value="35" min="0" max="100" step="1">
-            </div>
-            <div class="input-group">
-                <label>Toprak Sıcaklığı (°C)</label>
-                <input type="number" id="inp-soil-temp" value="22" min="-10" max="60">
-            </div>
-            <div class="input-group">
-                <label>Nem (%)</label>
-                <input type="number" id="inp-humidity" value="45" min="0" max="100">
-            </div>
-            <div class="input-group">
-                <label>Hava Sıcaklığı (°C)</label>
-                <input type="number" id="inp-temp" value="28" min="-20" max="50">
-            </div>
-            <div class="input-group">
-                <label>Yağış (mm)</label>
-                <input type="number" id="inp-precip" value="0" min="0" max="200">
-            </div>
-        </div>
-        <button class="predict-btn" onclick="predictIrrigation()">🤖 Sulama Tavsiyesi Al</button>
-        <div class="prediction-result" id="prediction-result">
-            <div class="result-header">
-                <div class="result-icon" id="result-icon">💧</div>
-                <div>
-                    <h3 id="result-title" style="font-size:16px; font-weight:600;">--</h3>
-                    <p id="result-message" style="color:var(--text-muted); font-size:13px; margin-top:4px;">--</p>
+    <!-- ═══ MAIN ═══ -->
+    <div class="main">
+        <header class="header">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <div class="header-left">
+                    <h2 id="pageTitle">Dashboard</h2>
+                    <p id="pageSubtitle">Genel Bakış</p>
                 </div>
             </div>
-            <div class="result-details">
-                <div class="result-detail">
-                    <div class="val" id="result-water">-- L</div>
-                    <div class="lbl">Önerilen Su Miktarı</div>
-                </div>
-                <div class="result-detail">
-                    <div class="val" id="result-confidence">--%</div>
-                    <div class="lbl">Model Güveni</div>
-                </div>
-                <div class="result-detail">
-                    <div class="val" id="result-needed">--</div>
-                    <div class="lbl">Sulama Gerekli mi?</div>
-                </div>
+            <div class="header-right">
+                <span class="refresh-badge" id="refreshBadge">🔄 30s</span>
             </div>
-        </div>
-    </div>
+        </header>
 
-    <!-- SULAMA GEÇMİŞİ TABLOSU -->
-    <div class="schedule-section">
-        <div class="section-title"><span>📋</span> Sulama Geçmişi</div>
-        <table class="schedule-table" id="schedule-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Tarla</th>
-                    <th>Tarih</th>
-                    <th>Su (L)</th>
-                    <th>Durum</th>
-                </tr>
-            </thead>
-            <tbody id="schedule-tbody">
-                <tr>
-                    <td colspan="5">
-                        <div class="empty-state">
-                            <span>📋</span>
-                            Henüz sulama kaydı bulunmamaktadır
+        <div class="main-content">
+            <!-- ═══ DASHBOARD PAGE ═══ -->
+            <section class="page active" id="page-dashboard">
+                <div class="cards-grid" id="dashboardCards"></div>
+                <div class="charts-row">
+                    <div class="chart-box"><h3>💧 Toprak Nemi Trendi</h3><canvas id="moistureChart"></canvas></div>
+                    <div class="chart-box"><h3>🌡️ Sıcaklık & Nem</h3><canvas id="tempHumChart"></canvas></div>
+                </div>
+                <div class="chart-box"><h3>🌧️ Yağış (Son 30 Gün)</h3><canvas id="precipChart"></canvas></div>
+            </section>
+
+            <!-- ═══ SENSORS PAGE ═══ -->
+            <section class="page" id="page-sensors">
+                <div class="table-box">
+                    <h3>📡 Sensör Listesi</h3>
+                    <table><thead><tr><th>ID</th><th>Tip</th><th>Seri No</th><th>Durum</th></tr></thead>
+                    <tbody id="sensorsTable"></tbody></table>
+                </div>
+                <div class="charts-row">
+                    <div class="chart-box"><h3>📈 Sensör Okumaları</h3><canvas id="sensorDetailChart"></canvas></div>
+                    <div class="chart-box" id="sensorInfoBox"><h3>ℹ️ Sensör Detay</h3><div class="empty-state"><div class="icon">📡</div><p>Bir sensör seçin</p></div></div>
+                </div>
+            </section>
+
+            <!-- ═══ WEATHER PAGE ═══ -->
+            <section class="page" id="page-weather">
+                <div class="cards-grid" id="weatherCards"></div>
+                <div class="charts-row">
+                    <div class="chart-box"><h3>🌡️ Sıcaklık Trendi</h3><canvas id="weatherTempChart"></canvas></div>
+                    <div class="chart-box"><h3>💨 Rüzgar Hızı</h3><canvas id="weatherWindChart"></canvas></div>
+                </div>
+            </section>
+
+            <!-- ═══ IRRIGATION PAGE ═══ -->
+            <section class="page" id="page-irrigation">
+                <div class="form-box">
+                    <h3>💧 ML Sulama Tahmini</h3>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Toprak Nemi (%)</label><input type="number" id="irr_moisture" value="35" step="0.1"></div>
+                        <div class="form-group"><label>Toprak Sıcaklığı (°C)</label><input type="number" id="irr_soil_temp" value="22" step="0.1"></div>
+                        <div class="form-group"><label>Hava Nemi (%)</label><input type="number" id="irr_humidity" value="55" step="0.1"></div>
+                        <div class="form-group"><label>Hava Sıcaklığı (°C)</label><input type="number" id="irr_temp" value="28" step="0.1"></div>
+                        <div class="form-group"><label>Yağış (mm)</label><input type="number" id="irr_precip" value="0" step="0.1"></div>
+                    </div>
+                    <button class="btn-primary" onclick="predictIrrigation()" style="margin-top:16px;">🔮 Tahmin Et</button>
+                    <div id="irrigationResult"></div>
+                </div>
+                <div class="table-box">
+                    <h3>📋 Sulama Geçmişi</h3>
+                    <table><thead><tr><th>Tarla</th><th>Tarih</th><th>Süre</th><th>Su (L)</th><th>Durum</th></tr></thead>
+                    <tbody id="irrigationTable"></tbody></table>
+                </div>
+            </section>
+
+            <!-- ═══ FERTILIZER PAGE ═══ -->
+            <section class="page" id="page-fertilizer">
+                <div class="form-box">
+                    <h3>🌱 Gübreleme Önerisi Al</h3>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Bitki Türü</label>
+                            <select id="fert_crop"><option value="wheat">Buğday</option><option value="corn">Mısır</option><option value="tomato">Domates</option><option value="cotton">Pamuk</option><option value="sunflower">Ayçiçeği</option><option value="pepper">Biber</option><option value="potato">Patates</option><option value="rice">Pirinç</option></select>
                         </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+                        <div class="form-group"><label>Alan (Hektar)</label><input type="number" id="fert_area" value="5" step="0.1"></div>
+                        <div class="form-group"><label>Toprak Azot (mg/kg)</label><input type="number" id="fert_n" value="40" step="1"></div>
+                        <div class="form-group"><label>Toprak Fosfor (mg/kg)</label><input type="number" id="fert_p" value="20" step="1"></div>
+                        <div class="form-group"><label>Toprak Potasyum (mg/kg)</label><input type="number" id="fert_k" value="30" step="1"></div>
+                    </div>
+                    <button class="btn-primary" onclick="recommendFertilizer()" style="margin-top:16px;">🧪 Öneri Al</button>
+                    <div id="fertilizerResult"></div>
+                </div>
+                <div class="form-box">
+                    <h3>📅 Gübreleme Takvimi Oluştur</h3>
+                    <div class="form-grid">
+                        <div class="form-group"><label>Ekim Tarihi</label><input type="date" id="fert_date" value="2026-05-01"></div>
+                    </div>
+                    <button class="btn-primary" onclick="fertilizerSchedule()" style="margin-top:16px;">📅 Takvim Oluştur</button>
+                    <div id="scheduleResult"></div>
+                </div>
+            </section>
+        </div>
     </div>
-</main>
+</div>
 
-<footer>
-    <p>🌾 SFDAP — Akıllı Tarım Veri Analizi Platformu | Ecenur Üner — Veri Görselleştirme Modülü</p>
-</footer>
+<div class="toast-container" id="toastContainer"></div>
 
 <script>
-    const API_BASE = 'http://localhost:8000';
-    let moistureChart = null;
-    let weatherChart = null;
-    let precipChart = null;
+/* ============================================================
+   SFDAP Dashboard — JavaScript
+   ============================================================ */
+const API_BASE = window.location.origin;
+let refreshInterval = null;
+let charts = {};
+let apiOnline = false;
 
-    const CHART_DEFAULTS = {
-        plugins: { legend: { labels: { color: '#94a3b8', font: { family: 'Inter' } } } },
-        scales: {
-            x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
-            y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
-        }
+// ─── API SERVICE ──────────────────────────────────────────────
+async function api(endpoint, options = {}) {
+    try {
+        const res = await fetch(`${API_BASE}${endpoint}`, {
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': 'dev-api-key', ...options.headers },
+            ...options
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    } catch (e) {
+        console.warn(`API Error: ${endpoint}`, e);
+        return null;
+    }
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────
+const pageTitles = {
+    dashboard: ['Dashboard', 'Genel Bakış'],
+    sensors: ['Sensörler', 'Sensör Verileri ve Detayları'],
+    weather: ['Hava Durumu', 'Meteoroloji Verileri'],
+    irrigation: ['Sulama Optimizasyonu', 'ML Tahmin ve Geçmiş'],
+    fertilizer: ['Gübreleme', 'NPK Öneri Sistemi'],
+};
+
+function navigate(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`page-${page}`).classList.add('active');
+    document.querySelector(`[href="#${page}"]`).classList.add('active');
+    document.getElementById('pageTitle').textContent = pageTitles[page][0];
+    document.getElementById('pageSubtitle').textContent = pageTitles[page][1];
+    // Load page data
+    if (page === 'dashboard') loadDashboard();
+    else if (page === 'sensors') loadSensors();
+    else if (page === 'weather') loadWeather();
+    else if (page === 'irrigation') loadIrrigation();
+    // Close sidebar on mobile
+    document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+// ─── HASH ROUTER ──────────────────────────────────────────────
+window.addEventListener('hashchange', () => {
+    const page = location.hash.slice(1) || 'dashboard';
+    if (pageTitles[page]) navigate(page);
+});
+
+// ─── DASHBOARD ────────────────────────────────────────────────
+async function loadDashboard() {
+    const [sensors, weather, schedules] = await Promise.all([
+        api('/api/sensors/'), api('/api/weather/?limit=30'), api('/api/irrigation/schedules?limit=20')
+    ]);
+    apiOnline = sensors !== null;
+    updateStatus(apiOnline);
+    const s = sensors || []; const w = weather || []; const sc = schedules || [];
+    // Summary cards
+    const avgMoisture = w.length ? (w.reduce((a,d) => a + (d.humidity_percent||0), 0) / w.length).toFixed(1) : '—';
+    const avgTemp = w.length ? (w.reduce((a,d) => a + (d.temperature_c||0), 0) / w.length).toFixed(1) : '—';
+    const totalPrecip = w.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1);
+    document.getElementById('dashboardCards').innerHTML = `
+        <div class="card"><div class="card-icon">📡</div><div class="card-value">${s.length}</div><div class="card-label">Aktif Sensör</div></div>
+        <div class="card"><div class="card-icon">🌡️</div><div class="card-value">${avgTemp}°C</div><div class="card-label">Ort. Sıcaklık</div></div>
+        <div class="card"><div class="card-icon">💧</div><div class="card-value">%${avgMoisture}</div><div class="card-label">Ort. Nem</div></div>
+        <div class="card"><div class="card-icon">🌧️</div><div class="card-value">${totalPrecip}mm</div><div class="card-label">Toplam Yağış</div></div>
+        <div class="card"><div class="card-icon">📋</div><div class="card-value">${sc.length}</div><div class="card-label">Sulama Kaydı</div></div>
+    `;
+    // Charts
+    renderMoistureChart(w); renderTempHumChart(w); renderPrecipChart(w);
+}
+
+function renderMoistureChart(data) {
+    const sorted = [...data].reverse();
+    const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
+    const values = sorted.map(d => d.humidity_percent);
+    if (charts.moisture) charts.moisture.destroy();
+    charts.moisture = new Chart(document.getElementById('moistureChart'), {
+        type: 'line', data: { labels, datasets: [{ label: 'Nem %', data: values, borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .4, pointRadius: 2 }] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+    });
+}
+
+function renderTempHumChart(data) {
+    const sorted = [...data].reverse();
+    const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
+    if (charts.tempHum) charts.tempHum.destroy();
+    charts.tempHum = new Chart(document.getElementById('tempHumChart'), {
+        type: 'line', data: { labels, datasets: [
+            { label: 'Sıcaklık °C', data: sorted.map(d => d.temperature_c), borderColor: '#f59e0b', tension: .4, pointRadius: 2, yAxisID: 'y' },
+            { label: 'Nem %', data: sorted.map(d => d.humidity_percent), borderColor: '#3b82f6', tension: .4, pointRadius: 2, yAxisID: 'y1' },
+        ] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: {
+                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
+                y: { position: 'left', ticks: { color: '#f59e0b' }, grid: { color: '#1f2937' } },
+                y1: { position: 'right', ticks: { color: '#3b82f6' }, grid: { display: false } },
+            } }
+    });
+}
+
+function renderPrecipChart(data) {
+    const sorted = [...data].reverse();
+    const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
+    if (charts.precip) charts.precip.destroy();
+    charts.precip = new Chart(document.getElementById('precipChart'), {
+        type: 'bar', data: { labels, datasets: [{ label: 'Yağış mm', data: sorted.map(d => d.precipitation_mm),
+            backgroundColor: 'rgba(6,182,212,.5)', borderColor: '#06b6d4', borderWidth: 1 }] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+    });
+}
+
+// ─── SENSORS ──────────────────────────────────────────────────
+async function loadSensors() {
+    const sensors = await api('/api/sensors/') || [];
+    const tbody = document.getElementById('sensorsTable');
+    tbody.innerHTML = sensors.map(s => `
+        <tr style="cursor:pointer" onclick="loadSensorDetail(${s.id})">
+            <td>${s.id}</td><td>${s.sensor_type}</td><td>${s.serial_number}</td>
+            <td><span class="badge active">${s.status}</span></td>
+        </tr>
+    `).join('');
+}
+
+async function loadSensorDetail(sensorId) {
+    const readings = await api(`/api/sensors/${sensorId}/readings?limit=30`) || [];
+    const sorted = [...readings].reverse();
+    if (charts.sensorDetail) charts.sensorDetail.destroy();
+    charts.sensorDetail = new Chart(document.getElementById('sensorDetailChart'), {
+        type: 'line', data: { labels: sorted.map(r => new Date(r.reading_timestamp).toLocaleDateString('tr')),
+            datasets: [{ label: 'Nem %', data: sorted.map(r => r.moisture_percent), borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,.1)', fill: true, tension: .4 }] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+    });
+    document.getElementById('sensorInfoBox').innerHTML = `<h3>ℹ️ Sensör #${sensorId}</h3>
+        <p style="margin:12px 0;color:var(--text-muted)">Toplam ${readings.length} okuma</p>
+        ${readings.length ? `<p>Son okuma: <strong>%${readings[0].moisture_percent}</strong></p>
+        <p>Son sıcaklık: <strong>${readings[0].soil_temperature_c || '—'}°C</strong></p>` : '<p>Veri yok</p>'}`;
+}
+
+// ─── WEATHER ──────────────────────────────────────────────────
+async function loadWeather() {
+    const data = await api('/api/weather/?limit=30') || [];
+    const sorted = [...data].reverse();
+    // Cards
+    if (data.length) {
+        const temps = data.map(d => d.temperature_c).filter(Boolean);
+        const hums = data.map(d => d.humidity_percent).filter(Boolean);
+        document.getElementById('weatherCards').innerHTML = `
+            <div class="card"><div class="card-icon">🌡️</div><div class="card-value">${data[0].temperature_c?.toFixed(1) || '—'}°C</div><div class="card-label">Güncel Sıcaklık</div></div>
+            <div class="card"><div class="card-icon">💧</div><div class="card-value">%${data[0].humidity_percent?.toFixed(1) || '—'}</div><div class="card-label">Güncel Nem</div></div>
+            <div class="card"><div class="card-icon">📊</div><div class="card-value">${Math.min(...temps).toFixed(1)}—${Math.max(...temps).toFixed(1)}°C</div><div class="card-label">Sıcaklık Aralığı</div></div>
+            <div class="card"><div class="card-icon">🌧️</div><div class="card-value">${data.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1)}mm</div><div class="card-label">Toplam Yağış</div></div>
+        `;
+    }
+    // Temperature chart
+    const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
+    if (charts.weatherTemp) charts.weatherTemp.destroy();
+    charts.weatherTemp = new Chart(document.getElementById('weatherTempChart'), {
+        type: 'line', data: { labels, datasets: [{ label: 'Sıcaklık °C', data: sorted.map(d => d.temperature_c),
+            borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.1)', fill: true, tension: .4, pointRadius: 2 }] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+    });
+    // Wind chart
+    if (charts.weatherWind) charts.weatherWind.destroy();
+    charts.weatherWind = new Chart(document.getElementById('weatherWindChart'), {
+        type: 'bar', data: { labels, datasets: [{ label: 'Rüzgar km/h', data: sorted.map(d => d.wind_speed_kmh || 0),
+            backgroundColor: 'rgba(139,92,246,.4)', borderColor: '#8b5cf6', borderWidth: 1 }] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+    });
+}
+
+// ─── IRRIGATION ───────────────────────────────────────────────
+async function loadIrrigation() {
+    const schedules = await api('/api/irrigation/schedules?limit=20') || [];
+    document.getElementById('irrigationTable').innerHTML = schedules.map(s => `
+        <tr>
+            <td>Tarla #${s.field_id}</td><td>${new Date(s.scheduled_date).toLocaleDateString('tr')}</td>
+            <td>${s.duration_min || '—'} dk</td><td>${s.water_amount_liters?.toFixed(0) || '—'}</td>
+            <td><span class="badge ${s.status}">${s.status}</span></td>
+        </tr>
+    `).join('');
+}
+
+async function predictIrrigation() {
+    const body = {
+        soil_moisture: +document.getElementById('irr_moisture').value,
+        soil_temperature: +document.getElementById('irr_soil_temp').value,
+        humidity: +document.getElementById('irr_humidity').value,
+        temperature: +document.getElementById('irr_temp').value,
+        precipitation: +document.getElementById('irr_precip').value,
     };
-
-    // ──── YARDIMCI FONKSİYONLAR ───────────────────────────────────────
-
-    function getDataLimit() {
-        return parseInt(document.getElementById('data-limit').value || '24');
+    const result = await api('/api/irrigation/predict', { method: 'POST', body: JSON.stringify(body) });
+    if (result) {
+        const color = result.irrigation_needed ? 'var(--accent-amber)' : 'var(--primary)';
+        document.getElementById('irrigationResult').innerHTML = `
+            <div class="result-card">
+                <h4>${result.irrigation_needed ? '⚠️ Sulama Gerekli' : '✅ Sulama Gerekmiyor'}</h4>
+                <div class="value" style="color:${color}">${result.recommended_water_liters} L</div>
+                <p style="margin-top:8px;color:var(--text-muted)">${result.message}</p>
+                <p style="margin-top:4px;font-size:.8rem;color:var(--text-dim)">Güven: %${(result.confidence*100).toFixed(0)}</p>
+            </div>`;
+        showToast('Sulama tahmini tamamlandı', 'success');
+    } else {
+        showToast('Tahmin başarısız', 'error');
     }
+}
 
-    function generateDemoData(count, base, variance) {
-        return Array.from({ length: count }, () =>
-            Math.round((base + (Math.random() - 0.5) * variance) * 10) / 10
-        );
+// ─── FERTILIZER ───────────────────────────────────────────────
+async function recommendFertilizer() {
+    const body = {
+        crop_type: document.getElementById('fert_crop').value,
+        soil_nitrogen: +document.getElementById('fert_n').value,
+        soil_phosphorus: +document.getElementById('fert_p').value,
+        soil_potassium: +document.getElementById('fert_k').value,
+        area_hectares: +document.getElementById('fert_area').value,
+    };
+    const r = await api('/api/fertilizer/recommend', { method: 'POST', body: JSON.stringify(body) });
+    if (r) {
+        document.getElementById('fertilizerResult').innerHTML = `
+            <div class="result-card">
+                <h4>🌱 ${r.crop_name_tr} — Gübreleme Önerisi</h4>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0;">
+                    <div><div style="font-size:.8rem;color:var(--text-muted)">Azot (N)</div><div style="font-size:1.3rem;font-weight:700;color:#10b981">${r.nitrogen_needed_kg} kg</div></div>
+                    <div><div style="font-size:.8rem;color:var(--text-muted)">Fosfor (P)</div><div style="font-size:1.3rem;font-weight:700;color:#3b82f6">${r.phosphorus_needed_kg} kg</div></div>
+                    <div><div style="font-size:.8rem;color:var(--text-muted)">Potasyum (K)</div><div style="font-size:1.3rem;font-weight:700;color:#f59e0b">${r.potassium_needed_kg} kg</div></div>
+                </div>
+                <p style="color:var(--text-muted);font-size:.85rem;">${r.recommendation}</p>
+            </div>`;
+        showToast('Gübreleme önerisi hazır', 'success');
     }
+}
 
-    function getTimeLabels(count) {
-        const labels = [];
-        const now = new Date();
-        for (let i = count - 1; i >= 0; i--) {
-            const d = new Date(now - i * 2 * 60 * 60 * 1000);
-            labels.push(d.getHours().toString().padStart(2,'0') + ':00');
-        }
-        return labels;
+async function fertilizerSchedule() {
+    const body = {
+        crop_type: document.getElementById('fert_crop').value,
+        planting_date: document.getElementById('fert_date').value,
+        area_hectares: +document.getElementById('fert_area').value,
+        soil_nitrogen: +document.getElementById('fert_n').value,
+        soil_phosphorus: +document.getElementById('fert_p').value,
+        soil_potassium: +document.getElementById('fert_k').value,
+    };
+    const schedule = await api('/api/fertilizer/schedules', { method: 'POST', body: JSON.stringify(body) });
+    if (schedule && schedule.length) {
+        document.getElementById('scheduleResult').innerHTML = `
+            <div class="table-box" style="margin-top:20px;">
+                <table><thead><tr><th>Faz</th><th>Tarih</th><th>Gübre</th><th>kg/ha</th><th>Not</th></tr></thead>
+                <tbody>${schedule.map(s => `<tr><td>${s.phase}</td><td>${s.target_date}</td><td>${s.fertilizer_type}</td><td>${s.amount_kg_per_hectare}</td><td style="color:var(--text-muted);font-size:.8rem;">${s.notes}</td></tr>`).join('')}</tbody></table>
+            </div>`;
+        showToast('Gübreleme takvimi oluşturuldu', 'success');
     }
+}
 
-    function formatDate(dateStr) {
-        if (!dateStr) return '--';
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
-               ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-    }
+// ─── STATUS & UTILITIES ───────────────────────────────────────
+function updateStatus(online) {
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    dot.className = `status-dot ${online ? 'online' : 'offline'}`;
+    text.textContent = online ? 'API Bağlı' : 'Çevrimdışı';
+}
 
-    // ──── FİLTRELER ───────────────────────────────────────────────────
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'} ${message}`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+}
 
-    function applyFilters() {
-        loadSensorReadings();
-        loadWeatherData();
-        loadSchedules();
-    }
+function updateClock() {
+    document.getElementById('clockDisplay').textContent = new Date().toLocaleTimeString('tr');
+}
 
-    // ──── API BAĞLANTI KONTROLÜ ───────────────────────────────────────
+// ─── INIT ─────────────────────────────────────────────────────
+async function init() {
+    // Health check
+    const health = await api('/api/health');
+    apiOnline = health !== null;
+    updateStatus(apiOnline);
+    if (apiOnline) showToast('API bağlantısı başarılı', 'success');
+    else showToast('API bağlantısı kurulamadı — Demo mod', 'error');
 
-    async function checkApiStatus() {
-        try {
-            const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(3000) });
-            const data = await res.json();
-            const el = document.getElementById('api-status');
-            el.textContent = 'API: ✅ Bağlı';
-            el.style.color = '#22c55e';
-            el.style.borderColor = 'rgba(22,163,74,0.4)';
-        } catch {
-            const el = document.getElementById('api-status');
-            el.textContent = 'API: ⚠️ Demo Modu';
-            el.style.color = '#f59e0b';
-            el.style.borderColor = 'rgba(245,158,11,0.3)';
-        }
-    }
+    // Load initial page
+    const page = location.hash.slice(1) || 'dashboard';
+    if (pageTitles[page]) navigate(page); else navigate('dashboard');
 
-    // ──── SENSÖR LİSTESİ ──────────────────────────────────────────────
-
-    async function loadSensorList() {
-        try {
-            const res = await fetch(`${API_BASE}/api/sensors/`, { signal: AbortSignal.timeout(3000) });
-            const sensors = await res.json();
-            const select = document.getElementById('sensor-select');
-
-            // Mevcut seçenekleri temizle (ilk "Tüm Sensörler" hariç)
-            while (select.options.length > 1) select.remove(1);
-
-            sensors.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = `#${s.id} — ${s.sensor_type} (${s.serial_number})`;
-                select.appendChild(opt);
-            });
-
-            document.getElementById('stat-sensors').textContent = sensors.length;
-        } catch {
-            document.getElementById('stat-sensors').textContent = '0';
-        }
-    }
-
-    // ──── TOPRAK NEMİ GRAFİĞİ ────────────────────────────────────────
-
-    async function loadSensorReadings() {
-        const limit = getDataLimit();
-        const sensorId = document.getElementById('sensor-select').value;
-        let labels, data;
-
-        try {
-            const endpoint = sensorId === 'all'
-                ? `${API_BASE}/api/sensors/1/readings?limit=${limit}`
-                : `${API_BASE}/api/sensors/${sensorId}/readings?limit=${limit}`;
-
-            const res = await fetch(endpoint, { signal: AbortSignal.timeout(3000) });
-            const readings = await res.json();
-            if (readings.length > 0) {
-                readings.reverse();
-                labels = readings.map(r => r.reading_timestamp
-                    ? new Date(r.reading_timestamp).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})
-                    : '--');
-                data = readings.map(r => r.moisture_percent);
-                document.getElementById('stat-moisture').textContent = data[data.length-1] + '%';
-                document.getElementById('stat-moisture-trend').textContent = '↑ Canlı veri';
-                document.getElementById('stat-moisture-trend').className = 'up';
-            } else { throw new Error('no data'); }
-        } catch {
-            labels = getTimeLabels(limit);
-            data = generateDemoData(limit, 45, 20);
-            document.getElementById('stat-moisture').textContent = data[data.length-1] + '%';
-            document.getElementById('stat-moisture-trend').textContent = '↑ Demo verisi';
-        }
-
-        const ctx = document.getElementById('moistureChart').getContext('2d');
-        if (moistureChart) moistureChart.destroy();
-        moistureChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Toprak Nemi (%)',
-                    data,
-                    borderColor: '#22c55e',
-                    backgroundColor: 'rgba(34,197,94,0.08)',
-                    borderWidth: 2.5,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#22c55e',
-                    pointRadius: 3,
-                    pointHoverRadius: 6,
-                }]
-            },
-            options: {
-                ...CHART_DEFAULTS,
-                responsive: true,
-                interaction: { intersect: false, mode: 'index' },
-                scales: {
-                    ...CHART_DEFAULTS.scales,
-                    y: { ...CHART_DEFAULTS.scales.y, min: 0, max: 100 }
-                }
-            }
-        });
-    }
-
-    // ──── HAVA DURUMU GRAFİĞİ ─────────────────────────────────────────
-
-    async function loadWeatherData() {
-        const limit = getDataLimit();
-        let labels, tempData, humidData, precipData;
-
-        try {
-            const res = await fetch(`${API_BASE}/api/weather/?limit=${limit}`, { signal: AbortSignal.timeout(3000) });
-            const weather = await res.json();
-            if (weather.length > 0) {
-                weather.reverse();
-                labels = weather.map(w => w.recorded_at
-                    ? new Date(w.recorded_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})
-                    : '--');
-                tempData = weather.map(w => w.temperature_c);
-                humidData = weather.map(w => w.humidity_percent);
-                precipData = weather.map(w => w.precipitation_mm || 0);
-
-                document.getElementById('stat-temp').textContent = tempData[tempData.length-1] + '°C';
-                document.getElementById('stat-humidity').textContent = humidData[humidData.length-1] + '%';
-                document.getElementById('stat-temp-trend').textContent = '↑ Canlı veri';
-                document.getElementById('stat-humidity-trend').textContent = 'Canlı veri';
-
-                const totalPrecip = precipData.reduce((a, b) => a + b, 0);
-                document.getElementById('stat-precip').textContent = totalPrecip.toFixed(1) + ' mm';
-            } else { throw new Error('no data'); }
-        } catch {
-            labels = getTimeLabels(limit);
-            tempData = generateDemoData(limit, 24, 6);
-            humidData = generateDemoData(limit, 55, 15);
-            precipData = generateDemoData(limit, 3, 6).map(v => Math.max(0, v));
-
-            document.getElementById('stat-temp').textContent = tempData[tempData.length-1] + '°C';
-            document.getElementById('stat-humidity').textContent = humidData[humidData.length-1] + '%';
-            document.getElementById('stat-temp-trend').textContent = '↑ Demo verisi';
-            document.getElementById('stat-humidity-trend').textContent = 'Demo verisi';
-            document.getElementById('stat-precip').textContent =
-                precipData.reduce((a, b) => a + b, 0).toFixed(1) + ' mm';
-            document.getElementById('stat-precip-trend').textContent = 'Demo verisi';
-        }
-
-        // Çizgi Grafik — Sıcaklık + Nem
-        const ctx = document.getElementById('weatherChart').getContext('2d');
-        if (weatherChart) weatherChart.destroy();
-        weatherChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Sıcaklık (°C)', data: tempData,
-                        borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.05)',
-                        borderWidth: 2.5, tension: 0.4, yAxisID: 'y',
-                        pointRadius: 3, pointHoverRadius: 6
-                    },
-                    {
-                        label: 'Nem (%)', data: humidData,
-                        borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.05)',
-                        borderWidth: 2.5, tension: 0.4, yAxisID: 'y1',
-                        pointRadius: 3, pointHoverRadius: 6
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                interaction: { intersect: false, mode: 'index' },
-                plugins: { ...CHART_DEFAULTS.plugins },
-                scales: {
-                    x: CHART_DEFAULTS.scales.x,
-                    y: { ...CHART_DEFAULTS.scales.y, position: 'left', title: { display: true, text: '°C', color: '#94a3b8' } },
-                    y1: { ...CHART_DEFAULTS.scales.y, position: 'right', title: { display: true, text: '%', color: '#94a3b8' }, grid: { drawOnChartArea: false } }
-                }
-            }
-        });
-
-        // Bar Grafik — Yağış
-        const ctx2 = document.getElementById('precipChart').getContext('2d');
-        if (precipChart) precipChart.destroy();
-        precipChart = new Chart(ctx2, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Yağış (mm)',
-                    data: precipData,
-                    backgroundColor: precipData.map(v =>
-                        v > 10 ? 'rgba(59,130,246,0.7)' :
-                        v > 5 ? 'rgba(59,130,246,0.5)' :
-                        v > 0 ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.1)'
-                    ),
-                    borderColor: '#3b82f6',
-                    borderWidth: 1,
-                    borderRadius: 4,
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { ...CHART_DEFAULTS.plugins },
-                scales: {
-                    x: CHART_DEFAULTS.scales.x,
-                    y: {
-                        ...CHART_DEFAULTS.scales.y,
-                        beginAtZero: true,
-                        title: { display: true, text: 'mm', color: '#94a3b8' }
-                    }
-                }
-            }
-        });
-    }
-
-    // ──── SULAMA GEÇMİŞİ ──────────────────────────────────────────────
-
-    async function loadSchedules() {
-        try {
-            const res = await fetch(`${API_BASE}/api/irrigation/schedules?limit=10`, { signal: AbortSignal.timeout(3000) });
-            const schedules = await res.json();
-            const tbody = document.getElementById('schedule-tbody');
-
-            if (schedules.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span>📋</span>Henüz sulama kaydı bulunmamaktadır</div></td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = schedules.map(s => {
-                const statusClass = s.status === 'completed' ? 'status-completed' :
-                                   s.source === 'model' ? 'status-model' : 'status-pending';
-                const statusLabel = s.status === 'completed' ? '✅ Tamamlandı' :
-                                   s.status === 'pending' ? '⏳ Bekliyor' : s.status;
-                return `<tr>
-                    <td>#${s.id}</td>
-                    <td>Tarla ${s.field_id}</td>
-                    <td>${formatDate(s.scheduled_date)}</td>
-                    <td>${s.water_amount_liters ? s.water_amount_liters + ' L' : '-'}</td>
-                    <td><span class="schedule-table .status-badge-cell ${statusClass}">${statusLabel}</span></td>
-                </tr>`;
-            }).join('');
-        } catch {
-            // API kapalıysa demo veri
-            const tbody = document.getElementById('schedule-tbody');
-            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span>📋</span>API bağlantısı bekleniyor...</div></td></tr>`;
-        }
-    }
-
-    // ──── ML SULAMA TAHMİNİ ───────────────────────────────────────────
-
-    async function predictIrrigation() {
-        const payload = {
-            soil_moisture: parseFloat(document.getElementById('inp-moisture').value),
-            soil_temperature: parseFloat(document.getElementById('inp-soil-temp').value),
-            humidity: parseFloat(document.getElementById('inp-humidity').value),
-            temperature: parseFloat(document.getElementById('inp-temp').value),
-            precipitation: parseFloat(document.getElementById('inp-precip').value)
-        };
-
-        try {
-            const res = await fetch(`${API_BASE}/api/irrigation/predict`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: AbortSignal.timeout(5000)
-            });
-            const result = await res.json();
-
-            const el = document.getElementById('prediction-result');
-            el.classList.add('show');
-            el.className = 'prediction-result show ' + (result.irrigation_needed ? 'result-needed' : 'result-ok');
-            document.getElementById('result-icon').textContent = result.irrigation_needed ? '💧' : '✅';
-            document.getElementById('result-title').textContent = result.irrigation_needed ? 'Sulama Öneriliyor' : 'Sulama Gerekmez';
-            document.getElementById('result-message').textContent = result.message;
-            document.getElementById('result-water').textContent = result.recommended_water_liters + ' L';
-            document.getElementById('result-confidence').textContent = Math.round(result.confidence * 100) + '%';
-            document.getElementById('result-needed').textContent = result.irrigation_needed ? '✅ Evet' : '❌ Hayır';
-        } catch {
-            alert('API bağlantısı kurulamadı. Sunucunun çalıştığından emin olun.');
-        }
-    }
-
-    // ──── SAYFA YÜKLEME ───────────────────────────────────────────────
-
-    // Varsayılan tarih aralığı: son 7 gün
-    (function setDefaultDates() {
-        const now = new Date();
-        const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-        document.getElementById('date-end').value = now.toISOString().split('T')[0];
-        document.getElementById('date-start').value = weekAgo.toISOString().split('T')[0];
-    })();
-
-    (async () => {
-        await checkApiStatus();
-        await loadSensorList();
-        await Promise.all([loadSensorReadings(), loadWeatherData(), loadSchedules()]);
-    })();
-
-    // Her 30 sn'de otomatik yenile
-    setInterval(() => {
-        loadSensorReadings();
-        loadWeatherData();
-        loadSchedules();
+    // Auto-refresh every 30s
+    refreshInterval = setInterval(() => {
+        const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
+        if (activePage === 'dashboard') loadDashboard();
     }, 30000);
+
+    // Clock
+    updateClock();
+    setInterval(updateClock, 1000);
+}
+
+init();
 </script>
 </body>
 </html>

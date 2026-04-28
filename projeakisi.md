@@ -138,3 +138,38 @@ Web arayüzüne, toprak sensörü ve hava durumu verilerini görselleştiren tem
 
 Platformun temel veri erişim API'sini geliştir. API, toprak sensörü ve hava durumu verilerine erişim sağlamalıdır. API'yi Python (örneğin Flask/FastAPI) kullanarak geliştir. API'nin güvenliğini sağlamak için temel kimlik doğrulama mekanizmaları (örneğin API anahtarı) kullan. API'nin dokümantasyonunu oluştur (örneğin Swagger/OpenAPI).
 
+---
+
+## 🟣 Cycle 5 — Test, İyileştirme ve Canlıya Çıkarma Hazırlığı
+
+📅 **11 – 30 Nisan 2026**
+
+### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
+
+#### 📌 CI/CD Pipeline, Test Altyapısı ve Proje Raporu
+
+GitHub Actions CI pipeline kurulumu yaparak her push ve PR'da pytest otomatik çalıştırmayı sağla. Test coverage raporunu çıkart (pytest-cov) ve minimum %80 coverage hedefini tuttur. Linting kontrolü (ruff veya flake8) ekle. Eksik test alanlarını tespit ederek integration testler ekle. Proje sonuç raporunu hazırla: her cycle'da ne yapıldığının özeti, ekip katkı matrisi, proje metrikleri (satır sayısı, test sayısı, endpoint sayısı) ve sunum için slide hazırlığı.
+
+### 👤 EMİRHAN GÜNAY
+
+#### 📌 Veritabanı Migration Sistemi ve Seed Data
+
+Alembic migration sistemi kurulumu ve konfigürasyonunu yap. Mevcut DB şeması için initial migration oluştur ve migration kurallarını dokümante et. Sunumda gösterilebilecek gerçekçi demo verileri (seed data) hazırla: en az 3 çiftlik, 5 tarla, 10 sensör, 100 okuma kaydı ile hava durumu ve sulama verilerini içeren bir seed script oluştur. Veritabanı performans iyileştirmesi için sık sorgulanan alanlara index ekle ve query optimizasyonu (N+1 sorgu problemi kontrolü) gerçekleştir.
+
+### 👤 AYŞE ESLEM ÇEKİCİ
+
+#### 📌 Veri Pipeline Genişletme ve Gübreleme Öneri Sistemi
+
+Gübreleme öneri servisi (app/services/fertilizer_service.py) oluştur. Bitki türüne göre NPK (Azot-Fosfor-Potasyum) ihtiyacını hesapla ve toprak analizi verilerine göre gübreleme takvimi öner. Basit bir kural tabanlı veya ML tabanlı model geliştir. Gübreleme API endpoint'lerini oluştur: POST /api/fertilizer/recommend (bitki türü ve toprak verisi alır, öneri döndürür), GET /api/fertilizer/schedules (gübreleme takvimi). Pydantic schema'ları ve unit testleri yaz. Weather pipeline'a periyodik veri çekme yapısı (APScheduler veya BackgroundTasks) ve veri çekme log sistemi ekle.
+
+### 👤 ECENUR ÜNER
+
+#### 📌 Dashboard Modernizasyonu ve Responsive Tasarım
+
+Dashboard UI'ını yenile: modern, dark-mode destekli tasarım ve responsive layout (mobil/tablet uyumlu) oluştur. Sidebar navigasyon ekle (Dashboard, Sensörler, Hava Durumu, Sulama, Gübreleme). Loading state'leri ve error handling uygula. Dashboard'daki tüm grafikleri gerçek API'den besle: sensör verileri için çizgi grafik (Chart.js), hava durumu için kart bileşenleri ve grafik, sulama tahmin için form ve sonuç gösterimi. Auto-refresh mekanizması (30 saniyelik polling) ekle. Yeni sayfalar oluştur: sensör detay sayfası (tarihsel veriler), hava durumu dashboard'ı (istatistikler ve tahmin), sulama optimizasyonu sayfası (ML tahmin formu).
+
+### 👤 MEHMET SAİT TAYŞİ
+
+#### 📌 API Güvenlik Güçlendirme ve Dokümantasyon
+
+API güvenlik iyileştirmeleri yap: rate limiting ekleme (slowapi), request logging middleware (hangi endpoint'e kim, ne zaman erişti), input validation güçlendirme (Pydantic field validators) ve CORS ayarlarını daraltma (wildcard * yerine spesifik origin'ler). Hata yönetimini standardize et: global exception handler oluştur, tutarlı hata response formatı (error code, message, detail) belirle ve custom exception sınıfları (NotFound, Unauthorized, ValidationError) yaz. Kapsamlı API kullanım dokümantasyonu hazırla: her endpoint için örnek request/response, Postman Collection export'u ve Swagger/OpenAPI açıklamalarını zenginleştir.

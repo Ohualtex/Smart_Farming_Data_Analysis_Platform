@@ -1,8 +1,9 @@
-﻿import numpy as np
+import os
+
+import joblib
+import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
-import joblib
-import os
 
 
 class IrrigationOptimizer:
@@ -36,19 +37,22 @@ class IrrigationOptimizer:
         air_temp = np.random.uniform(0, 45, n_samples)
         precipitation = np.random.uniform(0, 30, n_samples)
 
-        water_needed = np.maximum(0, (
-            (50 - soil_moisture) * 2.0
-            + (air_temp - 20) * 1.5
-            - precipitation * 3.0
-            - (humidity - 50) * 0.5
-            + np.random.normal(0, 5, n_samples)
-        ))
+        water_needed = np.maximum(
+            0,
+            (
+                (50 - soil_moisture) * 2.0
+                + (air_temp - 20) * 1.5
+                - precipitation * 3.0
+                - (humidity - 50) * 0.5
+                + np.random.normal(0, 5, n_samples)
+            ),
+        )
 
-        X = np.column_stack([soil_moisture, soil_temp, humidity, air_temp, precipitation])
-        X_scaled = self.scaler.fit_transform(X)
+        x_features = np.column_stack([soil_moisture, soil_temp, humidity, air_temp, precipitation])
+        x_scaled = self.scaler.fit_transform(x_features)
 
         self.model = RandomForestRegressor(n_estimators=100, random_state=42, max_depth=10)
-        self.model.fit(X_scaled, water_needed)
+        self.model.fit(x_scaled, water_needed)
 
         os.makedirs(self.model_path, exist_ok=True)
         joblib.dump(self.model, os.path.join(self.model_path, "irrigation_model.pkl"))

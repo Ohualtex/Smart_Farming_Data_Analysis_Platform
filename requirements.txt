@@ -1,4 +1,4 @@
-﻿# ========================
+# ========================
 # SFDAP API Dependencies
 # ========================
 
@@ -9,6 +9,7 @@ uvicorn[standard]>=0.27.0
 # Database
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0
+alembic>=1.13.0
 
 # Data Validation
 pydantic>=2.5.0
@@ -27,6 +28,7 @@ python-dotenv>=1.0.0
 
 # CORS & Security
 python-multipart>=0.0.6
+slowapi>=0.1.9
 
 # HTTP Client (for weather API)
 httpx>=0.27.0

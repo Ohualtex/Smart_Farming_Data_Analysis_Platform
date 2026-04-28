@@ -7,8 +7,9 @@ Basit API anahtarı tabanlı kimlik doğrulama.
 Mehmet Sait Tayşi — Cycle 4 Görevi
 """
 
-from fastapi import Security, HTTPException, status
+from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
+
 from app.config import settings
 
 # Header'dan API Key okuma

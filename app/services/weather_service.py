@@ -7,11 +7,11 @@ eksik veri enterpolasyonu işlemleri.
 Ayşe Eslem Çekici — Cycle 4 Görevi
 """
 
+from datetime import UTC, datetime, timedelta
+
 import httpx
 import numpy as np
 import pandas as pd
-from datetime import datetime, UTC, timedelta
-from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -241,10 +241,7 @@ class WeatherService:
         since = datetime.now(UTC) - timedelta(days=days)
 
         records = (
-            db.query(WeatherData)
-            .filter(WeatherData.farm_id == farm_id)
-            .filter(WeatherData.recorded_at >= since)
-            .all()
+            db.query(WeatherData).filter(WeatherData.farm_id == farm_id).filter(WeatherData.recorded_at >= since).all()
         )
 
         if not records:

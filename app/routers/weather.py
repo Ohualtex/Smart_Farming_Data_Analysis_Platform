@@ -1,17 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
 import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional
+
 from app.database import get_db
+from app.middleware.auth import verify_api_key
 from app.models.models import WeatherData
 from app.schemas.schemas import WeatherDataCreate, WeatherDataResponse
 from app.services.weather_service import weather_service
-from app.middleware.auth import verify_api_key
 
 router = APIRouter(prefix="/api/weather", tags=["Hava Durumu"])
 
 
-@router.get("/", response_model=List[WeatherDataResponse])
+@router.get("/", response_model=list[WeatherDataResponse])
 def get_weather_data(farm_id: int = None, limit: int = 50, db: Session = Depends(get_db)):
     query = db.query(WeatherData)
     if farm_id:
@@ -30,9 +30,9 @@ def create_weather_data(data: WeatherDataCreate, db: Session = Depends(get_db)):
 
 @router.get("/latest/{farm_id}", response_model=WeatherDataResponse)
 def get_latest_weather(farm_id: int, db: Session = Depends(get_db)):
-    weather = db.query(WeatherData).filter(
-        WeatherData.farm_id == farm_id
-    ).order_by(WeatherData.recorded_at.desc()).first()
+    weather = (
+        db.query(WeatherData).filter(WeatherData.farm_id == farm_id).order_by(WeatherData.recorded_at.desc()).first()
+    )
     if not weather:
         raise HTTPException(status_code=404, detail="Hava durumu verisi bulunamadi")
     return weather
@@ -63,9 +63,9 @@ async def fetch_weather_from_api(
             },
         }
     except httpx.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Dis API hatasi: {str(e)}")
+        raise HTTPException(status_code=502, detail=f"Dis API hatasi: {str(e)}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Sunucu hatasi: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Sunucu hatasi: {str(e)}") from e
 
 
 @router.get("/stats/{farm_id}")
@@ -94,4 +94,3 @@ def clean_weather_record(data: dict):
         "cleaned": cleaned,
         "filled": filled,
     }
-

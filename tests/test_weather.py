@@ -6,9 +6,6 @@ POST /api/weather/
 GET  /api/weather/latest/{farm_id}
 """
 
-import pytest
-
-
 SAMPLE_WEATHER = {
     "farm_id": 1,
     "temperature_c": 22.5,

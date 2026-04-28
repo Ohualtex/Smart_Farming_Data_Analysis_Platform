@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
+
 from app.database import get_db
+from app.middleware.auth import verify_api_key
+from app.ml.irrigation_model import irrigation_optimizer
 from app.models.models import IrrigationSchedule
 from app.schemas.schemas import (
-    IrrigationCreate, IrrigationResponse,
-    IrrigationPredictionRequest, IrrigationPredictionResponse
+    IrrigationCreate,
+    IrrigationPredictionRequest,
+    IrrigationPredictionResponse,
+    IrrigationResponse,
 )
-from app.ml.irrigation_model import irrigation_optimizer
-from app.middleware.auth import verify_api_key
 
 router = APIRouter(prefix="/api/irrigation", tags=["Sulama Optimizasyonu"])
 
@@ -25,7 +27,7 @@ def predict_irrigation(data: IrrigationPredictionRequest):
     return result
 
 
-@router.get("/schedules", response_model=List[IrrigationResponse])
+@router.get("/schedules", response_model=list[IrrigationResponse])
 def get_schedules(field_id: int = None, limit: int = 20, db: Session = Depends(get_db)):
     query = db.query(IrrigationSchedule)
     if field_id:
