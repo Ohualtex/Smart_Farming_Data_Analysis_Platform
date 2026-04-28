@@ -4,26 +4,32 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
+from app.core.logger import setup_logging
 from app.database import init_db
 from app.middleware.exceptions import register_exception_handlers
 from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 from app.middleware.request_logger import RequestLoggerMiddleware
 from app.routers import analytics, fertilizer, health, irrigation, plants, sensors, weather
+from app.tasks.scheduler import shutdown_scheduler, start_scheduler
 
 
 # Lifespan event handler (on_event yerine modern yaklaşım)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    setup_logging()
     init_db()
-    print("SFDAP API baslatildi!")
-    print(f"Dokumantasyon: http://localhost:{settings.API_PORT}/docs")
+    start_scheduler()
+    logger.info("SFDAP API baslatildi!")
+    logger.info(f"Dokumantasyon: http://localhost:{settings.API_PORT}/docs")
     yield
     # Shutdown
-    print("SFDAP API kapatiliyor...")
+    shutdown_scheduler()
+    logger.info("SFDAP API kapatiliyor...")
 
 
 # FastAPI uygulamasi

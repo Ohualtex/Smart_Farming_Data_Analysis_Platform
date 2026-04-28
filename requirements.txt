@@ -32,3 +32,7 @@ slowapi>=0.1.9
 
 # HTTP Client (for weather API)
 httpx>=0.27.0
+
+# Logging & Background Tasks
+loguru>=0.7.2
+apscheduler>=3.10.4
