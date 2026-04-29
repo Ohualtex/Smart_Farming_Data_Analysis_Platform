@@ -188,13 +188,13 @@ Elde edilen içgörüleri ve model sonuçlarını görsel olarak temsil eden bir
 #### 📌 Dashboard Analitik Panosunun Ulusal Ölçekte Yeniden Düzenlenmesi
 81 ile genişleyen veri tabanındaki büyük verinin dashboard üzerinde görsel yığılmaya sebep olmasını engellemek için, backend üzerinden iletilen 'region' verisi ile grafiklerin bölge bazlı (7 Coğrafi Bölge) kırılımda görüntülenmesini sağla. Çiftlik bazlı sıcaklık ve günlük trend grafiklerini Chart.js üzerinde bu bölge kırılımı ile çalışacak şekilde revize et.
 
+#### 📌 Veritabanının 81 İle Genişletilmesi ve Mega Seed Data
+Projenin ölçeğini 3 çiftlikten 81 ile çıkartarak gerçekçi bir ulusal tarım sistemi simülasyonu sağla. `SoilAnalysis`, `CropPlanting` ve `FertilizerRecommendationLog` olmak üzere 3 yeni tabloyu tasarla ve Pydantic şemalarını oluştur. Türkiye'nin 7 coğrafi bölgesi için 15 farklı bitki türünün ve iklim şartlarının verisini toplayarak `database/turkey_data.py` üzerinden 7500+ kayıtlık mega seed data script'ini oluştur.
+
 ### 👤 EMİRHAN GÜNAY
 
 #### 📌 Veri Temizleme ve Dönüştürme İşlemlerini İyileştirme
 Oluşturulan veri temizleme ve dönüştürme işlemlerini gözden geçir. Eksik veya hatalı verileri tespit etmek için ek kontroller ekle ve dönüşüm sürecini daha verimli hale getir.
-
-#### 📌 Veritabanının 81 İle Genişletilmesi ve Mega Seed Data
-Projenin ölçeğini 3 çiftlikten 81 ile çıkartarak gerçekçi bir ulusal tarım sistemi simülasyonu sağla. `SoilAnalysis`, `CropPlanting` ve `FertilizerRecommendationLog` olmak üzere 3 yeni tabloyu tasarla ve Pydantic şemalarını oluştur. Türkiye'nin 7 coğrafi bölgesi için 15 farklı bitki türünün ve iklim şartlarının verisini toplayarak `database/turkey_data.py` üzerinden 7500+ kayıtlık mega seed data script'ini oluştur.
 
 ### 👤 AYŞE ESLEM ÇEKİCİ
 
