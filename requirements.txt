@@ -36,3 +36,7 @@ httpx>=0.27.0
 # Logging & Background Tasks
 loguru>=0.7.2
 apscheduler>=3.10.4
+
+# Reporting & Export (Cycle 7)
+fpdf2>=2.7.0
+openpyxl>=3.1.0

@@ -11,11 +11,13 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.services.report_service import ReportService
 from app.models.models import (
     Farm,
     Field,
@@ -193,3 +195,92 @@ def get_analytics_summary(
         "sensor_reading_stats": sensor_reading_stats,
         "npk_profiles": npk_profiles,
     }
+
+
+@router.get("/compare")
+def compare_analytics(
+    start_date_1: datetime = Query(..., description="1. Periyot Baslangic (Orn: 2026-03-01T00:00:00Z)"),
+    end_date_1: datetime = Query(..., description="1. Periyot Bitis (Orn: 2026-03-31T23:59:59Z)"),
+    start_date_2: datetime = Query(..., description="2. Periyot Baslangic"),
+    end_date_2: datetime = Query(..., description="2. Periyot Bitis"),
+    db: Session = Depends(get_db),
+):
+    """
+    Kullanicinin belirledigi iki farkli zaman dilimini kiyaslar.
+    Sicaklik, nem, sensor okumasi ve sulama sayisi gibi metrikleri 
+    fark (yuzdelik artis/azalis) ile dondurur.
+    """
+    def _get_stats(start: datetime, end: datetime):
+        weather_records = db.query(WeatherData).filter(
+            WeatherData.recorded_at >= start, WeatherData.recorded_at <= end
+        ).all()
+        
+        temps = [r.temperature_c for r in weather_records if r.temperature_c is not None]
+        hums = [r.humidity_percent for r in weather_records if r.humidity_percent is not None]
+        precip = sum([r.precipitation_mm for r in weather_records if r.precipitation_mm is not None])
+        
+        readings = db.query(func.count(SoilMoistureReading.id)).filter(
+            SoilMoistureReading.reading_timestamp >= start, SoilMoistureReading.reading_timestamp <= end
+        ).scalar() or 0
+        
+        irrigations = db.query(func.count(IrrigationSchedule.id)).filter(
+            IrrigationSchedule.scheduled_date >= start, IrrigationSchedule.scheduled_date <= end
+        ).scalar() or 0
+        
+        return {
+            "temp_avg": round(sum(temps) / len(temps), 2) if temps else 0,
+            "humidity_avg": round(sum(hums) / len(hums), 2) if hums else 0,
+            "precipitation_mm": round(precip, 2),
+            "sensor_readings": readings,
+            "irrigations": irrigations,
+        }
+        
+    stats_1 = _get_stats(start_date_1, end_date_1)
+    stats_2 = _get_stats(start_date_2, end_date_2)
+    
+    def _diff(val1, val2):
+        if val1 == 0:
+            return 100.0 if val2 > 0 else 0.0
+        return round(((val2 - val1) / val1) * 100, 2)
+        
+    return {
+        "period_1": {"start": start_date_1, "end": end_date_1, "stats": stats_1},
+        "period_2": {"start": start_date_2, "end": end_date_2, "stats": stats_2},
+        "comparison": {
+            "temp_avg_diff_percent": _diff(stats_1["temp_avg"], stats_2["temp_avg"]),
+            "humidity_avg_diff_percent": _diff(stats_1["humidity_avg"], stats_2["humidity_avg"]),
+            "precipitation_diff_percent": _diff(stats_1["precipitation_mm"], stats_2["precipitation_mm"]),
+            "sensor_readings_diff_percent": _diff(stats_1["sensor_readings"], stats_2["sensor_readings"]),
+            "irrigations_diff_percent": _diff(stats_1["irrigations"], stats_2["irrigations"]),
+        }
+    }
+
+
+@router.get("/export")
+def export_analytics(
+    format: str = Query("pdf", description="Export formati (pdf veya xlsx)"),
+    days: int = Query(30, description="Son kac gunluk veri"),
+    db: Session = Depends(get_db),
+):
+    """
+    Analitik verilerini PDF veya Excel formati olarak disari aktarir.
+    """
+    if format not in ["pdf", "xlsx"]:
+        raise HTTPException(status_code=400, detail="Gecersiz format. Sadece 'pdf' veya 'xlsx' desteklenir.")
+        
+    data = get_analytics_summary(days=days, db=db)
+    
+    if format == "pdf":
+        file_stream = ReportService.generate_pdf_report(data)
+        media_type = "application/pdf"
+        filename = f"sfdap_analitik_rapor_{days}_gun.pdf"
+    else:
+        file_stream = ReportService.generate_excel_report(data)
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        filename = f"sfdap_analitik_rapor_{days}_gun.xlsx"
+        
+    return StreamingResponse(
+        file_stream, 
+        media_type=media_type, 
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
