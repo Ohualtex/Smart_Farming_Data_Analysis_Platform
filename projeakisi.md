@@ -154,7 +154,7 @@ API güvenlik iyileştirmeleri yap: rate limiting ekleme (slowapi), request logg
 
 ## 🟠 Cycle 6 — İleri Seviye Modeller ve Ölçeklendirme
 
-📅 **28 Nisan – 7 Mayıs 2026**
+📅 **28 Nisan – 3 Mayıs 2026**
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
@@ -194,7 +194,7 @@ Modelin performansını düzenli olarak izlemek ve raporlamak için bir altyapı
 
 ## 🟤 Cycle 7 — İzleme, Raporlama ve Gelişmiş Özellikler
 
-📅 **8 Mayıs – 18 Mayıs 2026**
+📅 **4 Mayıs – 13 Mayıs 2026**
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
