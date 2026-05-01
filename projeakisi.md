@@ -1,4 +1,4 @@
-## 🟢 Cycle 1 — Proje Temelleri 
+## 🟢 Cycle 1 — Proje Temelleri
 
 📅 **24 Şubat – 10 Mart 2026**
 
@@ -167,6 +167,12 @@ Elde edilen içgörüleri ve model sonuçlarını görsel olarak temsil eden bir
 #### 📌 Veritabanının 81 İle Genişletilmesi ve Mega Seed Data
 Projenin ölçeğini 3 çiftlikten 81 ile çıkartarak gerçekçi bir ulusal tarım sistemi simülasyonu sağla. `SoilAnalysis`, `CropPlanting` ve `FertilizerRecommendationLog` olmak üzere 3 yeni tabloyu tasarla ve Pydantic şemalarını oluştur. Türkiye'nin 7 coğrafi bölgesi için 15 farklı bitki türünün ve iklim şartlarının verisini toplayarak `database/turkey_data.py` üzerinden 7500+ kayıtlık mega seed data script'ini oluştur.
 
+#### 📌 Rapor Export ve Tarihsel Karşılaştırma Modülü
+Mevcut analitik verilerin PDF ve Excel formatlarında dışa aktarılmasını sağlayacak bir raporlama modülü geliştir. Ayrıca, kullanıcıların son 30 gün yerine istedikleri iki periyodu (örneğin geçen ay ile bu ay) karşılaştırabilmeleri için analitik API'sine tarihsel karşılaştırma desteği ekle. (Erken Teslim)
+
+#### 📌 Repo Profesyonelleştirme (DX) ve Kod Kalitesi Temizliği
+Projeyi üretime hazır hale getirmek için Docker (Dockerfile, docker-compose), Makefile, Pre-commit hookları ve MIT lisansını projeye entegre et. Ayrıca Ruff linter/formatter kullanarak projedeki 170+ stil hatasını onar ve kod tabanını standartlaştır.
+
 ### 👤 EMİRHAN GÜNAY
 
 #### 📌 Veri Temizleme ve Dönüştürme İşlemlerini İyileştirme
@@ -198,8 +204,7 @@ Modelin performansını düzenli olarak izlemek ve raporlamak için bir altyapı
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
-#### 📌 Rapor Export ve Tarihsel Karşılaştırma Modülü
-Mevcut analitik verilerin PDF ve Excel formatlarında dışa aktarılmasını sağlayacak bir raporlama modülü geliştir. Ayrıca, kullanıcıların son 30 gün yerine istedikleri iki periyodu (örneğin geçen ay ile bu ay) karşılaştırabilmeleri için analitik API'sine tarihsel karşılaştırma desteği ekle.
+> ⏸️ *Mevcut görev yok.*
 
 ### 👤 EMİRHAN GÜNAY
 
@@ -214,14 +219,14 @@ Projenin temel hedeflerinden biri olan ancak henüz implemente edilmeyen "Bitki 
 ### 👤 ECENUR ÜNER
 
 #### 📌 Bitki Sağlığı UI, Giriş Ekranı ve İzleme Paneli (Frontend)
-Dashboard üzerinde eksik kalan 3 kritik ekranı tamamla: 
-1) Kullanıcı giriş ve kayıt (Authentication) arayüzü, 
-2) Hastalık tespiti için görsel yükleme ve sonuçları görüntüleme sayfası (Bitki Sağlığı), 
+Dashboard üzerinde eksik kalan 3 kritik ekranı tamamla:
+1) Kullanıcı giriş ve kayıt (Authentication) arayüzü,
+2) Hastalık tespiti için görsel yükleme ve sonuçları görüntüleme sayfası (Bitki Sağlığı),
 3) Sistem uyarılarını ve veri hattı durumunu gösterecek bir "İzleme ve Uyarı Paneli".
 
 ### 👤 MEHMET SAİT TAYŞİ
 
 #### 📌 İzleme Endpoint'leri ve Model Performans Raporlama API'si
-Sistemin sağlığını ve performansını izlemek üzere eksikleri kapat: 
-1) Veri hattı izleme (Health/Metrics) endpoint'lerini ve Sistem Uyarı (Alert) CRUD işlemlerini tamamla, 
+Sistemin sağlığını ve performansını izlemek üzere eksikleri kapat:
+1) Veri hattı izleme (Health/Metrics) endpoint'lerini ve Sistem Uyarı (Alert) CRUD işlemlerini tamamla,
 2) Halihazırda tablosu bulunan `ModelPerformanceLog` yapısı için, eğitilen modellerin başarı oranlarını ve tahmin/gerçekleşen sapmalarını döndürecek bir Raporlama API'si geliştir.
