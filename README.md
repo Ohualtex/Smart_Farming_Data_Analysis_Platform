@@ -177,42 +177,68 @@ ruff format app/ tests/
 
 ```
 Smart_Farming_Data_Analysis_Platform/
-├── app/
-│   ├── main.py              # FastAPI giriş noktası
-│   ├── config.py            # Ayar yönetimi (pydantic-settings)
-│   ├── database.py          # SQLAlchemy engine & session
-│   ├── models/              # ORM modelleri (12 tablo)
-│   ├── schemas/             # Pydantic şemaları
-│   ├── routers/             # API endpoint'leri
-│   │   ├── sensors.py       # Sensör CRUD
-│   │   ├── weather.py       # Hava durumu + dış API
-│   │   ├── irrigation.py    # ML sulama tahmini
-│   │   ├── fertilizer.py    # NPK gübreleme önerisi
-│   │   ├── plants.py        # Bitki sağlığı
-│   │   ├── analytics.py     # Analitik & görselleştirme verileri
-│   │   └── health.py        # Health check
-│   ├── services/            # İş mantığı
-│   │   ├── weather_service.py    # Veri pipeline
-│   │   └── fertilizer_service.py # Gübreleme hesaplama
-│   ├── middleware/           # Güvenlik katmanı
-│   │   ├── auth.py          # API Key doğrulama
-│   │   ├── exceptions.py    # Custom error handler'lar
-│   │   ├── rate_limiter.py  # SlowAPI rate limiting
-│   │   └── request_logger.py # Request logging
-│   └── ml/
-│       └── irrigation_model.py  # RandomForest sulama modeli
-├── alembic/                 # DB migration konfigürasyonu
-├── database/
-│   ├── sfdap_schema.sql     # SQL şeması
-│   └── seed_data.py         # Demo veri scripti
-├── Ecenur_Uner/
-│   └── index.html           # SPA Dashboard (6 sayfa + Analitik)
-├── tests/                   # 124 test (10 dosya)
-├── .github/workflows/       # CI/CD pipeline
-├── requirements.txt         # Production bağımlılıkları
-├── requirements-dev.txt     # Development bağımlılıkları
-├── pyproject.toml           # Proje konfigürasyonu
-└── .env.example             # Ortam değişkenleri şablonu
+├── app/                         # Ana uygulama (FastAPI)
+│   ├── main.py                  #   Giriş noktası & middleware konfigürasyonu
+│   ├── config.py                #   Ayar yönetimi (pydantic-settings)
+│   ├── database.py              #   SQLAlchemy engine & session
+│   ├── core/                    #   Logger konfigürasyonu
+│   ├── models/                  #   ORM modelleri (12 tablo)
+│   ├── schemas/                 #   Pydantic veri doğrulama şemaları
+│   ├── routers/                 #   API endpoint'leri
+│   │   ├── sensors.py           #     Sensör CRUD
+│   │   ├── weather.py           #     Hava durumu + dış API
+│   │   ├── irrigation.py        #     ML sulama tahmini
+│   │   ├── fertilizer.py        #     NPK gübreleme önerisi
+│   │   ├── plants.py            #     Bitki sağlığı
+│   │   ├── analytics.py         #     Analitik & görselleştirme verileri
+│   │   └── health.py            #     Health check
+│   ├── services/                #   İş mantığı katmanı
+│   │   ├── weather_service.py   #     Hava durumu veri pipeline
+│   │   └── fertilizer_service.py#     Gübreleme hesaplama motoru
+│   ├── middleware/              #   Güvenlik & izleme katmanı
+│   │   ├── auth.py              #     API Key doğrulama
+│   │   ├── exceptions.py        #     Global exception handler (6 sınıf)
+│   │   ├── rate_limiter.py      #     SlowAPI rate limiting
+│   │   └── request_logger.py    #     Request logging
+│   ├── ml/                      #   Makine öğrenimi modülleri
+│   │   ├── irrigation_model.py  #     RandomForest sulama modeli
+│   │   └── models/              #     Eğitilmiş model dosyaları (.pkl)
+│   └── tasks/
+│       └── scheduler.py         #   APScheduler periyodik görevler
+│
+├── frontend/                    # Web arayüzü (SPA Dashboard)
+│   └── index.html               #   Dark mode, responsive, Chart.js (6 sayfa)
+│
+├── database/                    # Veritabanı yönetimi
+│   ├── sfdap_schema.sql         #   SQL şeması
+│   ├── seed_data.py             #   81 il kapsamlı mega seed data
+│   └── turkey_data.py           #   Türkiye il/bölge/bitki referans verisi
+│
+├── alembic/                     # DB migration sistemi
+├── tests/                       # 124 test (10 dosya, %91+ coverage)
+├── .github/workflows/           # CI/CD pipeline (Ruff + Pytest)
+│
+├── docs/                        # Proje dokümantasyonu
+│   ├── wireframes/              #   UI/UX wireframe tasarımları (6 ekran)
+│   ├── api/                     #   API kullanım kılavuzu & Postman/Swagger
+│   ├── database/                #   Veritabanı şeması & sensör entegrasyonu
+│   ├── research/                #   Teknoloji araştırması & veri analizi
+│   ├── requirements/            #   Gereksinim belgeleri
+│   ├── setup/                   #   Geliştirme ortamı kurulum rehberi
+│   └── planning/                #   Veri toplama & görselleştirme planları
+│
+├── scripts/                     # Yardımcı scriptler & prototipler
+│   ├── weather_processing.py    #   Hava durumu veri işleme (bağımsız)
+│   ├── sensor_integration.py    #   Sensör entegrasyon scripti
+│   ├── verify_sensor_data.py    #   Sensör veri doğrulama
+│   └── api_prototype.py         #   Erken dönem API prototipi
+│
+├── CONTRIBUTORS.md              # Ekip & katkı matrisi
+├── projeakisi.md                # Sprint bazlı görev dağılımı
+├── requirements.txt             # Production bağımlılıkları
+├── requirements-dev.txt         # Development bağımlılıkları
+├── pyproject.toml               # Proje konfigürasyonu
+└── .env.example                 # Ortam değişkenleri şablonu
 ```
 
 ---
@@ -226,6 +252,8 @@ Smart_Farming_Data_Analysis_Platform/
 | Ecenur Üner | Dashboard SPA, veri görselleştirme |
 | Emirhan Günay | Veritabanı tasarımı, sensör entegrasyonu, seed data |
 | Mehmet Sait Tayşı | API geliştirme, güvenlik, rate limiting |
+
+Detaylı katkı matrisi için [CONTRIBUTORS.md](CONTRIBUTORS.md) dosyasına bakınız.
 
 ---
 

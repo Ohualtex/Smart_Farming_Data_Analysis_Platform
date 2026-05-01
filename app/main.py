@@ -94,6 +94,6 @@ def root():
     }
 
 
-_dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Ecenur_Uner")
+_dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.isdir(_dashboard_dir):
     app.mount("/dashboard", StaticFiles(directory=_dashboard_dir, html=True), name="dashboard")
