@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+
 def test_analytics_export_pdf_returns_200_and_pdf(client):
     response = client.get("/api/analytics/export?format=pdf&days=30")
     assert response.status_code == 200
@@ -29,7 +30,7 @@ def test_analytics_compare_returns_200(client):
     response = client.get(
         f"/api/analytics/compare?start_date_1={start1}&end_date_1={end1}&start_date_2={start2}&end_date_2={end2}"
     )
-    
+
     print("DEBUG:", response.json())
     assert response.status_code == 200
     data = response.json()
