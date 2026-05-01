@@ -37,8 +37,14 @@ copy .env.example .env
 # 5. Demo verilerini yükle (opsiyonel)
 python database/seed_data.py
 
-# 6. API'yi başlat
+# 6. API'yi başlat (Klasik Yöntem)
 uvicorn app.main:app --reload
+
+# VEYA Makefile ile (Önerilen)
+make run
+
+# VEYA Docker ile (Sadece Docker yüklüyse)
+make docker-up
 ```
 
 API çalışınca şu adreslerde erişebilirsin:
@@ -129,6 +135,8 @@ curl -X POST http://localhost:8000/api/sensors/ \
 | Method | Endpoint | Açıklama | Auth |
 |:-------|:---------|:---------|:----:|
 | GET | `/api/analytics/summary` | Toplu istatistik ve içgörü verileri | ❌ |
+| GET | `/api/analytics/compare` | İki farklı tarih aralığını karşılaştırır | ❌ |
+| GET | `/api/analytics/export` | Raporu PDF veya Excel formatında indirir | ❌ |
 
 > `days` query parametresi ile süre filtrelenebilir (varsayılan: 30 gün). Sensör dağılımı, çiftlik bazlı hava karşılaştırması, sulama durumu, günlük trendler, NPK profilleri ve sensör okuma istatistiklerini döndürür.
 
@@ -136,16 +144,15 @@ curl -X POST http://localhost:8000/api/sensors/ \
 
 ## 🧪 Test ve Kalite
 
+Makefile komutları ile tüm işlemleri kolayca yapabilirsiniz:
+
 ```bash
-# Tüm testleri çalıştır
-pytest tests/ -v
+# Tüm testleri çalıştır (Coverage raporlu)
+make test
 
-# Coverage raporlu
-pytest tests/ --cov=app --cov-report=term-missing
-
-# Linting
-ruff check app/ tests/
-ruff format app/ tests/
+# Linting ve Format Kontrolü
+make lint
+make format
 ```
 
 | Metrik | Değer |
