@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: sfdap_api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - API_KEY=dev-api-key
+      # To switch to PostgreSQL, uncomment the lines below and use the db service
+      # - DATABASE_URL=postgresql://sfdap_user:sfdap_password@db:5432/sfdap_db
+    volumes:
+      - .:/app
+      - /app/venv
+    restart: unless-stopped
+
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: sfdap_db
+  #   environment:
+  #     - POSTGRES_USER=sfdap_user
+  #     - POSTGRES_PASSWORD=sfdap_password
+  #     - POSTGRES_DB=sfdap_db
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
