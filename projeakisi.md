@@ -176,7 +176,7 @@ API güvenlik iyileştirmeleri yap: rate limiting ekleme (slowapi), request logg
 
 ---
 
-## 🟠 Cycle 6 -
+## 🟠 Cycle 6 — İleri Seviye Modeller ve Ölçeklendirme
 
 📅 **28 Nisan – 7 Mayıs 2026**
 
