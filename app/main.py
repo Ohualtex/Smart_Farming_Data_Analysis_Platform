@@ -13,7 +13,18 @@ from app.database import init_db
 from app.middleware.exceptions import register_exception_handlers
 from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 from app.middleware.request_logger import RequestLoggerMiddleware
-from app.routers import analytics, fertilizer, health, irrigation, plants, sensors, weather
+from app.routers import (
+    alerts,
+    analytics,
+    fertilizer,
+    health,
+    irrigation,
+    metrics,
+    model_performance,
+    plants,
+    sensors,
+    weather,
+)
 from app.tasks.scheduler import shutdown_scheduler, start_scheduler
 
 
@@ -78,6 +89,11 @@ app.include_router(irrigation.router)
 app.include_router(plants.router)
 app.include_router(fertilizer.router)
 app.include_router(analytics.router)
+
+# Cycle 6 / shiftSession ekipleri tarafindan genisletilecek skeleton router'lar
+app.include_router(alerts.router)  # Ecenur — Sistem Uyarilari (SystemAlert CRUD)
+app.include_router(metrics.router)  # Mehmet — /api/health/deep
+app.include_router(model_performance.router)  # Mehmet — Model Performans Raporlama
 
 
 @app.get("/", tags=["Root"])

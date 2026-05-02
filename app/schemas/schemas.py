@@ -271,3 +271,72 @@ class FertilizerRecommendationLogResponse(BaseModel):
     potassium_kg: float
     total_fertilizer_kg: float
     is_applied: bool
+
+
+# ========== SYSTEM ALERT (Ecenur — Cycle 6: Veri hatti izleme & uyari) ==========
+class SystemAlertCreate(BaseModel):
+    farm_id: int | None = None
+    field_id: int | None = None
+    alert_type: str  # 'sensor_anomaly' | 'weather_warning' | 'system_error' | ...
+    severity: str = "low"  # 'low' | 'medium' | 'critical'
+    message: str
+
+
+class SystemAlertResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    farm_id: int | None
+    field_id: int | None
+    alert_type: str
+    severity: str
+    message: str
+    is_resolved: bool
+    created_at: datetime
+
+
+class SystemAlertUpdate(BaseModel):
+    """Alert'in resolved durumunu güncellemek icin kismi update."""
+
+    is_resolved: bool | None = None
+    severity: str | None = None
+    message: str | None = None
+
+
+# ========== MODEL PERFORMANCE LOG (Mehmet — Cycle 6: Model perf izleme) ==========
+class ModelPerformanceLogCreate(BaseModel):
+    model_name: str  # 'irrigation_rf' | 'plant_disease_cnn' | ...
+    prediction_data: str  # JSON serialized
+    actual_data: str | None = None
+    accuracy_score: float | None = None
+
+
+class ModelPerformanceLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    model_name: str
+    prediction_data: str
+    actual_data: str | None
+    accuracy_score: float | None
+    logged_at: datetime
+
+
+class ModelPerformanceSummary(BaseModel):
+    """Bir modelin agregat performans ozeti."""
+
+    model_name: str
+    total_predictions: int
+    avg_accuracy: float | None
+    last_logged: datetime | None
+
+
+# ========== HEALTH (Mehmet — Cycle 6: deep health check) ==========
+class HealthCheckResponse(BaseModel):
+    """Detayli sistem sagligi raporu."""
+
+    status: str  # 'healthy' | 'degraded' | 'unhealthy'
+    service: str
+    version: str
+    components: dict  # {db: ok, scheduler: ok, ml_model: ok, ...}
+    timestamp: datetime
