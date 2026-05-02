@@ -61,5 +61,10 @@
 - **Miraç**: Production stability fix'leri (scheduler, hardcoded secrets,
   env-driven CORS), ekip için skeleton router/helper'lar (alerts, metrics,
   model_performance, ML eval, data_quality), 52 yeni test
+- **Miraç (Mehmet'ten devralarak)**: 🤖 **Model Performans İzleme &
+  Raporlama Altyapısı** (Cycle 6 görevi) — `PATCH /{id}` (gerçek değer
+  doldurma), `/timeseries/{model}` (günlük accuracy zaman serisi),
+  `/compare` (multi-model karşılaştırma), `irrigation/predict`'e
+  otomatik log entegrasyonu, 10 yeni test
 - **Ecenur**: Veri hattı izleme modülü (script + dokümantasyon)
 - *Diğer üyeler kendi Cycle 6 görevlerini devam ettirmekte*
