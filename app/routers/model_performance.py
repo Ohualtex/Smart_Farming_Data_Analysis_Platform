@@ -26,9 +26,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import verify_api_key
-from app.models.models import ModelPerformanceLog
+from app.models.models import ModelPerformanceLog, SystemAlert
 from app.schemas.schemas import (
     ModelPerformanceCompareItem,
+    ModelPerformanceDriftReport,
     ModelPerformanceLogCreate,
     ModelPerformanceLogResponse,
     ModelPerformanceLogUpdate,
@@ -198,3 +199,84 @@ def compare_models(
             )
         )
     return results
+
+
+@router.get(
+    "/drift/{model_name}",
+    response_model=ModelPerformanceDriftReport,
+    summary="Model drift kontrolü",
+    description="Son N gün accuracy ortalamasını önceki periyotla karşılaştırır. "
+    "Belirlenen eşikten fazla düşüş varsa otomatik olarak `SystemAlert` (severity=medium) yaratır. "
+    "İdeal sıklık: günde 1-2 kez (cron veya scheduler ile).",
+)
+def detect_drift(
+    model_name: str,
+    recent_days: int = Query(default=7, ge=1, le=90, description="Son periyot pencere"),
+    baseline_days: int = Query(default=30, ge=2, le=365, description="Önceki baz periyot pencere"),
+    threshold_percent: float = Query(default=10.0, gt=0, le=100, description="Drift eşik yüzdesi"),
+    db: Session = Depends(get_db),
+):
+    now = datetime.now(UTC)
+    recent_start = now - timedelta(days=recent_days)
+    baseline_start = recent_start - timedelta(days=baseline_days)
+
+    def _avg_accuracy(start: datetime, end: datetime) -> float | None:
+        val = (
+            db.query(func.avg(ModelPerformanceLog.accuracy_score))
+            .filter(
+                ModelPerformanceLog.model_name == model_name,
+                ModelPerformanceLog.logged_at >= start,
+                ModelPerformanceLog.logged_at < end,
+            )
+            .scalar()
+        )
+        return float(val) if val is not None else None
+
+    recent_avg = _avg_accuracy(recent_start, now)
+    baseline_avg = _avg_accuracy(baseline_start, recent_start)
+
+    drift_percent: float | None = None
+    drift_detected = False
+    alert_created = False
+
+    if recent_avg is not None and baseline_avg is not None and baseline_avg > 0:
+        # Pozitif % = iyileşme, negatif % = drift
+        drift_percent = ((recent_avg - baseline_avg) / baseline_avg) * 100
+        if drift_percent < -threshold_percent:
+            drift_detected = True
+            # Aynı tip alert son 24 saat içinde varsa tekrar yaratma (spam önleme)
+            existing = (
+                db.query(SystemAlert)
+                .filter(
+                    SystemAlert.alert_type == "model_drift",
+                    SystemAlert.message.like(f"%{model_name}%"),
+                    SystemAlert.created_at >= now - timedelta(hours=24),
+                )
+                .first()
+            )
+            if existing is None:
+                alert = SystemAlert(
+                    alert_type="model_drift",
+                    severity="medium",
+                    message=(
+                        f"Model '{model_name}' son {recent_days} günde %{abs(drift_percent):.1f} "
+                        f"accuracy düşüşü gösterdi (baseline: %{baseline_avg * 100:.1f}, "
+                        f"recent: %{recent_avg * 100:.1f})."
+                    ),
+                    is_resolved=False,
+                )
+                db.add(alert)
+                db.commit()
+                alert_created = True
+
+    return ModelPerformanceDriftReport(
+        model_name=model_name,
+        recent_avg_accuracy=recent_avg,
+        baseline_avg_accuracy=baseline_avg,
+        drift_percent=drift_percent,
+        drift_detected=drift_detected,
+        threshold_percent=threshold_percent,
+        recent_window_days=recent_days,
+        baseline_window_days=baseline_days,
+        alert_created=alert_created,
+    )

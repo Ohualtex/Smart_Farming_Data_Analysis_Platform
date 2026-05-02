@@ -64,7 +64,34 @@
 - **Miraç (Mehmet'ten devralarak)**: 🤖 **Model Performans İzleme &
   Raporlama Altyapısı** (Cycle 6 görevi) — `PATCH /{id}` (gerçek değer
   doldurma), `/timeseries/{model}` (günlük accuracy zaman serisi),
-  `/compare` (multi-model karşılaştırma), `irrigation/predict`'e
-  otomatik log entegrasyonu, 10 yeni test
+  `/compare` (multi-model karşılaştırma), `/drift/{model}` (otomatik
+  SystemAlert ile drift tespiti), `irrigation/predict`'e otomatik log
+  entegrasyonu, `/api/health/deep` zenginleştirme (DB latency, scheduler
+  job listesi, data freshness, alert sayaçları), 10+ yeni test
+- **Miraç**: Seed verisi gerçekçilik revizyonu (diurnal pattern, alert
+  temizliği), Filiz maskotu + UX cilası (Cycle 7'ye atandı, kod hazır)
 - **Ecenur**: Veri hattı izleme modülü (script + dokümantasyon)
 - *Diğer üyeler kendi Cycle 6 görevlerini devam ettirmekte*
+
+---
+
+## 📊 Proje Metrikleri (Cycle 6 sonu)
+
+| Metrik | Değer |
+|:---|:---:|
+| Toplam Python LOC | **6 538** (`app/`, `database/`, `tests/`) |
+| Frontend LOC | 2 323 satır (`frontend/index.html`) |
+| Endpoint sayısı | **36** (10 router) |
+| ORM tablo sayısı | **14** |
+| Pydantic schema sayısı | 30+ |
+| Toplam test | **198** (Cycle 4'te 41 → +157) |
+| Test coverage | %91+ |
+| Cycle 6 commit sayısı | 33 (Cycle 5 sonrasından) |
+| Bitki türü | 17 (Türkiye'nin 7 coğrafi bölgesi için) |
+| Çiftlik kapsamı | 81 il × 2 tarla = 162 tarla |
+| Sensör seed | 324 sensör, ~4 860 okuma (diurnal pattern) |
+| Hava durumu seed | 1 215 kayıt (sıcaklık/nem diurnal cycle) |
+| ML modeli | RandomForest (sklearn 1.8.0, sentetik 1000 örnek) |
+| Docker support | ✅ multi-stage Dockerfile + docker-compose |
+| CI/CD | GitHub Actions: ruff + pytest |
+| Pre-commit hooks | ruff, ruff-format, trim whitespace, EOF, large files |

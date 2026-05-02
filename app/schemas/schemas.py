@@ -406,6 +406,20 @@ class ModelPerformanceTimeseriesPoint(BaseModel):
     count: int
 
 
+class ModelPerformanceDriftReport(BaseModel):
+    """Model drift raporu — son periyot vs önceki periyot accuracy karşılaştırması."""
+
+    model_name: str
+    recent_avg_accuracy: float | None
+    baseline_avg_accuracy: float | None
+    drift_percent: float | None  # negatif = düşüş (drift), pozitif = iyileşme
+    drift_detected: bool
+    threshold_percent: float
+    recent_window_days: int
+    baseline_window_days: int
+    alert_created: bool
+
+
 class ModelPerformanceCompareItem(BaseModel):
     """Compare endpoint'i için tek model özet satırı."""
 
