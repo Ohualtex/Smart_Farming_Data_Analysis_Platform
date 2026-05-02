@@ -21,15 +21,29 @@ class FertilizerService:
     """
 
     # Bitki türüne göre ideal NPK ihtiyacı (mg/kg toprak)
+    # Cycle 6: Türkiye'nin 7 coğrafi bölgesinde yetiştirilen 15 bitki türü
+    # ile uyumlu olacak şekilde genişletildi (database/turkey_data.py)
     CROP_NPK_REQUIREMENTS: dict[str, dict[str, float]] = {
+        # ─── Tahıllar ──────────────────────────────────────────
         "wheat": {"N": 120.0, "P": 60.0, "K": 40.0, "name_tr": "Buğday"},
         "corn": {"N": 180.0, "P": 80.0, "K": 60.0, "name_tr": "Mısır"},
+        "barley": {"N": 100.0, "P": 50.0, "K": 40.0, "name_tr": "Arpa"},
+        "rice": {"N": 140.0, "P": 50.0, "K": 40.0, "name_tr": "Pirinç"},
+        # ─── Sebzeler & Endüstriyel ────────────────────────────
         "tomato": {"N": 150.0, "P": 100.0, "K": 200.0, "name_tr": "Domates"},
-        "cotton": {"N": 140.0, "P": 60.0, "K": 80.0, "name_tr": "Pamuk"},
-        "sunflower": {"N": 100.0, "P": 70.0, "K": 50.0, "name_tr": "Ayçiçeği"},
         "pepper": {"N": 130.0, "P": 80.0, "K": 160.0, "name_tr": "Biber"},
         "potato": {"N": 160.0, "P": 90.0, "K": 180.0, "name_tr": "Patates"},
-        "rice": {"N": 140.0, "P": 50.0, "K": 40.0, "name_tr": "Pirinç"},
+        "cotton": {"N": 140.0, "P": 60.0, "K": 80.0, "name_tr": "Pamuk"},
+        "sunflower": {"N": 100.0, "P": 70.0, "K": 50.0, "name_tr": "Ayçiçeği"},
+        "sugar_beet": {"N": 180.0, "P": 80.0, "K": 240.0, "name_tr": "Şeker Pancarı"},
+        # ─── Meyve Ağaçları & Çok Yıllık ───────────────────────
+        "olive": {"N": 80.0, "P": 40.0, "K": 80.0, "name_tr": "Zeytin"},
+        "grape": {"N": 80.0, "P": 60.0, "K": 120.0, "name_tr": "Üzüm"},
+        "apple": {"N": 100.0, "P": 50.0, "K": 120.0, "name_tr": "Elma"},
+        "citrus": {"N": 140.0, "P": 60.0, "K": 140.0, "name_tr": "Narenciye"},
+        "hazelnut": {"N": 100.0, "P": 50.0, "K": 100.0, "name_tr": "Fındık"},
+        "pistachio": {"N": 80.0, "P": 40.0, "K": 80.0, "name_tr": "Antep Fıstığı"},
+        "tea": {"N": 120.0, "P": 40.0, "K": 80.0, "name_tr": "Çay"},
     }
 
     # Gübreleme programı şablonları (bitki türünden bağımsız genel takvim)

@@ -60,8 +60,8 @@ API çalışınca şu adreslerde erişebilirsin:
 |:--------|:---------|
 | 🌍 Ulusal Ölçek | Tüm Türkiye (81 il) için 7500+ kayıtlık mega veritabanı |
 | 💧 Sulama Optimizasyonu | ML modeli ile toprak nemi ve hava verisi analizi |
-| 🌱 Akıllı Gübreleme | NPK analizi ve toprak yapısı bazlı 15 bitki türü için öneri sistemi |
-| 🦠 Hastalık Tespiti | CNN modeli ile bitki sağlığı görüntü analizi |
+| 🌱 Akıllı Gübreleme | NPK analizi ve toprak yapısı bazlı 17 bitki türü için öneri sistemi |
+| 🦠 Hastalık Tespiti | CNN modeli ile bitki sağlığı görüntü analizi *(Cycle 7'de planlandı)* |
 | 📊 Dashboard | Dark tema SPA, Chart.js grafikleri, responsive |
 | 📈 Analitik Panosu | Bölge bazlı gruplanmış (7 bölge) veri görselleştirme ve içgörü |
 | 🔐 API Güvenliği | API Key auth, rate limiting, request logging |

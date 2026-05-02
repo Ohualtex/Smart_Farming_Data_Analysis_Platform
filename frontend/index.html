@@ -288,7 +288,31 @@ tr:hover td { background: var(--surface-2); }
                     <h3>🌱 Gübreleme Önerisi Al</h3>
                     <div class="form-grid">
                         <div class="form-group"><label>Bitki Türü</label>
-                            <select id="fert_crop"><option value="wheat">Buğday</option><option value="corn">Mısır</option><option value="tomato">Domates</option><option value="cotton">Pamuk</option><option value="sunflower">Ayçiçeği</option><option value="pepper">Biber</option><option value="potato">Patates</option><option value="rice">Pirinç</option></select>
+                            <select id="fert_crop">
+                                <optgroup label="Tahıllar">
+                                    <option value="wheat">Buğday</option>
+                                    <option value="corn">Mısır</option>
+                                    <option value="barley">Arpa</option>
+                                    <option value="rice">Pirinç</option>
+                                </optgroup>
+                                <optgroup label="Sebzeler & Endüstriyel">
+                                    <option value="tomato">Domates</option>
+                                    <option value="pepper">Biber</option>
+                                    <option value="potato">Patates</option>
+                                    <option value="cotton">Pamuk</option>
+                                    <option value="sunflower">Ayçiçeği</option>
+                                    <option value="sugar_beet">Şeker Pancarı</option>
+                                </optgroup>
+                                <optgroup label="Meyve & Çok Yıllık">
+                                    <option value="olive">Zeytin</option>
+                                    <option value="grape">Üzüm</option>
+                                    <option value="apple">Elma</option>
+                                    <option value="citrus">Narenciye</option>
+                                    <option value="hazelnut">Fındık</option>
+                                    <option value="pistachio">Antep Fıstığı</option>
+                                    <option value="tea">Çay</option>
+                                </optgroup>
+                            </select>
                         </div>
                         <div class="form-group"><label>Alan (Hektar)</label><input type="number" id="fert_area" value="5" step="0.1"></div>
                         <div class="form-group"><label>Toprak Azot (mg/kg)</label><input type="number" id="fert_n" value="40" step="1"></div>
