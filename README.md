@@ -70,6 +70,48 @@ API çalışınca şu adreslerde erişebilirsin:
 
 ---
 
+## 🏗️ Sistem Mimarisi
+
+```mermaid
+graph TD
+    subgraph Frontend Katmanı
+        UI[Web Dashboard SPA]
+        Mobile[Mobil Arayüz - Gelecek]
+    end
+
+    subgraph API & Backend Katmanı
+        FastAPI[FastAPI Gateway & Routers]
+        Security[Auth & Rate Limiting]
+        Services[İş Katmanı Servisleri]
+
+        FastAPI --> Security
+        Security --> Services
+    end
+
+    subgraph Veri & Analitik Katmanı
+        DB[(PostgreSQL / SQLite)]
+        ML[ML Sulama & Gübre Modelleri]
+        CNN[CNN Bitki Sağlığı Modeli]
+
+        Services --> DB
+        Services --> ML
+        Services --> CNN
+    end
+
+    subgraph Dış Sistemler
+        WeatherAPI((Dış Hava Durumu API))
+        IoT[IoT Sensör Ağları]
+
+        IoT --> |Gerçek Zamanlı Veri| FastAPI
+        Services --> |İstek| WeatherAPI
+    end
+
+    UI --> |REST API / JSON| FastAPI
+    Mobile --> |REST API / JSON| FastAPI
+```
+
+---
+
 ## 🔐 API Kimlik Doğrulama
 
 Yazma (POST/DELETE) endpoint'leri `X-API-Key` header'ı gerektirir. Okuma (GET) endpoint'leri herkese açıktır.
