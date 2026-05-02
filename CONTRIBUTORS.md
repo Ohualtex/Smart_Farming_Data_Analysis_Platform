@@ -57,7 +57,7 @@
 > branch'inde tamamlandı/devam ediyor. Detaylı durum için `git log`
 > üzerinden ekip commit'lerine bakınız.
 
-### shiftSession — Cycle 6 Borç Kapatma (3 May+)
+### shiftSession — Borç Kapatma (3 May+)
 - **Miraç**: Production stability fix'leri (scheduler, hardcoded secrets,
   env-driven CORS), ekip için skeleton router/helper'lar (alerts, metrics,
   model_performance, ML eval, data_quality), 52 yeni test

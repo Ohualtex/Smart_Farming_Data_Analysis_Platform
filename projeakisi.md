@@ -204,7 +204,17 @@ Modelin performansını düzenli olarak izlemek ve raporlamak için bir altyapı
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
-> ⏸️ *Mevcut görev yok.*
+#### 📌 Filiz — Çiftçi-Dostu Akıllı Asistan Maskotu ve UX Cilası
+Platformun çiftçi kullanıcılar için tanıdık ve sevimli bir yüzü olması amacıyla **Filiz** adlı SVG tabanlı bir maskot karakter tasarla ve dashboard'a entegre et:
+
+1) **Karakter tasarımı**: 3D-cartoon stilinde yapraklı kafa, gradient gövde, büyük parıltılı gözler, pembe yanaklar, kollar ve yumuşak gölge. Tüm bileşenler inline SVG (harici asset yok), tema değişimine duyarlı.
+2) **Davranış sistemi**:
+   - Idle animasyonlar: float, yaprak salınımı, mouse takibi (göz pupil), senkron blink (`o_o → -_-`).
+   - Mood otomasyonu: gündüz **happy**, gece 00:00–05:00 **sleepy** (gözler kapalı, Zzz uçuşur).
+   - Tıklama tepkileri: gündüz `^_^` + 3 kalp animasyonu, uyku saatinde `>_<` sinirli (uyandırıldı tepkisi).
+3) **Tarımsal asistan**: 65+ Türkçe pratik ipucu havuzu (sulama, gübreleme, ekim/rotasyon, hava, hastalık/zararlı, hasat). 8 saniyelik konuşma balonu, otomatik ve manuel kapanabilir.
+4) **UX cilası**: Tüm sayfalara hero banner, dekoratif section header'lar, light/dark tema toggle (localStorage persist), 5 floating arka plan yaprağı, kart hover glow efektleri.
+5) **Swagger dokümantasyon iyileştirmesi**: Çiftçi-dostu Türkçe rehber metni, 11 tag açıklaması, 4 kritik endpoint'e canlı örnek body, sidebar'a "API Rehberi" kısayolu.
 
 ### 👤 EMİRHAN GÜNAY
 

@@ -61,7 +61,7 @@ API çalışınca şu adreslerde erişebilirsin:
 | 🌍 Ulusal Ölçek | Tüm Türkiye (81 il) için 7500+ kayıtlık mega veritabanı |
 | 💧 Sulama Optimizasyonu | ML modeli ile toprak nemi ve hava verisi analizi |
 | 🌱 Akıllı Gübreleme | NPK analizi ve toprak yapısı bazlı 17 bitki türü için öneri sistemi |
-| 📊 Dashboard | Dark tema SPA, Chart.js grafikleri, responsive |
+| 📊 Dashboard | Dark tema, Chart.js grafikleri, responsive SPA |
 | 📈 Analitik Panosu | Bölge bazlı gruplanmış (7 bölge) veri görselleştirme ve içgörü |
 | 🔐 API Güvenliği | API Key auth, rate limiting, request logging |
 | 🌤️ Veri Pipeline | Hava durumu veri temizleme ve dönüştürme |
@@ -71,6 +71,7 @@ API çalışınca şu adreslerde erişebilirsin:
 
 | Özellik | Hedef Sprint | Sorumlu |
 |:--------|:------------:|:-------:|
+| 🌱 Filiz Maskot ve UX cilası — animasyonlu SVG asistan + tema toggle | Cycle 7 | Miraç |
 | 🦠 Hastalık Tespiti — CNN bitki sağlığı görüntü analizi | Cycle 7 | Ayşe |
 | 🔐 Auth UI — kullanıcı giriş/kayıt arayüzü | Cycle 7 | Ecenur |
 | 🚨 İzleme & Uyarı Paneli — frontend | Cycle 7 | Ecenur |
