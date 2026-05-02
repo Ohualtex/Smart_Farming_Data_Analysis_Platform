@@ -6,7 +6,7 @@ Bitki türüne göre gübreleme önerisi ve takvim oluşturma.
 Ayşe Eslem Çekici — Cycle 5 Görevi
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.schemas.schemas import (
     FertilizerRecommendRequest,
@@ -45,8 +45,6 @@ def recommend_fertilizer(data: FertilizerRecommendRequest):
     )
 
     if result.get("error"):
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail=result["message"])
 
     return result
@@ -74,8 +72,6 @@ def get_fertilizer_schedule(data: FertilizerScheduleRequest):
     )
 
     if not schedule:
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=400,
             detail=f"Bilinmeyen bitki turu: {data.crop_type}",

@@ -143,7 +143,8 @@ class TestSupportedCrops:
 
     def test_returns_all_crops(self):
         crops = self.service.get_supported_crops()
-        assert len(crops) == 8
+        # Cycle 6: 8 → 17 (Türkiye'nin 7 bölgesi için bitki yelpazesi genişletildi)
+        assert len(crops) == 17
 
     def test_crop_has_required_fields(self):
         crops = self.service.get_supported_crops()
@@ -249,4 +250,5 @@ class TestFertilizerCropsEndpoint:
         response = client.get("/api/fertilizer/crops")
         data = response.json()
         assert "crops" in data
-        assert data["count"] == 8
+        # Cycle 6: 8 → 17 bitki türü
+        assert data["count"] == 17

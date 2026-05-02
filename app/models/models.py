@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -14,7 +14,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), default="farmer")
     phone = Column(String(20))
-    created_at = Column(DateTime, default=datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     farms = relationship("Farm", back_populates="owner")
 
 
@@ -40,8 +40,10 @@ class Field(Base):
     area_hectares = Column(Float)
     soil_type = Column(String(50))
     elevation_m = Column(Float)
+    crop_id = Column(Integer, ForeignKey("crop_types.id"))
     farm = relationship("Farm", back_populates="fields")
     sensors = relationship("Sensor", back_populates="field")
+    crop = relationship("CropType", back_populates="fields")
 
 
 class CropType(Base):
@@ -55,6 +57,7 @@ class CropType(Base):
     optimal_temp_max = Column(Float)
     water_need_mm_per_day = Column(Float)
     growth_duration_days = Column(Integer)
+    fields = relationship("Field", back_populates="crop")
 
 
 class Sensor(Base):
@@ -76,7 +79,7 @@ class SoilMoistureReading(Base):
     __tablename__ = "soil_moisture_readings"
     id = Column(Integer, primary_key=True, index=True)
     sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False)
-    reading_timestamp = Column(DateTime, default=datetime.now(UTC), index=True)
+    reading_timestamp = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
     moisture_percent = Column(Float, nullable=False)
     depth_cm = Column(Float)
     soil_temperature_c = Column(Float)
@@ -90,7 +93,7 @@ class WeatherData(Base):
     __tablename__ = "weather_data"
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"))
-    recorded_at = Column(DateTime, default=datetime.now(UTC), index=True)
+    recorded_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
     temperature_c = Column(Float)
     humidity_percent = Column(Float)
     precipitation_mm = Column(Float)
@@ -117,7 +120,72 @@ class PlantHealthImage(Base):
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"))
     image_url = Column(String(500))
-    captured_at = Column(DateTime, default=datetime.now(UTC))
+    captured_at = Column(DateTime, default=lambda: datetime.now(UTC))
     diagnosis = Column(String(200))
     confidence_score = Column(Float)
     severity = Column(String(20))
+
+
+class SystemAlert(Base):
+    __tablename__ = "system_alerts"
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), index=True)
+    field_id = Column(Integer, ForeignKey("fields.id"), nullable=True, index=True)
+    alert_type = Column(String(50), nullable=False)  # e.g., 'sensor_anomaly', 'weather_warning', 'system_error'
+    severity = Column(String(20), default="low")  # 'low', 'medium', 'critical'
+    message = Column(Text, nullable=False)
+    is_resolved = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
+
+
+class ModelPerformanceLog(Base):
+    __tablename__ = "model_performance_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String(100), nullable=False, index=True)  # e.g., 'irrigation_rf', 'plant_disease_cnn'
+    prediction_data = Column(Text)  # JSON serialized
+    actual_data = Column(Text, nullable=True)  # JSON serialized, filled later
+    accuracy_score = Column(Float, nullable=True)
+    logged_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
+
+
+class SoilAnalysis(Base):
+    __tablename__ = "soil_analyses"
+    id = Column(Integer, primary_key=True, index=True)
+    field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
+    analysis_date = Column(DateTime, default=lambda: datetime.now(UTC))
+    ph_level = Column(Float)
+    organic_matter_pct = Column(Float)
+    nitrogen_mg_kg = Column(Float)
+    phosphorus_mg_kg = Column(Float)
+    potassium_mg_kg = Column(Float)
+    calcium_mg_kg = Column(Float)
+    magnesium_mg_kg = Column(Float)
+    texture_class = Column(String(50))  # e.g., 'killi-tınlı', 'kumlu', 'tınlı'
+    notes = Column(Text, nullable=True)
+
+
+class CropPlanting(Base):
+    __tablename__ = "crop_plantings"
+    id = Column(Integer, primary_key=True, index=True)
+    field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
+    crop_id = Column(Integer, ForeignKey("crop_types.id"), nullable=False, index=True)
+    planting_date = Column(DateTime, nullable=False)
+    expected_harvest_date = Column(DateTime)
+    actual_harvest_date = Column(DateTime, nullable=True)
+    season = Column(String(20))  # e.g., '2025-2026', 'Yaz 2026'
+    yield_kg_per_hectare = Column(Float, nullable=True)
+    status = Column(String(20), default="growing")  # 'growing', 'harvested', 'failed'
+
+
+class FertilizerRecommendationLog(Base):
+    __tablename__ = "fertilizer_recommendations"
+    id = Column(Integer, primary_key=True, index=True)
+    field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
+    crop_id = Column(Integer, ForeignKey("crop_types.id"), nullable=False)
+    recommended_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    nitrogen_kg = Column(Float)
+    phosphorus_kg = Column(Float)
+    potassium_kg = Column(Float)
+    total_fertilizer_kg = Column(Float)
+    recommendation_text = Column(Text)
+    is_applied = Column(Boolean, default=False)

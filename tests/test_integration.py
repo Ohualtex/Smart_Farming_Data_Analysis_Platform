@@ -209,8 +209,50 @@ class TestAPIDocumentation:
         assert "/api/irrigation/predict" in paths
         assert "/api/fertilizer/recommend" in paths
         assert "/api/fertilizer/crops" in paths
+        assert "/api/analytics/summary" in paths
 
     def test_root_includes_dashboard_link(self, client):
         res = client.get("/")
         data = res.json()
         assert "dashboard" in data
+
+
+class TestAnalyticsFlow:
+    """Analytics endpoint'inin uçtan uca çalıştığını doğrular."""
+
+    def test_analytics_summary_returns_all_sections(self, client):
+        """Analytics özet endpoint'i tüm bölümleri içermelidir."""
+        res = client.get("/api/analytics/summary")
+        assert res.status_code == 200
+        data = res.json()
+
+        # Tüm ana bölümler mevcut
+        assert "counts" in data
+        assert "sensor_type_distribution" in data
+        assert "farm_weather_comparison" in data
+        assert "irrigation_status_distribution" in data
+        assert "daily_trends" in data
+        assert "sensor_reading_stats" in data
+        assert "npk_profiles" in data
+        assert "period_days" in data
+        assert "generated_at" in data
+
+    def test_analytics_with_sensor_data(self, client, db):
+        """Sensör oluşturulunca analytics sayaçları güncellenir."""
+        # Önce sensör oluştur
+        sensor_data = {
+            "field_id": 1,
+            "sensor_type": "soil_moisture",
+            "serial_number": "INT-TEST-001",
+            "status": "active",
+        }
+        client.post(
+            "/api/sensors/",
+            json=sensor_data,
+            headers={"X-API-Key": "dev-api-key"},
+        )
+
+        # Analytics'te sayaç güncellenmeli
+        res = client.get("/api/analytics/summary")
+        data = res.json()
+        assert data["counts"]["sensors"] >= 1

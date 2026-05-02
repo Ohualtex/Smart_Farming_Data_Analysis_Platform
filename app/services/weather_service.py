@@ -7,6 +7,8 @@ eksik veri enterpolasyonu işlemleri.
 Ayşe Eslem Çekici — Cycle 4 Görevi
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
 
 import httpx

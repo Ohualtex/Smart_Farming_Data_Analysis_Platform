@@ -202,6 +202,9 @@ tr:hover td { background: var(--surface-2); }
             <a class="nav-item" href="#fertilizer" onclick="navigate('fertilizer')">
                 <span class="icon">🌱</span> Gübreleme
             </a>
+            <a class="nav-item" href="#analytics" onclick="navigate('analytics')">
+                <span class="icon">📈</span> Analitik
+            </a>
         </nav>
         <div class="sidebar-footer">
             <span class="status-dot online" id="statusDot"></span>
@@ -285,7 +288,31 @@ tr:hover td { background: var(--surface-2); }
                     <h3>🌱 Gübreleme Önerisi Al</h3>
                     <div class="form-grid">
                         <div class="form-group"><label>Bitki Türü</label>
-                            <select id="fert_crop"><option value="wheat">Buğday</option><option value="corn">Mısır</option><option value="tomato">Domates</option><option value="cotton">Pamuk</option><option value="sunflower">Ayçiçeği</option><option value="pepper">Biber</option><option value="potato">Patates</option><option value="rice">Pirinç</option></select>
+                            <select id="fert_crop">
+                                <optgroup label="Tahıllar">
+                                    <option value="wheat">Buğday</option>
+                                    <option value="corn">Mısır</option>
+                                    <option value="barley">Arpa</option>
+                                    <option value="rice">Pirinç</option>
+                                </optgroup>
+                                <optgroup label="Sebzeler & Endüstriyel">
+                                    <option value="tomato">Domates</option>
+                                    <option value="pepper">Biber</option>
+                                    <option value="potato">Patates</option>
+                                    <option value="cotton">Pamuk</option>
+                                    <option value="sunflower">Ayçiçeği</option>
+                                    <option value="sugar_beet">Şeker Pancarı</option>
+                                </optgroup>
+                                <optgroup label="Meyve & Çok Yıllık">
+                                    <option value="olive">Zeytin</option>
+                                    <option value="grape">Üzüm</option>
+                                    <option value="apple">Elma</option>
+                                    <option value="citrus">Narenciye</option>
+                                    <option value="hazelnut">Fındık</option>
+                                    <option value="pistachio">Antep Fıstığı</option>
+                                    <option value="tea">Çay</option>
+                                </optgroup>
+                            </select>
                         </div>
                         <div class="form-group"><label>Alan (Hektar)</label><input type="number" id="fert_area" value="5" step="0.1"></div>
                         <div class="form-group"><label>Toprak Azot (mg/kg)</label><input type="number" id="fert_n" value="40" step="1"></div>
@@ -302,6 +329,23 @@ tr:hover td { background: var(--surface-2); }
                     </div>
                     <button class="btn-primary" onclick="fertilizerSchedule()" style="margin-top:16px;">📅 Takvim Oluştur</button>
                     <div id="scheduleResult"></div>
+                </div>
+            </section>
+
+            <!-- ═══ ANALYTICS PAGE ═══ -->
+            <section class="page" id="page-analytics">
+                <div class="cards-grid" id="analyticsCards"></div>
+                <div class="charts-row">
+                    <div class="chart-box"><h3>🍩 Sensör Tipi Dağılımı</h3><canvas id="sensorTypeChart"></canvas></div>
+                    <div class="chart-box"><h3>🏘️ Çiftlik Bazlı Sıcaklık Karşılaştırması</h3><canvas id="farmTempChart"></canvas></div>
+                </div>
+                <div class="charts-row">
+                    <div class="chart-box"><h3>💧 Sulama Durumu Dağılımı</h3><canvas id="irrigationStatusChart"></canvas></div>
+                    <div class="chart-box"><h3>🌿 Bitki NPK İhtiyaç Profili</h3><canvas id="npkRadarChart"></canvas></div>
+                </div>
+                <div class="charts-row">
+                    <div class="chart-box"><h3>🌡️ Günlük Sıcaklık Trendleri (Çiftlik Bazlı)</h3><canvas id="dailyTrendChart"></canvas></div>
+                    <div class="chart-box"><h3>📊 Sensör Okuma İstatistikleri</h3><canvas id="sensorStatsChart"></canvas></div>
                 </div>
             </section>
         </div>
@@ -341,6 +385,7 @@ const pageTitles = {
     weather: ['Hava Durumu', 'Meteoroloji Verileri'],
     irrigation: ['Sulama Optimizasyonu', 'ML Tahmin ve Geçmiş'],
     fertilizer: ['Gübreleme', 'NPK Öneri Sistemi'],
+    analytics: ['Analitik', 'Veri Görselleştirme ve İçgörüler'],
 };
 
 function navigate(page) {
@@ -355,6 +400,7 @@ function navigate(page) {
     else if (page === 'sensors') loadSensors();
     else if (page === 'weather') loadWeather();
     else if (page === 'irrigation') loadIrrigation();
+    else if (page === 'analytics') loadAnalytics();
     // Close sidebar on mobile
     document.getElementById('sidebar').classList.remove('open');
 }
@@ -575,6 +621,212 @@ async function fertilizerSchedule() {
             </div>`;
         showToast('Gübreleme takvimi oluşturuldu', 'success');
     }
+}
+
+// ─── ANALYTICS ─────────────────────────────────────────────────
+const analyticsColors = {
+    green: '#10b981', blue: '#3b82f6', amber: '#f59e0b',
+    red: '#ef4444', violet: '#8b5cf6', cyan: '#06b6d4',
+    pink: '#ec4899', lime: '#84cc16',
+};
+
+async function loadAnalytics() {
+    const data = await api('/api/analytics/summary?days=30');
+    if (!data) { showToast('Analitik verisi yüklenemedi', 'error'); return; }
+
+    // Özet Kartları
+    const c = data.counts;
+    document.getElementById('analyticsCards').innerHTML = `
+        <div class="card"><div class="card-icon">🏡</div><div class="card-value">${c.farms}</div><div class="card-label">Çiftlik</div></div>
+        <div class="card"><div class="card-icon">🌾</div><div class="card-value">${c.fields}</div><div class="card-label">Tarla</div></div>
+        <div class="card"><div class="card-icon">📡</div><div class="card-value">${c.sensors}</div><div class="card-label">Sensör</div></div>
+        <div class="card"><div class="card-icon">📊</div><div class="card-value">${c.readings}</div><div class="card-label">Sensör Okuması</div></div>
+        <div class="card"><div class="card-icon">🌤️</div><div class="card-value">${c.weather_records}</div><div class="card-label">Hava Durumu Kaydı</div></div>
+        <div class="card"><div class="card-icon">💧</div><div class="card-value">${c.irrigation_schedules}</div><div class="card-label">Sulama Programı</div></div>
+    `;
+
+    renderSensorTypeChart(data.sensor_type_distribution);
+    renderFarmTempChart(data.farm_weather_comparison);
+    renderIrrigationStatusChart(data.irrigation_status_distribution);
+    renderNpkRadarChart(data.npk_profiles);
+    renderDailyTrendChart(data.daily_trends);
+    renderSensorStatsChart(data.sensor_reading_stats);
+}
+
+function renderSensorTypeChart(dist) {
+    const typeLabels = { 'soil_moisture': 'Toprak Nemi', 'soil_temperature': 'Toprak Sıcaklığı', 'electrical_conductivity': 'Elektriksel İletkenlik' };
+    const colors = [analyticsColors.green, analyticsColors.amber, analyticsColors.cyan, analyticsColors.violet, analyticsColors.pink];
+    if (charts.sensorType) charts.sensorType.destroy();
+    charts.sensorType = new Chart(document.getElementById('sensorTypeChart'), {
+        type: 'doughnut',
+        data: {
+            labels: dist.map(d => typeLabels[d.type] || d.type),
+            datasets: [{ data: dist.map(d => d.count), backgroundColor: colors.slice(0, dist.length), borderColor: 'transparent', borderWidth: 0 }]
+        },
+        options: {
+            responsive: true, cutout: '60%',
+            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 16, font: { size: 12 } } } }
+        }
+    });
+}
+
+function renderFarmTempChart(comparison) {
+    if (!comparison.length) return;
+    // Bölge bazlı gruplama (81 il → 7 bölge)
+    const regionMap = {};
+    comparison.forEach(f => {
+        const region = f.region || 'Diğer';
+        if (!regionMap[region]) regionMap[region] = { temps: [], hums: [], precips: [], count: 0 };
+        regionMap[region].temps.push(f.temperature.avg);
+        regionMap[region].hums.push(f.humidity?.avg || 0);
+        regionMap[region].count++;
+    });
+    const regions = Object.keys(regionMap);
+    const avgByRegion = regions.map(r => {
+        const t = regionMap[r].temps;
+        return { region: r, avg: +(t.reduce((a,b) => a+b, 0) / t.length).toFixed(1),
+            min: +Math.min(...t).toFixed(1), max: +Math.max(...t).toFixed(1), count: regionMap[r].count };
+    });
+    avgByRegion.sort((a, b) => b.avg - a.avg);
+    const labels = avgByRegion.map(r => `${r.region} (${r.count})`);
+    if (charts.farmTemp) charts.farmTemp.destroy();
+    charts.farmTemp = new Chart(document.getElementById('farmTempChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Min °C', data: avgByRegion.map(r => r.min), backgroundColor: analyticsColors.blue + '99' },
+                { label: 'Ort °C', data: avgByRegion.map(r => r.avg), backgroundColor: analyticsColors.amber + '99' },
+                { label: 'Max °C', data: avgByRegion.map(r => r.max), backgroundColor: analyticsColors.red + '99' },
+            ]
+        },
+        options: {
+            responsive: true, indexAxis: 'y',
+            plugins: { legend: { labels: { color: '#9ca3af' } },
+                title: { display: true, text: 'Bölge Bazlı Sıcaklık Karşılaştırması', color: '#9ca3af', font: { size: 13 } } },
+            scales: {
+                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' }, title: { display: true, text: '°C', color: '#6b7280' } },
+                y: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { color: '#1f2937' } }
+            }
+        }
+    });
+}
+
+function renderIrrigationStatusChart(dist) {
+    const statusLabels = { 'completed': 'Tamamlandı', 'pending': 'Bekliyor', 'cancelled': 'İptal Edildi' };
+    const statusColors = { 'completed': analyticsColors.green, 'pending': analyticsColors.amber, 'cancelled': analyticsColors.red };
+    if (charts.irrigationStatus) charts.irrigationStatus.destroy();
+    charts.irrigationStatus = new Chart(document.getElementById('irrigationStatusChart'), {
+        type: 'polarArea',
+        data: {
+            labels: dist.map(d => statusLabels[d.status] || d.status),
+            datasets: [{
+                data: dist.map(d => d.count),
+                backgroundColor: dist.map(d => (statusColors[d.status] || analyticsColors.violet) + '80'),
+                borderColor: dist.map(d => statusColors[d.status] || analyticsColors.violet),
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 16, font: { size: 12 } } } },
+            scales: { r: { ticks: { color: '#6b7280', backdropColor: 'transparent' }, grid: { color: '#1f293766' } } }
+        }
+    });
+}
+
+function renderNpkRadarChart(profiles) {
+    const colors = [analyticsColors.green, analyticsColors.blue, analyticsColors.red];
+    if (charts.npkRadar) charts.npkRadar.destroy();
+    charts.npkRadar = new Chart(document.getElementById('npkRadarChart'), {
+        type: 'radar',
+        data: {
+            labels: profiles.map(p => p.crop),
+            datasets: [
+                { label: 'Azot (N)', data: profiles.map(p => p.N), borderColor: analyticsColors.green, backgroundColor: analyticsColors.green + '20', pointBackgroundColor: analyticsColors.green, pointRadius: 3 },
+                { label: 'Fosfor (P)', data: profiles.map(p => p.P), borderColor: analyticsColors.blue, backgroundColor: analyticsColors.blue + '20', pointBackgroundColor: analyticsColors.blue, pointRadius: 3 },
+                { label: 'Potasyum (K)', data: profiles.map(p => p.K), borderColor: analyticsColors.amber, backgroundColor: analyticsColors.amber + '20', pointBackgroundColor: analyticsColors.amber, pointRadius: 3 },
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 16 } } },
+            scales: { r: { ticks: { color: '#6b7280', backdropColor: 'transparent' }, grid: { color: '#1f293766' }, pointLabels: { color: '#9ca3af', font: { size: 11 } } } }
+        }
+    });
+}
+
+function renderDailyTrendChart(trends) {
+    if (!trends.length) return;
+    // Bölge bazlı gruplama: Her bölge için ortalama günlük sıcaklık
+    const regionTrends = {};
+    trends.forEach(farm => {
+        const region = farm.region || 'Diğer';
+        if (!regionTrends[region]) regionTrends[region] = { days: {} };
+        farm.days.forEach(d => {
+            if (!regionTrends[region].days[d.date]) regionTrends[region].days[d.date] = { temps: [], hums: [] };
+            if (d.temp_avg != null) regionTrends[region].days[d.date].temps.push(d.temp_avg);
+        });
+    });
+    const regionColors = [
+        analyticsColors.red, analyticsColors.blue, analyticsColors.green,
+        analyticsColors.violet, analyticsColors.amber, analyticsColors.cyan, analyticsColors.pink
+    ];
+    const regionNames = Object.keys(regionTrends);
+    // İlk bölgenin tarihlerini al
+    const allDates = Object.keys(regionTrends[regionNames[0]]?.days || {}).sort();
+    const datasets = regionNames.map((region, i) => {
+        const data = allDates.map(date => {
+            const day = regionTrends[region].days[date];
+            if (!day || !day.temps.length) return null;
+            return +(day.temps.reduce((a,b) => a+b, 0) / day.temps.length).toFixed(1);
+        });
+        return {
+            label: region, data,
+            borderColor: regionColors[i % regionColors.length],
+            backgroundColor: regionColors[i % regionColors.length] + '15',
+            fill: false, tension: 0.4, pointRadius: 3, borderWidth: 2,
+        };
+    });
+    const labels = allDates.map(d => d.slice(5));
+    if (charts.dailyTrend) charts.dailyTrend.destroy();
+    charts.dailyTrend = new Chart(document.getElementById('dailyTrendChart'), {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#9ca3af', font: { size: 11 } } },
+                title: { display: true, text: 'Bölge Bazlı Günlük Sıcaklık Trendi', color: '#9ca3af', font: { size: 13 } } },
+            scales: {
+                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
+                y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' }, title: { display: true, text: '°C', color: '#6b7280' } }
+            }
+        }
+    });
+}
+
+function renderSensorStatsChart(stats) {
+    if (!stats || !stats.moisture.avg) return;
+    if (charts.sensorStats) charts.sensorStats.destroy();
+    charts.sensorStats = new Chart(document.getElementById('sensorStatsChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Toprak Nemi (%)', 'Toprak Sıcaklığı (°C)'],
+            datasets: [
+                { label: 'Min', data: [stats.moisture.min, stats.soil_temperature.min], backgroundColor: analyticsColors.blue + '80' },
+                { label: 'Ortalama', data: [stats.moisture.avg, stats.soil_temperature.avg], backgroundColor: analyticsColors.green + '80' },
+                { label: 'Max', data: [stats.moisture.max, stats.soil_temperature.max], backgroundColor: analyticsColors.red + '80' },
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: {
+                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
+                y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }
+            }
+        }
+    });
 }
 
 // ─── STATUS & UTILITIES ───────────────────────────────────────
