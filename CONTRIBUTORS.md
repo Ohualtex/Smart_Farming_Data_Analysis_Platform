@@ -45,9 +45,21 @@
 - **Ecenur**: Dashboard modernizasyonu (dark mode, responsive, 6 sayfa SPA)
 - **Mehmet Sait**: API güvenlik (rate limiting, auth, exception handling)
 
-### Cycle 6 — Son Sprint (28 Nis – 7 May)
-- **Miraç**: Analitik pano, 81 il genişletme, mega seed data (7500+ kayıt)
+### Cycle 6 — Son Sprint (28 Nis – 3 May)
+**Planlanan görevler** (`projeakisi.md`):
+- **Miraç**: Analitik pano, 81 il genişletme, mega seed data, rapor export, repo profesyonelleştirme
 - **Emirhan**: Veri temizleme iyileştirmeleri
 - **Ayşe Eslem**: ML model değerlendirme ve optimizasyon
 - **Ecenur**: Veri hattı izleme ve uyarı sistemi
 - **Mehmet Sait**: Model performans izleme ve raporlama altyapısı
+
+> **Not:** Cycle 6 deadline'ı (3 May) sonrasında bazı görevler `shiftSession`
+> branch'inde tamamlandı/devam ediyor. Detaylı durum için `git log`
+> üzerinden ekip commit'lerine bakınız.
+
+### shiftSession — Cycle 6 Borç Kapatma (3 May+)
+- **Miraç**: Production stability fix'leri (scheduler, hardcoded secrets,
+  env-driven CORS), ekip için skeleton router/helper'lar (alerts, metrics,
+  model_performance, ML eval, data_quality), 52 yeni test
+- **Ecenur**: Veri hattı izleme modülü (script + dokümantasyon)
+- *Diğer üyeler kendi Cycle 6 görevlerini devam ettirmekte*

@@ -22,6 +22,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
+from loguru import logger
 
 # Proje kök dizinini path'e ekle
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -47,22 +48,22 @@ from database.turkey_data import CROP_DATA, PROVINCES, REGION_CROPS, SOIL_TYPES
 
 def seed_database():
     """Veritabanını 81 il kapsamlı demo verilerle doldurur."""
-    print("🌱 SFDAP 81 İl Seed Data yükleniyor...")
+    logger.info("🌱 SFDAP 81 İl Seed Data yükleniyor...")
 
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
     try:
         if db.query(User).count() > 0:
-            print("⚠️  Veritabanında zaten veri var. Seed atlanıyor.")
-            print("    Sıfırdan başlamak için sfdap_dev.db dosyasını silin.")
+            logger.warning("⚠️  Veritabanında zaten veri var. Seed atlanıyor.")
+            logger.warning("    Sıfırdan başlamak için sfdap_dev.db dosyasını silin.")
             return
 
         rng = np.random.default_rng(42)
         now = datetime.now(UTC)
 
         # ─── 1. KULLANICILAR ─────────────────────────────────────────
-        print("  👤 Kullanıcılar oluşturuluyor...")
+        logger.info("  👤 Kullanıcılar oluşturuluyor...")
         users = [
             User(
                 name="Ahmet Yılmaz",
@@ -104,7 +105,7 @@ def seed_database():
         db.flush()
 
         # ─── 2. BİTKİ TÜRLERİ (15 adet) ─────────────────────────────
-        print("  🌿 15 bitki türü oluşturuluyor...")
+        logger.info("  🌿 15 bitki türü oluşturuluyor...")
         crop_types = []
         for name, sci, ph_min, ph_max, t_min, t_max, water, days in CROP_DATA:
             crop_types.append(
@@ -123,7 +124,7 @@ def seed_database():
         db.flush()
 
         # ─── 3. ÇİFTLİKLER (81 il) & TARLALAR (162) ─────────────────
-        print("  🏡 81 il çiftliği ve 162 tarla oluşturuluyor...")
+        logger.info("  🏡 81 il çiftliği ve 162 tarla oluşturuluyor...")
         all_farms = []
         all_fields = []
 
@@ -164,7 +165,7 @@ def seed_database():
         db.flush()
 
         # ─── 4. SENSÖRLER (324) ──────────────────────────────────────
-        print("  📡 324 sensör oluşturuluyor...")
+        logger.info("  📡 324 sensör oluşturuluyor...")
         all_sensors = []
         for i, field in enumerate(all_fields):
             for st_idx, stype in enumerate(["soil_moisture", "soil_temperature"]):
@@ -181,7 +182,7 @@ def seed_database():
         db.flush()
 
         # ─── 5. SENSÖR OKUMALARI (~4800) ──────────────────────────────
-        print("  📊 Sensör okumaları oluşturuluyor...")
+        logger.info("  📊 Sensör okumaları oluşturuluyor...")
         readings = []
         for sensor in all_sensors:
             for day in range(15):
@@ -198,10 +199,10 @@ def seed_database():
                 )
         db.add_all(readings)
         db.flush()
-        print(f"    → {len(readings)} okuma oluşturuldu")
+        logger.info(f"    → {len(readings)} okuma oluşturuldu")
 
         # ─── 6. HAVA DURUMU (~1200) ──────────────────────────────────
-        print("  🌤️ Hava durumu verileri oluşturuluyor...")
+        logger.info("  🌤️ Hava durumu verileri oluşturuluyor...")
         weather = []
         for idx, farm in enumerate(all_farms):
             base_temp = PROVINCES[idx][4]
@@ -222,10 +223,10 @@ def seed_database():
                 )
         db.add_all(weather)
         db.flush()
-        print(f"    → {len(weather)} hava durumu kaydı oluşturuldu")
+        logger.info(f"    → {len(weather)} hava durumu kaydı oluşturuldu")
 
         # ─── 7. SULAMA PROGRAMLARI (~320) ─────────────────────────────
-        print("  💧 Sulama programları oluşturuluyor...")
+        logger.info("  💧 Sulama programları oluşturuluyor...")
         irrigations = []
         statuses = ["completed", "completed", "completed", "pending", "cancelled"]
         for field in all_fields:
@@ -242,10 +243,10 @@ def seed_database():
                 )
         db.add_all(irrigations)
         db.flush()
-        print(f"    → {len(irrigations)} sulama programı oluşturuldu")
+        logger.info(f"    → {len(irrigations)} sulama programı oluşturuldu")
 
         # ─── 8. TOPRAK ANALİZLERİ (162) ──────────────────────────────
-        print("  🧪 Toprak analizleri oluşturuluyor...")
+        logger.info("  🧪 Toprak analizleri oluşturuluyor...")
         soil_analyses = []
         for field in all_fields:
             soil_analyses.append(
@@ -265,10 +266,10 @@ def seed_database():
             )
         db.add_all(soil_analyses)
         db.flush()
-        print(f"    → {len(soil_analyses)} toprak analizi oluşturuldu")
+        logger.info(f"    → {len(soil_analyses)} toprak analizi oluşturuldu")
 
         # ─── 9. EKİM TAKİBİ (162) ────────────────────────────────────
-        print("  🌾 Ekim kayıtları oluşturuluyor...")
+        logger.info("  🌾 Ekim kayıtları oluşturuluyor...")
         plantings = []
         for field in all_fields:
             plant_date = now - timedelta(days=int(rng.integers(30, 120)))
@@ -290,10 +291,10 @@ def seed_database():
             )
         db.add_all(plantings)
         db.flush()
-        print(f"    → {len(plantings)} ekim kaydı oluşturuldu")
+        logger.info(f"    → {len(plantings)} ekim kaydı oluşturuldu")
 
         # ─── 10. GÜBRE ÖNERİLERİ (162) ───────────────────────────────
-        print("  🧬 Gübre önerileri oluşturuluyor...")
+        logger.info("  🧬 Gübre önerileri oluşturuluyor...")
         fert_recs = []
         for field in all_fields:
             n = round(float(rng.uniform(10, 60)), 1)
@@ -314,10 +315,10 @@ def seed_database():
             )
         db.add_all(fert_recs)
         db.flush()
-        print(f"    → {len(fert_recs)} gübre önerisi oluşturuldu")
+        logger.info(f"    → {len(fert_recs)} gübre önerisi oluşturuldu")
 
         # ─── 11. SİSTEM UYARILARI & MODEL LOGLAR ─────────────────────
-        print("  🚨 Sistem uyarıları ve model logları oluşturuluyor...")
+        logger.info("  🚨 Sistem uyarıları ve model logları oluşturuluyor...")
         alerts = []
         alert_templates = [
             ("sensor_anomaly", "medium", "Sensör okumalarında anomali tespit edildi."),
@@ -373,24 +374,24 @@ def seed_database():
             + len(alerts)
             + len(perf_logs)
         )
-        print(f"\n✅ Seed data başarıyla yüklendi! (Toplam: {total} kayıt)")
-        print(f"   👤 {len(users)} kullanıcı")
-        print(f"   🌿 {len(crop_types)} bitki türü")
-        print(f"   🏡 {len(all_farms)} çiftlik (81 il)")
-        print(f"   🌾 {len(all_fields)} tarla")
-        print(f"   📡 {len(all_sensors)} sensör")
-        print(f"   📊 {len(readings)} sensör okuması")
-        print(f"   🌤️ {len(weather)} hava durumu kaydı")
-        print(f"   💧 {len(irrigations)} sulama programı")
-        print(f"   🧪 {len(soil_analyses)} toprak analizi")
-        print(f"   🌾 {len(plantings)} ekim kaydı")
-        print(f"   🧬 {len(fert_recs)} gübre önerisi")
-        print(f"   🚨 {len(alerts)} sistem uyarısı")
-        print(f"   📈 {len(perf_logs)} performans logu")
+        logger.info(f"\n✅ Seed data başarıyla yüklendi! (Toplam: {total} kayıt)")
+        logger.info(f"   👤 {len(users)} kullanıcı")
+        logger.info(f"   🌿 {len(crop_types)} bitki türü")
+        logger.info(f"   🏡 {len(all_farms)} çiftlik (81 il)")
+        logger.info(f"   🌾 {len(all_fields)} tarla")
+        logger.info(f"   📡 {len(all_sensors)} sensör")
+        logger.info(f"   📊 {len(readings)} sensör okuması")
+        logger.info(f"   🌤️ {len(weather)} hava durumu kaydı")
+        logger.info(f"   💧 {len(irrigations)} sulama programı")
+        logger.info(f"   🧪 {len(soil_analyses)} toprak analizi")
+        logger.info(f"   🌾 {len(plantings)} ekim kaydı")
+        logger.info(f"   🧬 {len(fert_recs)} gübre önerisi")
+        logger.info(f"   🚨 {len(alerts)} sistem uyarısı")
+        logger.info(f"   📈 {len(perf_logs)} performans logu")
 
     except Exception as e:
         db.rollback()
-        print(f"❌ Hata: {e}")
+        logger.info(f"❌ Hata: {e}")
         raise
     finally:
         db.close()
