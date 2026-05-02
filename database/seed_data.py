@@ -17,6 +17,7 @@ Kullanım:
     python database/seed_data.py
 """
 
+import math
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -44,6 +45,14 @@ from app.models.models import (
     WeatherData,
 )
 from database.turkey_data import CROP_DATA, PROVINCES, REGION_CROPS, SOIL_TYPES
+
+
+def _diurnal_factor(hour: int) -> float:
+    """
+    Günlük döngü faktörü: -1 (gece dip) ↔ +1 (öğle pik).
+    sin(2π·(h-6)/24) → 06:00 = 0, 12:00 = +1, 18:00 = 0, 00:00 = -1
+    """
+    return math.sin(2 * math.pi * (hour - 6) / 24)
 
 
 def seed_database():
@@ -182,48 +191,71 @@ def seed_database():
         db.flush()
 
         # ─── 5. SENSÖR OKUMALARI (~4800) ──────────────────────────────
-        logger.info("  📊 Sensör okumaları oluşturuluyor...")
+        # Sezonsal (mevsim) + diurnal (gece-gündüz) pattern ile gerçekçi veri
+        logger.info("  📊 Sensör okumaları oluşturuluyor (diurnal pattern)...")
         readings = []
         for sensor in all_sensors:
+            # Sensörün baz değerleri (sensör-bazlı küçük varyasyon)
+            base_soil_temp = 18.0 + float(rng.uniform(-2, 2))  # ~16-20°C ortalama
+            base_moisture = 50.0 + float(rng.uniform(-8, 8))  # %42-58 ortalama
             for day in range(15):
-                ts = now - timedelta(days=day, hours=int(rng.integers(0, 12)))
+                hour = int(rng.integers(0, 24))
+                ts = now - timedelta(days=day, hours=hour)
+                d = _diurnal_factor(hour)  # -1 ↔ +1
+                # Toprak sıcaklığı: 6°C diurnal + ±1.5°C noise
+                soil_temp = base_soil_temp + 6.0 * d + float(rng.uniform(-1.5, 1.5))
+                # Nem: tersine + sulama jitteri (sulama sonrası ani artış simülasyonu)
+                irrigation_boost = 12.0 if rng.random() < 0.08 else 0.0
+                moisture = base_moisture - 8.0 * d + irrigation_boost + float(rng.uniform(-3, 3))
+                moisture = max(15.0, min(90.0, moisture))  # fiziksel sınır
                 readings.append(
                     SoilMoistureReading(
                         sensor_id=sensor.id,
                         reading_timestamp=ts,
-                        moisture_percent=round(float(rng.uniform(20, 80)), 1),
+                        moisture_percent=round(moisture, 1),
                         depth_cm=sensor.depth_cm,
-                        soil_temperature_c=round(float(rng.uniform(8, 32)), 1),
-                        electrical_conductivity=round(float(rng.uniform(0.3, 3.5)), 2),
+                        soil_temperature_c=round(soil_temp, 1),
+                        electrical_conductivity=round(float(rng.uniform(0.4, 2.5)), 2),
                     )
                 )
         db.add_all(readings)
         db.flush()
-        logger.info(f"    → {len(readings)} okuma oluşturuldu")
+        logger.info(f"    → {len(readings)} okuma oluşturuldu (diurnal pattern uygulandı)")
 
-        # ─── 6. HAVA DURUMU (~1200) ──────────────────────────────────
-        logger.info("  🌤️ Hava durumu verileri oluşturuluyor...")
+        # ─── 6. HAVA DURUMU (~1200) — bölge baz + diurnal pattern ────
+        logger.info("  🌤️ Hava durumu verileri oluşturuluyor (diurnal pattern)...")
         weather = []
         for idx, farm in enumerate(all_farms):
             base_temp = PROVINCES[idx][4]
             base_hum = PROVINCES[idx][5]
             for day in range(15):
-                ts = now - timedelta(days=day, hours=int(rng.integers(6, 18)))
+                hour = int(rng.integers(0, 24))
+                ts = now - timedelta(days=day, hours=hour)
+                d = _diurnal_factor(hour)
+                # Hava sıcaklığı: 7°C diurnal + ±2°C noise
+                temp = base_temp + 7.0 * d + float(rng.uniform(-2, 2))
+                # Nem: ters phase, gündüz düşer
+                hum = base_hum - 12.0 * d + float(rng.uniform(-5, 5))
+                hum = max(20.0, min(95.0, hum))
+                # Solar: sadece gündüz var (saat 6-18 arası)
+                solar = max(0.0, 800.0 * max(0.0, d) + float(rng.uniform(-50, 50)))
+                # UV index: gündüz yüksek
+                uv = max(0.0, 9.0 * max(0.0, d) + float(rng.uniform(-1, 1)))
                 weather.append(
                     WeatherData(
                         farm_id=farm.id,
                         recorded_at=ts,
-                        temperature_c=round(base_temp + float(rng.uniform(-6, 8)), 1),
-                        humidity_percent=round(base_hum + float(rng.uniform(-15, 20)), 1),
+                        temperature_c=round(temp, 1),
+                        humidity_percent=round(hum, 1),
                         precipitation_mm=round(float(rng.choice([0, 0, 0, 0, rng.uniform(0.5, 15)])), 1),
                         wind_speed_kmh=round(float(rng.uniform(2, 35)), 1),
-                        solar_radiation=round(float(rng.uniform(150, 900)), 1),
-                        uv_index=round(float(rng.uniform(1, 11)), 1),
+                        solar_radiation=round(solar, 1),
+                        uv_index=round(uv, 1),
                     )
                 )
         db.add_all(weather)
         db.flush()
-        logger.info(f"    → {len(weather)} hava durumu kaydı oluşturuldu")
+        logger.info(f"    → {len(weather)} hava durumu kaydı oluşturuldu (diurnal pattern uygulandı)")
 
         # ─── 7. SULAMA PROGRAMLARI (~320) ─────────────────────────────
         logger.info("  💧 Sulama programları oluşturuluyor...")
@@ -318,25 +350,38 @@ def seed_database():
         logger.info(f"    → {len(fert_recs)} gübre önerisi oluşturuldu")
 
         # ─── 11. SİSTEM UYARILARI & MODEL LOGLAR ─────────────────────
+        # Az sayıda gerçekçi uyarı: çoğu çözülmüş, sadece 1-2 aktif kritik
         logger.info("  🚨 Sistem uyarıları ve model logları oluşturuluyor...")
-        alerts = []
-        alert_templates = [
-            ("sensor_anomaly", "medium", "Sensör okumalarında anomali tespit edildi."),
-            ("weather_warning", "critical", "Şiddetli yağış uyarısı."),
-            ("system_error", "low", "Sensör bağlantısı geçici olarak kesildi."),
+        # (alert_type, severity, message_template, is_resolved, hours_ago)
+        alert_seeds = [
+            ("sensor_anomaly", "medium", "Sensör okumalarında geçici anomali", True, 168),  # 1 hafta önce, çözülmüş
+            ("system_error", "low", "Sensör bağlantısı geçici olarak kesildi", True, 240),  # 10 gün önce, çözülmüş
+            ("weather_warning", "critical", "Şiddetli yağış uyarısı verildi", True, 96),  # 4 gün önce, çözülmüş
+            ("sensor_anomaly", "medium", "Toprak nemi beklenmedik düşüş", True, 48),  # 2 gün önce, çözülmüş
+            ("system_error", "low", "API zaman aşımı (geçici)", True, 36),  # geçen gün, çözülmüş
+            # Aktif uyarılar (az sayıda, gerçekçi):
+            ("sensor_anomaly", "medium", "Sensör batarya seviyesi %15", False, 6),  # 6 saat önce, aktif
+            (
+                "weather_warning",
+                "critical",
+                "48 saat içinde dolu yağışı bekleniyor",
+                False,
+                2,
+            ),  # 2 saat önce, aktif kritik
+            ("system_error", "low", "Hava verisi son senkronu yapılamadı", False, 1),  # 1 saat önce, aktif
         ]
-        for i in range(30):
+        alerts = []
+        for i, (atype, sev, msg_template, resolved, hours_ago) in enumerate(alert_seeds):
             farm = all_farms[i % len(all_farms)]
-            atype, sev, msg = alert_templates[i % 3]
             alerts.append(
                 SystemAlert(
                     farm_id=farm.id,
-                    field_id=all_fields[i * 2 % len(all_fields)].id if i % 2 == 0 else None,
+                    field_id=all_fields[i].id if i < len(all_fields) else None,
                     alert_type=atype,
                     severity=sev,
-                    message=f"{farm.city}: {msg}",
-                    is_resolved=bool(rng.choice([True, False])),
-                    created_at=now - timedelta(hours=int(rng.integers(1, 720))),
+                    message=f"{farm.city}: {msg_template}",
+                    is_resolved=resolved,
+                    created_at=now - timedelta(hours=hours_ago),
                 )
             )
         db.add_all(alerts)
