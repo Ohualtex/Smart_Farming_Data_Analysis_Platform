@@ -56,14 +56,10 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 # Request Logger
 app.add_middleware(RequestLoggerMiddleware)
 
-# CORS ayarlari (güvenli: spesifik origin'ler)
+# CORS ayarlari (env-driven: settings.CORS_ORIGINS virgulle ayrilmis liste)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8000",
-        "http://localhost:3000",
-        "http://127.0.0.1:8000",
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
