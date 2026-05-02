@@ -241,9 +241,62 @@ Sistemin sağlığını ve performansını izlemek üzere eksikleri kapat:
 1) Veri hattı izleme (Health/Metrics) endpoint'lerini ve Sistem Uyarı (Alert) CRUD işlemlerini tamamla,
 2) Halihazırda tablosu bulunan `ModelPerformanceLog` yapısı için, eğitilen modellerin başarı oranlarını ve tahmin/gerçekleşen sapmalarını döndürecek bir Raporlama API'si geliştir.
 
-## ⚫️ Cycle 8 —
+## ⚫️ Cycle 8 — Üretim Hazırlığı, Güvenlik ve Cila
 
-📅 **11 - 20 Mayıs 2026**
+📅 **11 – 20 Mayıs 2026**
+
+> Cycle 7 tüm temel özellikleri bitirdikten sonra projeyi pilot/üretim seviyesine
+> taşıyacak teknik borçların kapanması ve son cila için ara döngü.
+
+### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
+
+#### 📌 Üretim Altyapısı: Migration, Auth Backend, Rate Limit ve Performans
+Projenin gerçek kullanıma çıkabilmesi için kritik altyapı eksikliklerini kapat:
+
+1) **Alembic migration autogenerate** — `alembic/versions/8f05*.py` `pass` ile dolu durumda; `alembic revision --autogenerate -m "initial schema"` ile mevcut 14 tabloyu yansıtan migration üret. PostgreSQL'e geçişte `Base.metadata.create_all` yerine alembic kullanılmalı.
+2) **JWT tabanlı kullanıcı authentication backend** — Mevcut `User` tablosu var ama `password_hash` kullanılmıyor. `/api/auth/register`, `/api/auth/login`, `/api/auth/me` endpoint'lerini ekle (`python-jose` + `passlib[bcrypt]`). Ecenur'un Cycle 7'de yaptığı Auth UI'a backend desteği sağlar.
+3) **Rate limiting bağlama** — `slowapi` import edilmiş ama hiçbir endpoint'te `@limiter.limit(...)` decorator'ı yok. Kritik POST/DELETE endpoint'lerine (sensors, weather, alerts, model-performance) `30/minute` limiti uygula.
+4) **N+1 query fix** — `app/routers/analytics.py:71-153` dashboard isteğinde 81 farm × 2 loop = ~162 query yapıyor. Tek `group_by` SQL ile tek sorguya indirgeme.
+5) **HTTPS / reverse proxy konfigürasyonu** — Docker compose'a nginx (veya traefik) servisi ekle, `letsencrypt` placeholder'ı ile prod-hazır şablon.
+
+### 👤 EMİRHAN GÜNAY
+
+#### 📌 Veri Yedekleme & Veritabanı Optimizasyonu
+1) **Backup/restore script** — PostgreSQL ve SQLite için `pg_dump`/`sqlite3 .backup` tabanlı `scripts/backup.sh` ve `scripts/restore.sh`; cron ile günlük otomatik yedek + 7 günlük rotation. Makefile target'ları (`make backup`, `make restore`).
+2) **DB connection pool tuning** — `app/database.py` engine konfigürasyonuna `pool_size`, `max_overflow`, `pool_pre_ping` ayarları (env-driven). Prod yükü senaryosu için.
+3) **Sensör okumaları arşivleme** — Cycle 7'de IoT stream eklendiğinde tablo hızla şişer; 30 günden eski okumaları aylık özet tabloya taşıyan periyodik görev (APScheduler ile haftalık).
+
+### 👤 AYŞE ESLEM ÇEKİCİ
+
+#### 📌 Test Kapsamı Güçlendirme & Edge Case Senaryoları
+Mevcut 198 testi prod-hazır seviyeye çıkar:
+1) **Rate limit testleri** — `test_security.py`'a 5+ test: limit aşımında 429 döner, header'ları doğrulanır.
+2) **Edge case'ler** — Aşırı büyük payload (1MB JSON), unicode/emoji ile injection denemesi, concurrent insert race, oversized image upload (CNN endpoint'i için), SQL injection deneme stringi.
+3) **Auth flow integration testleri** — register → login → token ile protected endpoint çağrısı.
+4) **Coverage hedefini %95+'a çıkar** — şu an %91; en zayıf modüller `tasks/scheduler.py` (%56) ve `weather_service.py` (%74).
+
+### 👤 ECENUR ÜNER
+
+#### 📌 Frontend Build Pipeline ve Erişilebilirlik
+1) **Frontend bundling** — `frontend/index.html` 2200+ satırlık tek dosya; Vite veya esbuild ile CSS/JS extract, minify, cache busting (hashed filenames). Geliştirme deneyimi için HMR.
+2) **Erişilebilirlik (a11y)** — ARIA labels, keyboard navigation (sidebar nav, modal'lar), focus indicator'ları, screen reader test (axe-core), kontrast oranı (WCAG AA).
+3) **Loading / error UX** — Skeleton placeholder'ları kart/grafik için (Cycle 6 sonu hâlâ toast tabanlı), 5xx hata sayfası, offline durum indikatörü.
+
+### 👤 MEHMET SAİT TAYŞİ
+
+#### 📌 Gözlemlenebilirlik: Sentry, Prometheus, Structured Logging
+1) **Sentry entegrasyonu** — `SENTRY_DSN` env varsa hata raporlamayı aç; FastAPI ve loguru handler'ı ile uncaught exception'ları topla. Production'da kritik.
+2) **Prometheus metrics export** — `/api/metrics` endpoint'i (text/plain), `prometheus-client` ile: `http_requests_total`, `http_request_duration_seconds`, `model_predictions_total{model_name}`, `db_query_duration_seconds`. `app/routers/metrics.py` docstring'inde planlanmıştı.
+3) **Structured logging** — Loguru'ya JSON output formatı opsiyonu (`LOG_FORMAT=json` env), trace_id propagation (request_id middleware'le entegre), log rotation (`log_dir/sfdap.log` günlük rotate).
+
+---
+
+## 🟣 Cycle 9 — Final Rapor, Sunum ve Akademik Teslim
+
+📅 **21 – 31 Mayıs 2026**
+
+> Tüm teknik geliştirme bittikten sonra projeyi akademik olarak teslim etmek
+> ve kapsamlı şekilde belgelemek için son döngü.
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
