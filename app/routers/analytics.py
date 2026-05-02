@@ -9,7 +9,7 @@ Miraç Duran — Cycle 6 Görevi
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -47,7 +47,7 @@ def get_analytics_summary(
     - NPK bitki profilleri (radar chart için)
     - Günlük sıcaklık & nem trendleri (ısı haritası için)
     """
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since = datetime.now(UTC) - timedelta(days=days)
 
     # ─── GENEL SAYAÇLAR ──────────────────────────────────────────
     counts = {
@@ -186,7 +186,7 @@ def get_analytics_summary(
 
     return {
         "period_days": days,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "counts": counts,
         "sensor_type_distribution": sensor_type_distribution,
         "farm_weather_comparison": farm_weather_comparison,

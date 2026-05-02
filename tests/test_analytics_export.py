@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 def test_analytics_export_pdf_returns_200_and_pdf(client):
@@ -21,7 +21,7 @@ def test_analytics_export_invalid_format_returns_400(client):
 
 
 def test_analytics_compare_returns_200(client):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     start1 = (now - timedelta(days=60)).isoformat().replace("+", "%2B")
     end1 = (now - timedelta(days=30)).isoformat().replace("+", "%2B")
     start2 = (now - timedelta(days=30)).isoformat().replace("+", "%2B")

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -14,7 +14,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), default="farmer")
     phone = Column(String(20))
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     farms = relationship("Farm", back_populates="owner")
 
 
@@ -79,7 +79,7 @@ class SoilMoistureReading(Base):
     __tablename__ = "soil_moisture_readings"
     id = Column(Integer, primary_key=True, index=True)
     sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False)
-    reading_timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    reading_timestamp = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
     moisture_percent = Column(Float, nullable=False)
     depth_cm = Column(Float)
     soil_temperature_c = Column(Float)
@@ -93,7 +93,7 @@ class WeatherData(Base):
     __tablename__ = "weather_data"
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"))
-    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    recorded_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
     temperature_c = Column(Float)
     humidity_percent = Column(Float)
     precipitation_mm = Column(Float)
@@ -120,7 +120,7 @@ class PlantHealthImage(Base):
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"))
     image_url = Column(String(500))
-    captured_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    captured_at = Column(DateTime, default=lambda: datetime.now(UTC))
     diagnosis = Column(String(200))
     confidence_score = Column(Float)
     severity = Column(String(20))
@@ -135,7 +135,7 @@ class SystemAlert(Base):
     severity = Column(String(20), default="low")  # 'low', 'medium', 'critical'
     message = Column(Text, nullable=False)
     is_resolved = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
 
 
 class ModelPerformanceLog(Base):
@@ -145,14 +145,14 @@ class ModelPerformanceLog(Base):
     prediction_data = Column(Text)  # JSON serialized
     actual_data = Column(Text, nullable=True)  # JSON serialized, filled later
     accuracy_score = Column(Float, nullable=True)
-    logged_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    logged_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
 
 
 class SoilAnalysis(Base):
     __tablename__ = "soil_analyses"
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
-    analysis_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    analysis_date = Column(DateTime, default=lambda: datetime.now(UTC))
     ph_level = Column(Float)
     organic_matter_pct = Column(Float)
     nitrogen_mg_kg = Column(Float)
@@ -182,7 +182,7 @@ class FertilizerRecommendationLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
     crop_id = Column(Integer, ForeignKey("crop_types.id"), nullable=False)
-    recommended_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    recommended_at = Column(DateTime, default=lambda: datetime.now(UTC))
     nitrogen_kg = Column(Float)
     phosphorus_kg = Column(Float)
     potassium_kg = Column(Float)

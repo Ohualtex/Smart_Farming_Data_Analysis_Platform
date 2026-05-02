@@ -6,7 +6,7 @@ Analytics Endpoint Testleri
 Miraç Duran — Cycle 6 Görevi
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.models.models import (
     Farm,
@@ -68,7 +68,7 @@ def _seed_demo_data(db):
     db.flush()
 
     # Sensör okumaları
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for i in range(10):
         db.add(
             SoilMoistureReading(
