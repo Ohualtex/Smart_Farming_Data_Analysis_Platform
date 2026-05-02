@@ -1,3 +1,15 @@
+"""
+Sulama Optimizasyon Modeli (RandomForest)
+===========================================
+Toprak nemi, sıcaklık, hava nemi, dış sıcaklık ve son yağış miktarını alıp
+gereken sulama miktarını (litre) tahmin eden ML servis sınıfı.
+
+İlk başlatmada `app/ml/models/` altında pickle dosyası varsa yüklenir;
+yoksa synthetic data ile yeniden eğitilip kaydedilir (deterministic seed=42).
+
+Miraç Duran — Cycle 4 Görevi
+"""
+
 import os
 
 import joblib

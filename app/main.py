@@ -1,3 +1,17 @@
+"""
+SFDAP API — FastAPI Giriş Noktası
+====================================
+Uygulamanın ana giriş noktası: FastAPI app objesini oluşturur, middleware'leri
+(rate limit, CORS, request logger, exception handler) bağlar ve tüm router'ları
+register eder. Lifespan'de scheduler başlatılıp kapatılır.
+
+Tüm konfigürasyon `app.config.settings` (pydantic-settings) üzerinden gelir.
+Static dashboard SPA `frontend/index.html` dosyası `/dashboard` altında
+mount edilir.
+
+Miraç Duran — Cycle 4/5/6 Görevi
+"""
+
 import os
 from contextlib import asynccontextmanager
 

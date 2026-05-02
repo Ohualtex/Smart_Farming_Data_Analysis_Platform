@@ -1,3 +1,14 @@
+"""
+Hava Durumu API Endpoint'leri
+================================
+Çiftlik bazlı hava durumu kayıtlarının CRUD işlemleri, dış API'den
+(OpenWeatherMap) veri çekme ve veri temizleme pipeline'ı için endpoint'ler.
+
+Ayşe Eslem Çekici & Mehmet Sait Tayşi — Cycle 4/5 Görevi
+"""
+
+from __future__ import annotations
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
