@@ -123,7 +123,7 @@ Platformun temel veri erişim API'sini geliştir. API, toprak sensörü ve hava 
 
 ## 🟣 Cycle 5 — Test, İyileştirme ve Canlıya Çıkarma Hazırlığı
 
-📅 **11 – 28 Nisan 2026**
+📅 **14 – 27 Nisan 2026**
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
@@ -200,7 +200,7 @@ Modelin performansını düzenli olarak izlemek ve raporlamak için bir altyapı
 
 ## 🟤 Cycle 7 — İzleme, Raporlama ve Gelişmiş Özellikler
 
-📅 **4 Mayıs – 13 Mayıs 2026**
+📅 **3 Mayıs – 10 Mayıs 2026**
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
@@ -230,3 +230,32 @@ Dashboard üzerinde eksik kalan 3 kritik ekranı tamamla:
 Sistemin sağlığını ve performansını izlemek üzere eksikleri kapat:
 1) Veri hattı izleme (Health/Metrics) endpoint'lerini ve Sistem Uyarı (Alert) CRUD işlemlerini tamamla,
 2) Halihazırda tablosu bulunan `ModelPerformanceLog` yapısı için, eğitilen modellerin başarı oranlarını ve tahmin/gerçekleşen sapmalarını döndürecek bir Raporlama API'si geliştir.
+
+## ⚫️ Cycle 8 —
+
+📅 **11 - 20 Mayıs 2026**
+
+### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
+
+#### 📌 Proje Dokümantasyonunun Tamamlanması
+Projenin tüm aşamalarını detaylı bir şekilde belgeleyin. Kod açıklamaları, veri işleme adımları, algoritma seçim nedenleri ve karşılaşılan zorluklar gibi bilgileri içeren kapsamlı bir dokümantasyon hazırlayın.
+
+### 👤 EMİRHAN GÜNAY
+
+#### 📌 Proje Final Raporu ve Sunum Hazırlığı
+Projenin genel bir özetini, kullanılan veri kümelerini, uygulanan algoritmaları ve elde edilen sonuçları içeren kapsamlı bir final raporu hazırlayın. Raporun tüm teknik detayları içerdiğinden ve kolayca anlaşılabilir olduğundan emin olun.
+
+### 👤 AYŞE ESLEM ÇEKİCİ
+
+#### 📌 Veri Seti ve Algoritma Optimizasyonu
+Kullanılan veri setlerini ve makine öğrenimi algoritmalarını optimize ederek projenin performansını artırın. Daha iyi sonuçlar elde etmek için farklı parametreler deneyin ve sonuçları karşılaştırın.
+
+### 👤 ECENUR ÜNER
+
+#### 📌 Sunum Materyallerinin Oluşturulması
+Projenin temel hedeflerini, kullanılan yöntemleri ve elde edilen sonuçları özetleyen etkili bir sunum hazırlayın. Görsel materyallerle destekleyerek sunumun anlaşılırlığını artırın.
+
+### 👤 MEHMET SAİT TAYŞİ
+
+#### 📌 Test ve Validasyon Süreçlerinin Tamamlanması
+Projenin tüm bileşenlerini kapsamlı bir şekilde test edin ve elde edilen sonuçları doğrulayın. Hata ayıklama süreçlerini tamamlayın ve projenin güvenilirliğini sağlayın.
