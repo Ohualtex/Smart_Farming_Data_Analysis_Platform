@@ -1,6 +1,6 @@
 """
 Analitik verilerin disariya aktarilmasini (export) saglayan servis modulu.
-Miraç Duran tarafindan Cycle 7 kapsaminda eklendi.
+Miraç Duran tarafindan Cycle 6 kapsaminda eklendi.
 """
 
 import io

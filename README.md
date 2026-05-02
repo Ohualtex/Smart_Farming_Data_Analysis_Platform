@@ -3,16 +3,16 @@
 Çiftçilerin tarımsal verimliliğini en üst düzeye çıkarmak amacıyla toprak sensörleri, hava durumu verileri ve bitki sağlığı görüntülerini entegre bir şekilde analiz eden kapsamlı bir veri analizi ve karar destek platformudur.
 
 [![CI](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions)
-![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue)
+![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue)
 ![Coverage 91%](https://img.shields.io/badge/Coverage-91%25-brightgreen)
-![Tests 124](https://img.shields.io/badge/Tests-124%20passed-success)
+![Tests 128](https://img.shields.io/badge/Tests-128%20passed-success)
 
 ---
 
 ## 🚀 Hızlı Başlangıç
 
 ### Gereksinimler
-- Python 3.9+
+- Python 3.12+
 - Git
 
 ### Kurulum
@@ -199,7 +199,7 @@ make format
 
 | Metrik | Değer |
 |:-------|:------|
-| Toplam Test | 124 |
+| Toplam Test | 128 |
 | Coverage | %91+ |
 | Linting | Ruff (All checks passed) |
 | CI/CD | GitHub Actions (Ruff + Pytest) |
@@ -264,7 +264,7 @@ Smart_Farming_Data_Analysis_Platform/
 │   └── turkey_data.py           #   Türkiye il/bölge/bitki referans verisi
 │
 ├── alembic/                     # DB migration sistemi
-├── tests/                       # 124 test (10 dosya, %91+ coverage)
+├── tests/                       # 128 test (11 dosya, %91+ coverage)
 ├── .github/workflows/           # CI/CD pipeline (Ruff + Pytest)
 │
 ├── docs/                        # Proje dokümantasyonu
