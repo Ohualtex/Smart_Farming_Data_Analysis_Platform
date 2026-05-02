@@ -176,11 +176,24 @@ curl -X POST http://localhost:8000/api/sensors/ \
 ### Analitik & Görselleştirme
 | Method | Endpoint | Açıklama | Auth |
 |:-------|:---------|:---------|:----:|
-| GET | `/api/analytics/summary` | Toplu istatistik ve içgörü verileri | ❌ |
-| GET | `/api/analytics/compare` | İki farklı tarih aralığını karşılaştırır | ❌ |
-| GET | `/api/analytics/export` | Raporu PDF veya Excel formatında indirir | ❌ |
+| GET | `/api/analytics/summary?days=30` | Toplu istatistik ve içgörü verileri | ❌ |
+| GET | `/api/analytics/compare?start_date_1=&end_date_1=&start_date_2=&end_date_2=` | İki farklı tarih aralığını karşılaştırır | ❌ |
+| GET | `/api/analytics/export?format=pdf\|xlsx&days=30` | Raporu PDF veya Excel formatında indirir | ❌ |
 
-> `days` query parametresi ile süre filtrelenebilir (varsayılan: 30 gün). Sensör dağılımı, çiftlik bazlı hava karşılaştırması, sulama durumu, günlük trendler, NPK profilleri ve sensör okuma istatistiklerini döndürür.
+> **Notlar:**
+> - `summary`: `days` query parametresi ile süre filtrelenebilir (varsayılan: 30 gün). Sensör dağılımı, çiftlik bazlı hava karşılaştırması, sulama durumu, günlük trendler, NPK profilleri ve sensör okuma istatistiklerini döndürür.
+> - `compare`: Tüm 4 tarih parametresi (`start_date_1`, `end_date_1`, `start_date_2`, `end_date_2`) `YYYY-MM-DD` formatında zorunludur.
+> - `export`: `format` parametresi yalnızca `pdf` veya `xlsx` değerini kabul eder (`excel` yerine `xlsx` kullanın).
+
+```bash
+# PDF rapor indir
+curl "http://localhost:8000/api/analytics/export?format=pdf&days=30" -o rapor.pdf
+
+# NPK gübreleme önerisi al (auth gerekmiyor)
+curl -X POST http://localhost:8000/api/fertilizer/recommend \
+  -H "Content-Type: application/json" \
+  -d '{"crop_type":"tomato","area_hectares":1.0,"soil_nitrogen":80,"soil_phosphorus":40,"soil_potassium":50,"soil_ph":6.5}'
+```
 
 ---
 
