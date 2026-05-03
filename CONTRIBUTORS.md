@@ -38,7 +38,7 @@
 - **Ecenur**: Dashboard veri görselleştirme (Chart.js)
 - **Mehmet Sait**: Temel veri erişim API (FastAPI + Swagger)
 
-### Cycle 5 — Test ve İyileştirme (11 – 28 Nis)
+### Cycle 5 — Test ve İyileştirme (14 – 27 Nis)
 - **Miraç**: CI/CD pipeline (GitHub Actions), test altyapısı, proje raporu
 - **Emirhan**: Alembic migration sistemi, seed data, DB performans optimizasyonu
 - **Ayşe Eslem**: Gübreleme öneri servisi (NPK), weather pipeline genişletme
@@ -69,7 +69,8 @@
   entegrasyonu, `/api/health/deep` zenginleştirme (DB latency, scheduler
   job listesi, data freshness, alert sayaçları), 10+ yeni test
 - **Miraç**: Seed verisi gerçekçilik revizyonu (diurnal pattern, alert
-  temizliği), Filiz maskotu + UX cilası (Cycle 7'ye atandı, kod hazır)
+  temizliği). Filiz maskotu + UX cilası lokal olarak hazır, Cycle 7
+  içinde ayrı PR ile main'e alınacak.
 - **Ecenur**: Veri hattı izleme modülü (script + dokümantasyon)
 - *Diğer üyeler kendi Cycle 6 görevlerini devam ettirmekte*
 
@@ -81,10 +82,10 @@
 |:---|:---:|
 | Toplam Python LOC | **6 538** (`app/`, `database/`, `tests/`) |
 | Frontend LOC | 2 323 satır (`frontend/index.html`) |
-| Endpoint sayısı | **36** (10 router) |
+| Endpoint sayısı | **41** (11 router) |
 | ORM tablo sayısı | **14** |
 | Pydantic schema sayısı | 30+ |
-| Toplam test | **198** (Cycle 4'te 41 → +157) |
+| Toplam test | **220** (Cycle 4'te 41 → +179, 19 dosya) |
 | Test coverage | %91+ |
 | Cycle 6 commit sayısı | 33 (Cycle 5 sonrasından) |
 | Bitki türü | 17 (Türkiye'nin 7 coğrafi bölgesi için) |

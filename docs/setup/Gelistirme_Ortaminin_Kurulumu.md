@@ -1,5 +1,12 @@
 # Hafta 1 - Kurulum ve Hazırlık Raporu
 
+> ⚠️ **TARİHSEL DOKÜMAN — Cycle 1 (Hafta 1) çıktısı.**
+> Bu rapor ekip üyesinin (Ecenur) kişisel kurulum sürecini belgeler.
+> **Güncel kurulum talimatları için** [`README.md`](../../README.md) → "Hızlı Başlangıç" bölümüne bakınız (Python 3.12+, .venv, Docker, Makefile, pre-commit dahil).
+
+---
+
+
 ### Yapılan Teknik Hazırlıklar
 - Python dili ve VS Code editörü kurularak yazılım geliştirme ortamı hazırlandı.
 - Git yazılımı bilgisayara kuruldu ve Github hesabı ile "git-ecosystem (authentication) sağlandı.

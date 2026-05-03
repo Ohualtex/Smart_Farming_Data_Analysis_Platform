@@ -1,5 +1,12 @@
 # HAFTA 4: WEB ARAYÜZÜ VE VERİ GÖRSELLEŞTİRME
 
+> ⚠️ **TARİHSEL DOKÜMAN — Cycle 4 (Hafta 4) çıktısı.**
+> Bu rapor dashboard'un ilk prototip aşamasını belgeler (Chart.js + line chart).
+> **Güncel frontend mimarisi için** [`docs/frontend/Frontend_Kılavuzu.md`](../frontend/Frontend_Kılavuzu.md) ve [`docs/architecture.md`](../architecture.md) bölümlerine bakınız (6 sayfalı SPA, 81 il bölge filtresi, Filiz mascot, Cycle 8 Vite bundling planı dahil).
+
+---
+
+
 ## 1. GÖREV ÖZETİ
 Bu hafta, Akıllı Tarım Platformu projesi kapsamında sensörlerden gelen verilerin son kullanıcı (çiftçi) tarafından kolayca analiz edilebilmesi için bir web arayüzü tasarlanmış ve veri görselleştirme entegrasyonu yapılmıştır.
 

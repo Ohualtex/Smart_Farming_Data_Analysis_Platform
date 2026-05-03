@@ -3,6 +3,8 @@
 **Hedef süre:** 12-15 dakika
 **Teknik gereksinimler:** Python 3.12, dashboard tarayıcıda açık, terminal ile API canlı
 
+> **Not:** Filiz maskotu (Adım 1 hero ve Adım 6) Cycle 7 sonunda dashboard'a entegre olacaktır. Bu PR (`shiftSession` → `main`) Cycle 7 öncesi snapshot'ı taşır; Filiz adımları ayrı bir PR'da etkinleşir.
+
 ---
 
 ## ⚙️ Hazırlık (sunumdan önce, 2 dk)
@@ -37,9 +39,9 @@ python database/seed_data.py    # 7500+ kayıtlık seed yüklenir, ~5 sn
 > ekiple Scrum metodolojisiyle 6 ay içinde geliştirdik."*
 
 **Göster:** Dashboard ana sayfa
-- 🌾 Filiz maskotu sağ alt köşede karşılıyor
 - Hero banner: "81 il · 324 sensör · 4860 okuma · 17 bitki türü"
 - Üst kartlar: günlük genel durum
+- *(Cycle 7'de: Filiz maskotu sağ alt köşede karşılayacak)*
 
 ---
 
@@ -114,24 +116,17 @@ Form değerlerini gir:
 
 ---
 
-### Adım 6 — Filiz Asistan & UX (1.5 dk)
-
-**Filiz'e tıkla** (sağ alt köşe)
-
-> *"Filiz, çiftçi-dostu maskot asistanımız. 65+ tarımsal ipucu sunuyor
-> — sulama, gübreleme, ekim rotasyonu, hastalık ve zararlı, hasat..."*
-
-**Tema toggle (sağ üst):** Dark → Light geçiş
+### Adım 6 — UX Cilası (1.5 dk) *(Cycle 7'de Filiz Asistan eklenecek)*
 
 > *"Dashboard light/dark tema, mobil-responsive, Türkçe arayüz.
 > Çiftçinin kullanacağı bir araç olduğu için UI dilimiz teknik değil
 > tamamen yerel."*
 
-**Filiz'e tekrar tıkla** → farklı ipucu
+**Tema toggle (sağ üst):** Dark → Light geçiş
 
-> *"Filiz'in moodu da var: gündüz mutlu, gece 00:00–05:00 arası
-> uyukluyor. Tıklarsan sevinçli, geceyarısı tıklarsan sinirli oluyor —
-> akıllı bir karakter."*
+> *"Cycle 7'de **Filiz** adlı SVG-tabanlı maskot karakter eklenecek:
+> 65+ tarımsal ipucu, gündüz/gece mood otomasyonu, göz takibi, tıklama
+> tepkileri. Geliştirme bitti, ayrı PR ile main'e alınacak."*
 
 ---
 
@@ -139,7 +134,7 @@ Form değerlerini gir:
 
 **Tarayıcıda:** http://localhost:8000/docs
 
-> *"Geliştirici tarafı: 36 endpoint, hepsi Swagger'da Türkçe açıklamalı.
+> *"Geliştirici tarafı: 41 endpoint, hepsi Swagger'da Türkçe açıklamalı.
 > Sağ üstten Authorize → API key ver, herhangi bir endpoint'i canlı
 > test et."*
 
@@ -179,7 +174,7 @@ curl http://localhost:8000/api/model-performance/drift/irrigation_rf
 make test
 ```
 
-> *"198 test, %91 coverage, 8 test dosyası, GitHub Actions ile her PR'da
+> *"220 test, %91 coverage, 19 test dosyası, GitHub Actions ile her PR'da
 > otomatik. Pre-commit hook'larıyla ruff lint + format zorunlu."*
 
 ```bash

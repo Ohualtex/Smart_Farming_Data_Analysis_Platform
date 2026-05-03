@@ -29,7 +29,20 @@ Modelin `predict()` fonksiyonu şu formatta bir sonuç döndürür:
 }
 ```
 
-## 🦠 2. Bitki Sağlığı Görüntü Analizi (CNN Modeli) - *Gelecek Eklenti*
-Cycle 7 kapsamında sisteme Ayşe Eslem Çekici tarafından entegre edilecek olan evrişimli sinir ağı (CNN) modelidir.
-- Çiftçilerin yüklediği yaprak görsellerini işleyerek "Sağlıklı", "Pas Hastalığı", "Mantar" gibi tespitler yapması planlanmaktadır.
-- Modele ait döküman, entegrasyon tamamlandığında bu rehbere eklenecektir.
+## 🦠 2. Bitki Sağlığı Görüntü Analizi (CNN Modeli) — *Skeleton hazır (Cycle 7)*
+
+Cycle 7 kapsamında Ayşe Eslem Çekici tarafından geliştirilen evrişimli sinir ağı (CNN) modelinin **deterministic stub sarıcısı** `app/ml/plant_disease_model.py` içinde halihazırda canlıdır:
+
+### Mevcut Skeleton (shiftSession)
+- **Sarıcı sınıf:** `PlantDiseaseClassifier` — hash-bazlı deterministic prediction (gerçek inference için ONNX placeholder).
+- **API endpoint'i:** `POST /api/plants/health-images/analyze` (multipart upload). Yüklenen görseli `app/ml/plant_uploads/` altına kaydedip `PlantHealthImage` ve `ModelPerformanceLog` tablolarına yazar.
+- **Test kapsamı:** `tests/test_plant_disease_model.py` (deterministic output garantisi + endpoint integration testleri).
+
+### Cycle 7 İçinde Tamamlanacak (Ayşe)
+- Gerçek CNN eğitimi (Keras/TensorFlow) → `.onnx` export
+- Sınıf etiketleri: "Sağlıklı", "Pas Hastalığı", "Mantar Lekesi", "Kurşuni Küf", vb.
+- Test seti accuracy hedefi ≥ %85
+- Model dosyası `app/ml/models/plant_disease_cnn.onnx` olarak yüklenir, sarıcı runtime'da `onnxruntime` ile yorumlar.
+
+### Otomatik Loglama
+Her tahmin `ModelPerformanceLog` tablosuna yazılır (`model_name='plant_disease_cnn'`). Drift detection endpoint'i (`GET /api/model-performance/drift/plant_disease_cnn`) eşik altı düşüşte otomatik `SystemAlert` üretir.

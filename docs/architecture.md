@@ -20,7 +20,7 @@ graph TB
         Auth[🔐 Auth Middleware<br/>X-API-Key + JWT]
         RateLimit[🚦 SlowAPI Rate Limiter]
         ReqLog[📝 Request Logger]
-        Routers[10 Router<br/>30+ Endpoint]
+        Routers[11 Router<br/>41 Endpoint]
         Services[İş Mantığı<br/>weather, fertilizer, ml_eval]
         Tasks[⏰ APScheduler<br/>Daily weather fetch]
         MQTT[📨 MQTT Listener<br/>Cycle 7]
@@ -82,7 +82,7 @@ app/
 ├── schemas/
 │   └── schemas.py             # 30+ Pydantic request/response modeli
 │
-├── routers/                   # 10 router, 36 endpoint
+├── routers/                   # 11 router, 41 endpoint
 │   ├── health.py              # Sığ sağlık (load balancer için)
 │   ├── metrics.py             # Derin sağlık (DB+scheduler+ML+freshness+alerts)
 │   ├── sensors.py             # Sensör CRUD + readings
@@ -158,7 +158,7 @@ sequenceDiagram
     Note over API,DB: 5 ayrı sorgu paralel
     API-->>U: JSON response × 5
     U->>U: Chart.js render
-    U->>U: Filiz boots (3 sn sonra selam)
+    Note over U: Cycle 7+: Filiz boots (3 sn sonra selam)
 ```
 
 ---

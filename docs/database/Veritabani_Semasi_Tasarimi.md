@@ -1,4 +1,17 @@
 SFDAP Veritabanı Şeması Tasarımı — Detaylı Plan
+
+> ⚠️ **TARİHSEL DOKÜMAN — Cycle 3 (Tasarım) çıktısı.**
+> Bu doküman ~27 tablodan oluşan tam kapsamlı tasarım planını içerir.
+> **Gerçekleşen şema 14 ORM tablosudur** (`app/models/models.py`):
+> User, Farm, Field, CropType, Sensor, SoilMoistureReading, WeatherData,
+> IrrigationSchedule, PlantHealthImage, SystemAlert, ModelPerformanceLog,
+> SoilAnalysis, CropPlanting, FertilizerRecommendationLog.
+> Tabloların bir kısmı (`soil_mineral_results`, `weather_forecasts`,
+> `irrigation_logs`, vb.) Cycle 7+ planlarında değerlendirilecektir.
+> Güncel ER diyagramı için [`docs/architecture.md`](../architecture.md) → "Veri Modeli" bölümüne bakınız.
+
+---
+
 Akıllı Tarım Veri Analizi Platformu (SFDAP) için kapsamlı bir ilişkisel veritabanı şeması. Toprak nem verileri, mineral analizleri, IoT sensörler, hava durumu, bitki sağlığı, sulama, gübreleme ve hastalık tahmini modüllerini destekler.
 
 1. Kullanıcı & Çiftlik Yönetimi

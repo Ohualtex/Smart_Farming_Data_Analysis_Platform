@@ -20,13 +20,41 @@ make run                # ya da: uvicorn app.main:app --reload
 
 ## 2. Kimlik Doğrulama
 
-Yazma endpoint'leri (POST/DELETE/PATCH) `X-API-Key` header'ı zorunlu kılar.
-Okuma endpoint'leri (GET) auth gerektirmez.
+İki paralel mekanizma çalışır:
+
+1. **`X-API-Key` header** — eski/admin yazma endpoint'leri (POST/DELETE/PATCH) için. Okuma (GET) auth gerektirmez.
+2. **`Authorization: Bearer <token>` header** — `/api/auth/*` skeleton (Cycle 7) ile elde edilen kullanıcı token'ı için. Cycle 8'de JWT'ye geçecek.
 
 | Ortam | API Key |
 |:------|:--------|
 | Development (varsayılan) | `dev-api-key` |
 | Production | `.env` dosyasındaki `API_KEY` (`ENVIRONMENT=production` iken default değer reddedilir) |
+
+### Kullanıcı Auth Akışı (Cycle 7 skeleton)
+
+| Method | Endpoint | Açıklama |
+|:-------|:---------|:---------|
+| POST | `/api/auth/register` | Email + parola → user kaydı (sha256+salt) |
+| POST | `/api/auth/login` | Email + parola → `{access_token}` döner |
+| GET | `/api/auth/me` | Bearer token ile mevcut kullanıcıyı döner |
+| POST | `/api/auth/logout` | Token'ı blacklist'e atar |
+
+```bash
+# Register
+curl -X POST http://localhost:8000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"farmer@example.com","password":"s3cret123","full_name":"Çiftçi Ahmet"}'
+
+# Login → token al
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"farmer@example.com","password":"s3cret123"}' | jq -r .access_token)
+
+# Korumalı endpoint
+curl http://localhost:8000/api/auth/me -H "Authorization: Bearer $TOKEN"
+```
+
+> **Not:** Mevcut implementasyon `sha256+salt` skeleton'dur. Cycle 8'de `python-jose` + `passlib[bcrypt]` ile JWT'ye yükseltilecek.
 
 ### Swagger UI üzerinden auth
 
@@ -51,6 +79,7 @@ curl -X POST http://localhost:8000/api/sensors/ \
 | Kategori | Prefix | Örnek endpoint |
 |:---------|:-------|:---------------|
 | Health | `/api/health` | `GET /api/health`, `GET /api/health/deep` |
+| Auth (skeleton) | `/api/auth` | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` (Bearer) |
 | Sensörler | `/api/sensors` | `GET /api/sensors/`, `POST /api/sensors/` (auth) |
 | Hava Durumu | `/api/weather` | `GET /api/weather/`, `GET /api/weather/latest/{farm_id}` |
 | Sulama (ML) | `/api/irrigation` | `POST /api/irrigation/predict` |
