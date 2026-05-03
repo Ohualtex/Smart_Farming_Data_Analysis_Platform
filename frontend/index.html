@@ -153,6 +153,22 @@ tr:hover td { background: var(--surface-2); }
 .toast.success { border-left: 3px solid var(--primary); }
 .toast.error { border-left: 3px solid var(--accent-red); }
 .toast.info { border-left: 3px solid var(--accent-blue); }
+.toast-message { flex: 1; }
+.toast-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 2px 8px;
+    margin-left: 4px;
+    border-radius: 6px;
+    transition: color .15s ease, background .15s ease;
+}
+.toast-close:hover { color: var(--text); background: var(--surface-2); }
+.toast.hide { animation: slideOut .25s ease forwards; }
+@keyframes slideOut { to { opacity: 0; transform: translateX(40px); } }
 
 /* ─── PAGE SECTIONS ──────────────────────────────── */
 .page { display: none; animation: fadeIn .3s ease; }
@@ -959,6 +975,33 @@ tr:hover td { background: linear-gradient(90deg, var(--primary-glow) 0%, transpa
 }
 
 /* ─── 🌗 TEMA TOGGLE PILL (sun ↔ moon) ─────────────── */
+/* Geliştirici link — header'da küçük </> ikon, çiftçiye görünmez kalır */
+.dev-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 30px;
+    padding: 0 6px;
+    border-radius: 8px;
+    color: var(--text-dim);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: .85rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    transition: color .2s ease, background .2s ease, border-color .2s ease, transform .2s ease;
+}
+.dev-link:hover {
+    color: var(--primary);
+    background: var(--primary-glow);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+.dev-link:active { transform: translateY(0); }
+
 .theme-toggle {
     position: relative;
     width: 64px;
@@ -1095,14 +1138,12 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <a class="nav-item" href="#analytics" onclick="navigate('analytics')">
                 <span class="icon">📈</span> Analitik
             </a>
-            <a class="nav-item nav-item-help" href="/docs" target="_blank" rel="noopener">
-                <span class="icon">📖</span> API Rehberi
-                <span class="icon" style="margin-left:auto; font-size:.7rem; opacity:.6;">↗</span>
-            </a>
+            <!-- API Rehberi sidebar'dan çıkarıldı, header'a `</>` ikonu olarak taşındı.
+                 Çiftçi-dostu UI için: çiftçi sekmeleri ile geliştirici aracını ayır. -->
         </nav>
         <div class="sidebar-footer">
             <span class="status-dot online" id="statusDot"></span>
-            <span id="statusText">API Bağlı</span>
+            <span id="statusText">Sistem Aktif</span>
             <div style="margin-top:6px;" id="clockDisplay"></div>
         </div>
     </aside>
@@ -1118,6 +1159,9 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                 </div>
             </div>
             <div class="header-right">
+                <a class="dev-link" href="/docs" target="_blank" rel="noopener"
+                   aria-label="API Rehberi (Geliştiriciler için)"
+                   title="API Rehberi · Geliştiriciler için (Swagger /docs)">&lt;/&gt;</a>
                 <button class="theme-toggle" id="themeToggle" aria-label="Tema değiştir" title="Tema değiştir">
                     <span class="toggle-track">
                         <!-- Aydınlık arka plan: gökyüzü + bulutlar -->
@@ -2027,16 +2071,29 @@ function updateStatus(online) {
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     dot.className = `status-dot ${online ? 'online' : 'offline'}`;
-    text.textContent = online ? 'API Bağlı' : 'Çevrimdışı';
+    text.textContent = online ? 'Sistem Aktif' : 'Bağlantı Yok';
 }
 
-function showToast(message, type = 'info') {
+function showToast(message, type = 'info', duration = 3500) {
     const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'} ${message}`;
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+    toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" aria-label="Kapat" title="Kapat">×</button>
+    `;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
+
+    let timer = null;
+    const dismiss = () => {
+        clearTimeout(timer);
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 250);
+    };
+    toast.querySelector('.toast-close').addEventListener('click', dismiss);
+    if (duration > 0) timer = setTimeout(dismiss, duration);
 }
 
 function updateClock() {
@@ -2049,8 +2106,8 @@ async function init() {
     const health = await api('/api/health');
     apiOnline = health !== null;
     updateStatus(apiOnline);
-    if (apiOnline) showToast('API bağlantısı başarılı', 'success');
-    else showToast('API bağlantısı kurulamadı — Demo mod', 'error');
+    if (apiOnline) showToast('Sistem aktif — veriler güncel', 'success');
+    else showToast('Bağlantı yok — son kayıtlı veriler gösteriliyor', 'error');
 
     // Load initial page
     const page = location.hash.slice(1) || 'dashboard';
