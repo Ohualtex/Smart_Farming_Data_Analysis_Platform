@@ -99,6 +99,29 @@ input, select { font-family: var(--font); }
 
 /* ─── TABLES ─────────────────────────────────────── */
 .table-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 28px; overflow-x: auto; }
+/* Scroll-table: uzun listeleri kompakt tutar (slider ile gezilebilir) */
+.scroll-table .scroll-area {
+    max-height: 360px;
+    overflow-y: auto;
+    margin-top: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+.scroll-table .scroll-area::-webkit-scrollbar { width: 8px; }
+.scroll-table .scroll-area::-webkit-scrollbar-track { background: var(--surface-2); border-radius: 4px; }
+.scroll-table .scroll-area::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+.scroll-table .scroll-area::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+.scroll-table .scroll-area table { width: 100%; }
+.scroll-table .scroll-area thead th {
+    position: sticky; top: 0; z-index: 1;
+    background: var(--surface);
+}
+.muted-hint {
+    font-size: .7rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    margin-left: 6px;
+}
 .table-box h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
 table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 th { text-align: left; padding: 10px 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: 500; }
@@ -1121,10 +1144,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
         </div>
         <nav class="sidebar-nav">
             <a class="nav-item active" href="#dashboard" onclick="navigate('dashboard')">
-                <span class="icon">📊</span> Dashboard
-            </a>
-            <a class="nav-item" href="#sensors" onclick="navigate('sensors')">
-                <span class="icon">📡</span> Sensörler
+                <span class="icon">📊</span> Genel Bakış
             </a>
             <a class="nav-item" href="#weather" onclick="navigate('weather')">
                 <span class="icon">🌤️</span> Hava Durumu
@@ -1135,8 +1155,11 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <a class="nav-item" href="#fertilizer" onclick="navigate('fertilizer')">
                 <span class="icon">🌱</span> Gübreleme
             </a>
+            <a class="nav-item" href="#sensors" onclick="navigate('sensors')">
+                <span class="icon">📡</span> Sensörler
+            </a>
             <a class="nav-item" href="#analytics" onclick="navigate('analytics')">
-                <span class="icon">📈</span> Analitik
+                <span class="icon">📈</span> Raporlar
             </a>
             <!-- API Rehberi sidebar'dan çıkarıldı, header'a `</>` ikonu olarak taşındı.
                  Çiftçi-dostu UI için: çiftçi sekmeleri ile geliştirici aracını ayır. -->
@@ -1206,7 +1229,6 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                         </span>
                     </span>
                 </button>
-                <span class="refresh-badge" id="refreshBadge">🔄 30s</span>
             </div>
         </header>
 
@@ -1215,7 +1237,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <section class="page active" id="page-dashboard">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌾</span> Hoş geldin, çiftçi!</h1>
-                    <p>Tüm Türkiye'den toplanan toprak, hava ve sulama verilerini tek bir panelde gör. ML modelleri seninle çalışıyor.</p>
+                    <p>Türkiye'nin dört bir yanından toplanan toprak, hava ve sulama bilgilerini tek bir ekranda gör. Akıllı asistan seninle çalışıyor.</p>
                     <div class="hero-stats">
                         <div class="hero-stat">🇹🇷 <strong id="heroFarms">81</strong> il</div>
                         <div class="hero-stat">📡 <strong id="heroSensors">324</strong> sensör</div>
@@ -1236,18 +1258,21 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <!-- ═══ SENSORS PAGE ═══ -->
             <section class="page" id="page-sensors">
                 <div class="hero-banner">
-                    <h1><span class="hero-emoji">📡</span> Sensör Ağı</h1>
-                    <p>Toprak nemi ve sıcaklık sensörlerinden gelen okumaları takip et. Bir sensöre tıklayarak detaylı zaman serisini görüntüle.</p>
+                    <h1><span class="hero-emoji">📡</span> Tarladaki Sensörler</h1>
+                    <p>Toprak nemi ve sıcaklık ölçümlerini buradan takip edebilirsin. Listeden bir sensöre tıklayınca o sensörün son okumalarını grafik olarak görürsün.</p>
                 </div>
-                <div class="section-header">📋 Aktif Sensörler</div>
-                <div class="table-box">
-                    <h3>📡 Sensör Listesi</h3>
-                    <table><thead><tr><th>ID</th><th>Tip</th><th>Seri No</th><th>Durum</th></tr></thead>
-                    <tbody id="sensorsTable"></tbody></table>
-                </div>
+                <div class="section-header">📈 Sensör Okumaları</div>
                 <div class="charts-row">
-                    <div class="chart-box"><h3>📈 Sensör Okumaları</h3><canvas id="sensorDetailChart"></canvas></div>
-                    <div class="chart-box" id="sensorInfoBox"><h3>ℹ️ Sensör Detay</h3><div class="empty-state"><div class="icon">📡</div><p>Bir sensör seçin</p></div></div>
+                    <div class="chart-box"><h3>📈 Seçilen Sensörün Grafiği</h3><canvas id="sensorDetailChart"></canvas></div>
+                    <div class="chart-box" id="sensorInfoBox"><h3>ℹ️ Sensör Bilgisi</h3><div class="empty-state"><div class="icon">📡</div><p>Listeden bir sensör seç</p></div></div>
+                </div>
+                <div class="section-header">📋 Sensör Listesi</div>
+                <div class="table-box scroll-table">
+                    <h3>📡 Aktif Sensörler <span class="muted-hint">(ilk 20)</span></h3>
+                    <div class="scroll-area">
+                        <table><thead><tr><th>ID</th><th>Tip</th><th>Seri No</th><th>Durum</th></tr></thead>
+                        <tbody id="sensorsTable"></tbody></table>
+                    </div>
                 </div>
             </section>
 
@@ -1255,7 +1280,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <section class="page" id="page-weather">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌤️</span> Hava Durumu</h1>
-                    <p>81 ildeki çiftliklerin sıcaklık, nem, yağış ve rüzgar verileri. APScheduler her gün 02:00'de otomatik günceller.</p>
+                    <p>81 ildeki çiftliklerden sıcaklık, nem, yağış ve rüzgar bilgilerini görebilirsin. Hava verileri her gün otomatik güncellenir.</p>
                 </div>
                 <div class="section-header">🌡️ Şu Anki Durum</div>
                 <div class="cards-grid" id="weatherCards"></div>
@@ -1268,17 +1293,12 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <!-- ═══ IRRIGATION PAGE ═══ -->
             <section class="page" id="page-irrigation">
                 <div class="hero-banner">
-                    <h1><span class="hero-emoji">💧</span> Sulama Optimizasyonu</h1>
-                    <p>RandomForest modeli toprak nemi, sıcaklık, hava nemi ve son yağışı analiz ederek önerilen sulama miktarını (litre) hesaplar.</p>
-                    <div class="hero-stats">
-                        <div class="hero-stat">🤖 <strong>scikit-learn</strong> 1.8</div>
-                        <div class="hero-stat">📚 <strong>1000</strong> sentetik örnek</div>
-                        <div class="hero-stat">⚡ <strong>~50ms</strong> tahmin</div>
-                    </div>
+                    <h1><span class="hero-emoji">💧</span> Akıllı Sulama</h1>
+                    <p>Toprak ve hava verilerini birlikte değerlendirip tarlana ne kadar su vermen gerektiğini söyler. Aşağıdaki formu doldur, öneriyi hemen al.</p>
                 </div>
-                <div class="section-header">🔮 ML Tahmin</div>
+                <div class="section-header">💧 Sulama Önerisi</div>
                 <div class="form-box">
-                    <h3>💧 ML Sulama Tahmini</h3>
+                    <h3>💧 Sulama Önerisi Al</h3>
                     <div class="form-grid">
                         <div class="form-group"><label>Toprak Nemi (%)</label><input type="number" id="irr_moisture" value="35" step="0.1"></div>
                         <div class="form-group"><label>Toprak Sıcaklığı (°C)</label><input type="number" id="irr_soil_temp" value="22" step="0.1"></div>
@@ -1286,13 +1306,15 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                         <div class="form-group"><label>Hava Sıcaklığı (°C)</label><input type="number" id="irr_temp" value="28" step="0.1"></div>
                         <div class="form-group"><label>Yağış (mm)</label><input type="number" id="irr_precip" value="0" step="0.1"></div>
                     </div>
-                    <button class="btn-primary" onclick="predictIrrigation()" style="margin-top:16px;">🔮 Tahmin Et</button>
+                    <button class="btn-primary" onclick="predictIrrigation()" style="margin-top:16px;">💧 Öneri Hesapla</button>
                     <div id="irrigationResult"></div>
                 </div>
-                <div class="table-box">
-                    <h3>📋 Sulama Geçmişi</h3>
-                    <table><thead><tr><th>Tarla</th><th>Tarih</th><th>Süre</th><th>Su (L)</th><th>Durum</th></tr></thead>
-                    <tbody id="irrigationTable"></tbody></table>
+                <div class="table-box scroll-table">
+                    <h3>📋 Sulama Geçmişi <span class="muted-hint">(son 20)</span></h3>
+                    <div class="scroll-area">
+                        <table><thead><tr><th>Tarla</th><th>Tarih</th><th>Süre</th><th>Su (L)</th><th>Durum</th></tr></thead>
+                        <tbody id="irrigationTable"></tbody></table>
+                    </div>
                 </div>
             </section>
 
@@ -1300,16 +1322,11 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <section class="page" id="page-fertilizer">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌱</span> Akıllı Gübreleme</h1>
-                    <p>Bitki türüne göre NPK ihtiyacını ve toprak analiz verilerini birleştirerek gerekli gübre miktarını hesaplarız. 17 bitki destekli.</p>
-                    <div class="hero-stats">
-                        <div class="hero-stat">🌾 <strong>4</strong> Tahıl</div>
-                        <div class="hero-stat">🍅 <strong>6</strong> Sebze & Endüstriyel</div>
-                        <div class="hero-stat">🍇 <strong>7</strong> Meyve & Çok Yıllık</div>
-                    </div>
+                    <p>Bitki türüne ve toprak analizine göre tarlana ne kadar azot, fosfor ve potasyum gübresi gerektiğini hesaplarız. 17 farklı bitki türü destekli.</p>
                 </div>
-                <div class="section-header">🧪 NPK Önerisi</div>
+                <div class="section-header">🧪 Gübre Önerisi</div>
                 <div class="form-box">
-                    <h3>🌱 Gübreleme Önerisi Al</h3>
+                    <h3>🌱 Gübre Önerisi Al</h3>
                     <div class="form-grid">
                         <div class="form-group"><label>Bitki Türü</label>
                             <select id="fert_crop">
@@ -1343,7 +1360,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                         <div class="form-group"><label>Toprak Fosfor (mg/kg)</label><input type="number" id="fert_p" value="20" step="1"></div>
                         <div class="form-group"><label>Toprak Potasyum (mg/kg)</label><input type="number" id="fert_k" value="30" step="1"></div>
                     </div>
-                    <button class="btn-primary" onclick="recommendFertilizer()" style="margin-top:16px;">🧪 Öneri Al</button>
+                    <button class="btn-primary" onclick="recommendFertilizer()" style="margin-top:16px;">🌱 Öneri Hesapla</button>
                     <div id="fertilizerResult"></div>
                 </div>
                 <div class="form-box">
@@ -1359,28 +1376,23 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <!-- ═══ ANALYTICS PAGE ═══ -->
             <section class="page" id="page-analytics">
                 <div class="hero-banner">
-                    <h1><span class="hero-emoji">📈</span> Analitik Pano</h1>
-                    <p>81 ildeki çiftliklerden gelen verilerin 7 coğrafi bölgede gruplanmış görünümü. PDF ve Excel'e aktarabilir, iki periyot karşılaştırabilirsiniz.</p>
-                    <div class="hero-stats">
-                        <div class="hero-stat">🗺️ <strong>7</strong> bölge kırılımı</div>
-                        <div class="hero-stat">📄 PDF + Excel export</div>
-                        <div class="hero-stat">⏱️ Tarihsel karşılaştırma</div>
-                    </div>
+                    <h1><span class="hero-emoji">📈</span> Raporlar ve Analiz</h1>
+                    <p>Türkiye genelindeki çiftlik verilerinin bölge bazında özetini gör. İstersen PDF veya Excel olarak indir, iki farklı dönemi yan yana karşılaştır.</p>
                 </div>
                 <div class="section-header">📊 Sayısal Özet</div>
                 <div class="cards-grid" id="analyticsCards"></div>
                 <div class="section-header">🍩 Dağılımlar</div>
                 <div class="charts-row">
-                    <div class="chart-box"><h3>🍩 Sensör Tipi Dağılımı</h3><canvas id="sensorTypeChart"></canvas></div>
-                    <div class="chart-box"><h3>🏘️ Çiftlik Bazlı Sıcaklık Karşılaştırması</h3><canvas id="farmTempChart"></canvas></div>
+                    <div class="chart-box"><h3>🍩 Sensör Türlerine Göre Dağılım</h3><canvas id="sensorTypeChart"></canvas></div>
+                    <div class="chart-box"><h3>🏘️ Çiftliklerin Sıcaklık Karşılaştırması</h3><canvas id="farmTempChart"></canvas></div>
                 </div>
                 <div class="charts-row">
                     <div class="chart-box"><h3>💧 Sulama Durumu Dağılımı</h3><canvas id="irrigationStatusChart"></canvas></div>
-                    <div class="chart-box"><h3>🌿 Bitki NPK İhtiyaç Profili</h3><canvas id="npkRadarChart"></canvas></div>
+                    <div class="chart-box"><h3>🌿 Bitkilerin Gübre İhtiyaç Profili</h3><canvas id="npkRadarChart"></canvas></div>
                 </div>
                 <div class="section-header">📅 Trendler</div>
                 <div class="charts-row">
-                    <div class="chart-box"><h3>🌡️ Günlük Sıcaklık Trendleri (Çiftlik Bazlı)</h3><canvas id="dailyTrendChart"></canvas></div>
+                    <div class="chart-box"><h3>🌡️ Çiftliklerin Günlük Sıcaklık Trendi</h3><canvas id="dailyTrendChart"></canvas></div>
                     <div class="chart-box"><h3>📊 Sensör Okuma İstatistikleri</h3><canvas id="sensorStatsChart"></canvas></div>
                 </div>
             </section>
@@ -1617,12 +1629,12 @@ async function api(endpoint, options = {}) {
 
 // ─── NAVIGATION ───────────────────────────────────────────────
 const pageTitles = {
-    dashboard: ['Dashboard', 'Genel Bakış'],
-    sensors: ['Sensörler', 'Sensör Verileri ve Detayları'],
-    weather: ['Hava Durumu', 'Meteoroloji Verileri'],
-    irrigation: ['Sulama Optimizasyonu', 'ML Tahmin ve Geçmiş'],
-    fertilizer: ['Gübreleme', 'NPK Öneri Sistemi'],
-    analytics: ['Analitik', 'Veri Görselleştirme ve İçgörüler'],
+    dashboard: ['Genel Bakış', 'Tarlanın özeti'],
+    weather: ['Hava Durumu', 'Sıcaklık, nem ve yağış'],
+    irrigation: ['Sulama', 'Önerilen su miktarı ve geçmiş'],
+    fertilizer: ['Gübreleme', 'NPK önerisi ve takvim'],
+    sensors: ['Sensörler', 'Tarladaki ölçüm cihazları'],
+    analytics: ['Raporlar', 'Bölge bazında özet ve dışa aktarma'],
 };
 
 function navigate(page) {
@@ -1718,7 +1730,7 @@ function renderPrecipChart(data) {
 
 // ─── SENSORS ──────────────────────────────────────────────────
 async function loadSensors() {
-    const sensors = await api('/api/sensors/') || [];
+    const sensors = await api('/api/sensors/?limit=20') || [];
     const tbody = document.getElementById('sensorsTable');
     tbody.innerHTML = sensors.map(s => `
         <tr style="cursor:pointer" onclick="loadSensorDetail(${s.id})">
