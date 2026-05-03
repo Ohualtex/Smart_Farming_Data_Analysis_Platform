@@ -25,6 +25,21 @@ class IrrigationOptimizer:
     gereken sulama miktarini tahmin eder.
     """
 
+    # ─── Sınıf seviyesinde sabitler (magic number temizliği) ─────
+    IRRIGATION_THRESHOLD_LITERS: float = 5.0  # altında "sulama gerekmiyor"
+    LIGHT_IRRIGATION_LITERS: float = 20.0  # < 20 L: hafif
+    MODERATE_IRRIGATION_LITERS: float = 50.0  # < 50 L: orta, ≥ 50 L: acil
+    OPTIMAL_MOISTURE_PERCENT: float = 50.0  # ideal toprak nemi
+    CONFIDENCE_BASE: float = 0.7
+    CONFIDENCE_CAP: float = 0.95
+    CONFIDENCE_MOISTURE_DIVISOR: float = 200.0
+
+    # Synthetic training parametreleri
+    N_TRAINING_SAMPLES: int = 1000
+    RANDOM_SEED: int = 42
+    RF_N_ESTIMATORS: int = 100
+    RF_MAX_DEPTH: int = 10
+
     def __init__(self, model_path="app/ml/models/"):
         self.model_path = model_path
         self.model = None
@@ -63,7 +78,11 @@ class IrrigationOptimizer:
         x_features = np.column_stack([soil_moisture, soil_temp, humidity, air_temp, precipitation])
         x_scaled = self.scaler.fit_transform(x_features)
 
-        self.model = RandomForestRegressor(n_estimators=100, random_state=42, max_depth=10)
+        self.model = RandomForestRegressor(
+            n_estimators=self.RF_N_ESTIMATORS,
+            random_state=self.RANDOM_SEED,
+            max_depth=self.RF_MAX_DEPTH,
+        )
         self.model.fit(x_scaled, water_needed)
 
         os.makedirs(self.model_path, exist_ok=True)
@@ -76,14 +95,18 @@ class IrrigationOptimizer:
         predicted_water = float(self.model.predict(features_scaled)[0])
         predicted_water = max(0, round(predicted_water, 2))
 
-        irrigation_needed = predicted_water > 5.0
-        confidence = min(0.95, 0.7 + (abs(50 - soil_moisture) / 200))
+        irrigation_needed = predicted_water > self.IRRIGATION_THRESHOLD_LITERS
+        confidence = min(
+            self.CONFIDENCE_CAP,
+            self.CONFIDENCE_BASE
+            + (abs(self.OPTIMAL_MOISTURE_PERCENT - soil_moisture) / self.CONFIDENCE_MOISTURE_DIVISOR),
+        )
 
         if not irrigation_needed:
             message = "Toprak nemi yeterli, sulama gerekmiyor."
-        elif predicted_water < 20:
+        elif predicted_water < self.LIGHT_IRRIGATION_LITERS:
             message = f"Hafif sulama oneriliyor: {predicted_water} litre."
-        elif predicted_water < 50:
+        elif predicted_water < self.MODERATE_IRRIGATION_LITERS:
             message = f"Orta duzeyde sulama gerekli: {predicted_water} litre."
         else:
             message = f"Acil sulama gerekli: {predicted_water} litre!"
