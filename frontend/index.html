@@ -176,9 +176,899 @@ tr:hover td { background: var(--surface-2); }
     .cards-grid { grid-template-columns: 1fr; }
     html { font-size: 14px; }
 }
+
+/* ============================================================
+   ✨ Cycle 6 Cila — Şıklık + Filiz Maskotu (eski palet korunur)
+   ============================================================ */
+
+/* Yardımcı gradient değişkenleri (eski palet üzerine) */
+:root {
+    --gradient-primary: linear-gradient(135deg, #10b981, #06b6d4);
+    --gradient-warm: linear-gradient(135deg, #f59e0b, #ef4444);
+    --gradient-cool: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    --gradient-leaf: linear-gradient(135deg, #10b981, #84cc16);
+    --glow-primary: 0 0 40px rgba(16,185,129,.18);
+    --glow-soft: 0 8px 32px rgba(0,0,0,.35);
+}
+
+/* Hafif background atmosfer (eski koyu paleti zenginleştirir) */
+body {
+    background:
+        radial-gradient(ellipse 80% 60% at 0% 0%, rgba(16,185,129,.05) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 50% at 100% 100%, rgba(139,92,246,.04) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(59,130,246,.03) 0%, transparent 60%),
+        var(--bg);
+    background-attachment: fixed;
+    position: relative;
+}
+/* Subtle dot grid pattern */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,.015) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
+}
+.app { position: relative; z-index: 1; }
+
+/* Brand alanını gradient ile güzelleştir */
+.sidebar-brand h1 {
+    font-weight: 800;
+    letter-spacing: .3px;
+}
+.sidebar-brand h1 span {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Nav item: aktiv state'e ince sol çubuk */
+.nav-item {
+    position: relative;
+}
+.nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 60%;
+    background: var(--gradient-primary);
+    border-radius: 0 4px 4px 0;
+}
+.nav-item:hover .icon {
+    transform: scale(1.1) rotate(-5deg);
+    transition: transform var(--transition);
+}
+
+/* Card: glassmorphism + glow on hover */
+.card {
+    background: linear-gradient(180deg, var(--surface) 0%, rgba(17,30,24,.6) 100%);
+    backdrop-filter: blur(8px);
+    position: relative;
+    overflow: hidden;
+}
+.card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 0%, var(--primary-glow) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity var(--transition);
+    pointer-events: none;
+}
+.card:hover::after { opacity: 1; }
+.card:hover {
+    border-color: var(--primary);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(34,197,94,.12);
+}
+
+/* Chart-box hover */
+.chart-box { transition: border-color var(--transition); }
+.chart-box:hover { border-color: var(--border-light); }
+
+/* Buton iyileştirme */
+.btn-primary {
+    background: var(--gradient-primary);
+    box-shadow: 0 4px 16px rgba(34,197,94,.25);
+    letter-spacing: .3px;
+}
+.btn-primary:hover {
+    box-shadow: 0 6px 24px rgba(34,197,94,.35);
+    transform: translateY(-2px);
+}
+.btn-primary:active { transform: translateY(0); }
+
+/* Result card: daha sıcak gradient */
+.result-card {
+    background: linear-gradient(135deg, rgba(34,197,94,.1), rgba(56,189,248,.08));
+    box-shadow: 0 4px 24px rgba(34,197,94,.1);
+}
+
+/* Toast: yumuşak gölge */
+.toast { box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+
+/* Empty state: Filiz aktivasyon */
+.empty-state .icon { animation: float 3s ease-in-out infinite; display: inline-block; }
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+/* ─── 🌱 FİLİZ MASKOTU ─────────────────────────────── */
+.filiz-mascot {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 100px;
+    height: 116px;
+    cursor: pointer;
+    z-index: 200;
+    background: transparent;
+    padding: 0;
+    border: none;
+    animation: filizFloat 4s ease-in-out infinite;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    filter: drop-shadow(0 10px 20px rgba(16,185,129,.45));
+}
+.filiz-mascot:hover {
+    transform: scale(1.12) rotate(-4deg);
+    filter: drop-shadow(0 12px 24px rgba(16,185,129,.6));
+}
+.filiz-mascot:active {
+    transform: scale(.95);
+}
+.filiz-mascot svg { width: 100%; height: 100%; overflow: visible; }
+
+@keyframes filizFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+/* Blink: o_o → -_- (açık gözler ↔ çizgi gözler toggle) */
+@keyframes blinkOpen {
+    0%, 92%, 100% { opacity: 1; }
+    94%, 96% { opacity: 0; }
+}
+@keyframes blinkClosed {
+    0%, 92%, 100% { opacity: 0; }
+    94%, 96% { opacity: 1; }
+}
+.filiz-mascot .eye-open  { animation: blinkOpen 5s infinite ease-in-out; }
+.filiz-mascot .eye-closed {
+    opacity: 0;
+    animation: blinkClosed 5s infinite ease-in-out;
+}
+
+/* Yaprak rüzgar animasyonu */
+@keyframes leafSwayL {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-4deg); }
+}
+@keyframes leafSwayR {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(4deg); }
+}
+.filiz-mascot .filiz-leaf-l {
+    transform-origin: 60px 26px;
+    transform-box: fill-box;
+    animation: leafSwayL 3.5s ease-in-out infinite;
+}
+.filiz-mascot .filiz-leaf-r {
+    transform-origin: 60px 26px;
+    transform-box: fill-box;
+    animation: leafSwayR 3.5s ease-in-out infinite;
+}
+
+/* Kol sallama (hover'da) */
+@keyframes waveArm {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-25deg); }
+    75% { transform: rotate(15deg); }
+}
+.filiz-mascot:hover .filiz-arm-r {
+    transform-origin: 102px 92px;
+    transform-box: fill-box;
+    animation: waveArm .6s ease-in-out 2;
+}
+.filiz-mascot:hover .filiz-arm-l {
+    transform-origin: 18px 92px;
+    transform-box: fill-box;
+    animation: waveArm .6s ease-in-out 2 reverse;
+}
+
+/* ─── Tıklayınca: gözler ^_^ + 3 kalp uçar ─── */
+
+/* Sevinçli gözler default gizli */
+.filiz-mascot .eye-joyful { opacity: 0; }
+
+/* .happy state: o_o/-_- gizlen, ^_^ açıl, blink animasyonu duraklatılır */
+.filiz-mascot.happy .eye-open,
+.filiz-mascot.happy .eye-closed {
+    opacity: 0 !important;
+    animation-play-state: paused;
+}
+.filiz-mascot.happy .eye-joyful {
+    opacity: 1 !important;
+    animation: joyfulBounce .4s ease-out;
+}
+
+/* .happy state: düz ağız gizlen, gülümseme açıl */
+.filiz-mascot.happy .mouth-happy,
+.filiz-mascot.happy .mouth-worried,
+.filiz-mascot.happy .mouth-sleepy {
+    opacity: 0 !important;
+}
+.filiz-mascot.happy .mouth-joyful {
+    opacity: 1 !important;
+}
+
+/* ─── SLEEPY MOOD: gözler kapalı kalsın ────────── */
+.filiz-mascot[data-mood="sleepy"] .eye-open {
+    opacity: 0 !important;
+    animation-play-state: paused;
+}
+.filiz-mascot[data-mood="sleepy"] .eye-closed {
+    opacity: 1 !important;
+    animation-play-state: paused;
+}
+
+/* ─── .angry state: uykuda tıklanırsa kızgın ────── */
+.filiz-mascot.angry .eye-open,
+.filiz-mascot.angry .eye-closed,
+.filiz-mascot.angry .eye-joyful {
+    opacity: 0 !important;
+    animation-play-state: paused;
+}
+.filiz-mascot.angry .eye-angry {
+    opacity: 1 !important;
+}
+.filiz-mascot.angry .mouth-happy,
+.filiz-mascot.angry .mouth-worried,
+.filiz-mascot.angry .mouth-sleepy,
+.filiz-mascot.angry .mouth-joyful {
+    opacity: 0 !important;
+}
+.filiz-mascot.angry .mouth-angry {
+    opacity: 1 !important;
+}
+.filiz-mascot.angry .filiz-anger-mark,
+.filiz-mascot.angry .filiz-angry-brows {
+    opacity: 1 !important;
+}
+.filiz-mascot.angry .filiz-anger-mark {
+    animation: angerPulse .3s ease-in-out 4;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+@keyframes angerPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+}
+/* Angry'de Z'leri ve sleepy işaretlerini gizle */
+.filiz-mascot.angry .filiz-zzz,
+.filiz-mascot.angry .filiz-sweat {
+    display: none !important;
+}
+/* Angry'de hafif sallanma (kafayı sallar gibi) */
+.filiz-mascot.angry {
+    animation: angryShake .15s ease-in-out 3;
+}
+@keyframes angryShake {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    25% { transform: translateX(-3px) rotate(-2deg); }
+    75% { transform: translateX(3px) rotate(2deg); }
+}
+@keyframes joyfulBounce {
+    0%   { transform: translateY(2px) scaleY(.7); }
+    60%  { transform: translateY(-1px) scaleY(1.1); }
+    100% { transform: translateY(0) scaleY(1); }
+}
+
+/* Kalpler default gizli, .happy'de aktif */
+.filiz-mascot .filiz-hearts { opacity: 0; }
+.filiz-mascot.happy .filiz-hearts { opacity: 1; }
+
+@keyframes heartFloatBig {
+    0%   { opacity: 0; transform: translateY(8px) scale(.3); }
+    20%  { opacity: 1; transform: translateY(-2px) scale(1.2); }
+    60%  { opacity: 1; transform: translateY(-14px) scale(1); }
+    100% { opacity: 0; transform: translateY(-32px) scale(.85); }
+}
+@keyframes heartFloatLeft {
+    0%   { opacity: 0; transform: translate(0, 6px) scale(.3); }
+    25%  { opacity: 1; transform: translate(-4px, -4px) scale(1); }
+    100% { opacity: 0; transform: translate(-16px, -28px) scale(.6); }
+}
+@keyframes heartFloatRight {
+    0%   { opacity: 0; transform: translate(0, 6px) scale(.3); }
+    25%  { opacity: 1; transform: translate(4px, -4px) scale(1); }
+    100% { opacity: 0; transform: translate(16px, -28px) scale(.6); }
+}
+.filiz-mascot.happy .heart-big {
+    transform-origin: center;
+    transform-box: fill-box;
+    animation: heartFloatBig 1.4s ease-out forwards;
+}
+.filiz-mascot.happy .heart-left {
+    transform-origin: center;
+    transform-box: fill-box;
+    animation: heartFloatLeft 1.4s ease-out .15s both;
+}
+.filiz-mascot.happy .heart-right {
+    transform-origin: center;
+    transform-box: fill-box;
+    animation: heartFloatRight 1.4s ease-out .3s both;
+}
+
+/* Konuşma baloncuğu */
+.filiz-bubble {
+    position: fixed;
+    bottom: 110px;
+    right: 24px;
+    max-width: 280px;
+    background: var(--surface);
+    border: 1px solid var(--primary);
+    border-radius: 16px 16px 4px 16px;
+    padding: 14px 18px;
+    font-size: .85rem;
+    line-height: 1.5;
+    color: var(--text);
+    box-shadow: 0 8px 32px rgba(34,197,94,.2);
+    z-index: 199;
+    opacity: 0;
+    transform: translateY(8px) scale(.95);
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+}
+.filiz-bubble.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+.filiz-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    right: 28px;
+    width: 14px;
+    height: 14px;
+    background: var(--surface);
+    border-right: 1px solid var(--primary);
+    border-bottom: 1px solid var(--primary);
+    transform: rotate(45deg);
+}
+.filiz-bubble strong {
+    color: var(--primary);
+    font-weight: 600;
+}
+.filiz-bubble .filiz-tip {
+    margin-top: 6px;
+    font-size: .75rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Mobil: maskot biraz küçük */
+@media (max-width: 480px) {
+    .filiz-mascot { width: 56px; height: 56px; bottom: 16px; right: 16px; }
+    .filiz-bubble { max-width: 220px; bottom: 84px; right: 16px; font-size: .8rem; }
+}
+
+/* Refresh badge: yeşil ışık */
+.refresh-badge {
+    background: var(--primary-glow);
+    color: var(--primary);
+    border: 1px solid rgba(34,197,94,.2);
+}
+
+/* Status dot glow güçlendirme */
+.status-dot.online {
+    box-shadow: 0 0 12px var(--primary), 0 0 4px var(--primary);
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 12px var(--primary), 0 0 4px var(--primary); }
+    50% { box-shadow: 0 0 20px var(--primary), 0 0 8px var(--primary); }
+}
+
+/* Badge gradients */
+.badge.active {
+    background: linear-gradient(135deg, rgba(16,185,129,.2), rgba(6,182,212,.2));
+    border: 1px solid rgba(16,185,129,.3);
+}
+
+/* ─── 🎨 HERO CARD (sayfa banner'ı) ────────────────── */
+.hero-banner {
+    position: relative;
+    margin-bottom: 24px;
+    padding: 28px 32px;
+    border-radius: 20px;
+    background:
+        linear-gradient(135deg, rgba(16,185,129,.15), rgba(59,130,246,.08), rgba(139,92,246,.05));
+    border: 1px solid rgba(16,185,129,.2);
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+}
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(16,185,129,.25) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.hero-banner::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 30%;
+    width: 150px; height: 150px;
+    background: radial-gradient(circle, rgba(59,130,246,.15) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.hero-banner h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    letter-spacing: -.3px;
+}
+.hero-banner h1 .hero-emoji {
+    font-size: 2rem;
+    display: inline-block;
+    animation: heroEmojiBounce 2s ease-in-out infinite;
+}
+@keyframes heroEmojiBounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-6px) rotate(-8deg); }
+}
+.hero-banner p {
+    color: var(--text-muted);
+    font-size: .95rem;
+    line-height: 1.6;
+    max-width: 680px;
+}
+.hero-banner .hero-stats {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+.hero-stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(0,0,0,.25);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 24px;
+    font-size: .8rem;
+    color: var(--text-muted);
+}
+.hero-stat strong {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: .95rem;
+}
+.hero-leaves {
+    position: absolute;
+    top: 16px; right: 16px;
+    width: 80px; height: 80px;
+    opacity: .35;
+    pointer-events: none;
+}
+
+/* ─── 📑 SECTION HEADER ─────────────────────────────── */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0 16px;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+.section-header::before {
+    content: '';
+    width: 4px;
+    height: 18px;
+    background: var(--gradient-primary);
+    border-radius: 2px;
+}
+.section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border-light), transparent);
+}
+
+/* ─── 🃏 KART İYİLEŞTİRMELERİ ───────────────────────── */
+.card {
+    position: relative;
+    overflow: hidden;
+}
+.card .card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-glow), rgba(59,130,246,.1));
+    border: 1px solid rgba(16,185,129,.15);
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+    transition: transform var(--transition);
+}
+.card:hover .card-icon {
+    transform: scale(1.08) rotate(-5deg);
+}
+.card.accent-blue .card-icon { background: linear-gradient(135deg, rgba(59,130,246,.18), rgba(139,92,246,.08)); }
+.card.accent-amber .card-icon { background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(239,68,68,.08)); }
+.card.accent-violet .card-icon { background: linear-gradient(135deg, rgba(139,92,246,.18), rgba(59,130,246,.08)); }
+.card.accent-cyan .card-icon { background: linear-gradient(135deg, rgba(6,182,212,.18), rgba(16,185,129,.08)); }
+.card .card-corner {
+    position: absolute;
+    top: 0; right: 0;
+    width: 60px; height: 60px;
+    background: radial-gradient(circle at 100% 0%, var(--primary-glow) 0%, transparent 60%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+.card:hover .card-corner { opacity: 1; }
+
+/* Chart-box ek detaylar */
+.chart-box {
+    position: relative;
+    overflow: hidden;
+}
+.chart-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary), transparent 60%);
+    opacity: .6;
+}
+.chart-box h3 {
+    position: relative;
+    padding-left: 4px;
+}
+
+/* Form-box başlığı dekoratif */
+.form-box {
+    position: relative;
+    overflow: hidden;
+}
+.form-box::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(16,185,129,.06) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+/* ─── 🍃 ARKA PLAN YÜZEN YAPRAKLAR ──────────────────── */
+.bg-leaves {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+.bg-leaf {
+    position: absolute;
+    color: var(--primary);
+    opacity: .04;
+    animation: bgLeafFloat 18s ease-in-out infinite;
+}
+.bg-leaf svg { width: 100%; height: 100%; }
+.bg-leaf:nth-child(1) { top: 10%; left: 5%; width: 60px; height: 60px; animation-duration: 22s; }
+.bg-leaf:nth-child(2) { top: 30%; right: 8%; width: 80px; height: 80px; animation-duration: 28s; animation-delay: -5s; }
+.bg-leaf:nth-child(3) { bottom: 20%; left: 12%; width: 50px; height: 50px; animation-duration: 20s; animation-delay: -10s; }
+.bg-leaf:nth-child(4) { top: 60%; right: 20%; width: 70px; height: 70px; animation-duration: 25s; animation-delay: -3s; }
+.bg-leaf:nth-child(5) { top: 80%; left: 35%; width: 45px; height: 45px; animation-duration: 24s; animation-delay: -8s; }
+
+@keyframes bgLeafFloat {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    25% { transform: translate(20px, -30px) rotate(15deg); }
+    50% { transform: translate(-15px, -50px) rotate(-10deg); }
+    75% { transform: translate(10px, -20px) rotate(20deg); }
+}
+
+/* ─── ✨ STAT NUMBER ANIMATION ─────────────────────── */
+.card-value {
+    background: linear-gradient(180deg, var(--text) 0%, var(--text-muted) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.2;
+}
+
+/* ─── 📋 TABLE ROW HOVER ─────────────────────────── */
+tr { transition: background var(--transition); }
+tr:hover td { background: linear-gradient(90deg, var(--primary-glow) 0%, transparent 30%); }
+
+/* ─── 💧 RESULT CARD ANIMATION ─────────────────────── */
+.result-card { position: relative; overflow: hidden; }
+.result-card::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(16,185,129,.2) 0%, transparent 60%);
+    border-radius: 50%;
+    animation: pulseGlow 3s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+    0%, 100% { transform: scale(1); opacity: .4; }
+    50% { transform: scale(1.15); opacity: .7; }
+}
+
+/* ─── ☀️ LIGHT MODE ─────────────────────────────────── */
+[data-theme="light"] {
+    --primary: #059669;
+    --primary-hover: #047857;
+    --primary-glow: rgba(5,150,105,.12);
+    --bg: #f4f7fa;
+    --surface: #ffffff;
+    --surface-2: #f1f5f9;
+    --surface-3: #e2e8f0;
+    --border: #e2e8f0;
+    --border-light: #cbd5e1;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --text-dim: #64748b;
+    --accent-blue: #2563eb;
+    --accent-amber: #d97706;
+    --accent-red: #dc2626;
+    --accent-violet: #7c3aed;
+    --accent-cyan: #0891b2;
+    --shadow: 0 4px 24px rgba(15,23,42,.08);
+    --gradient-primary: linear-gradient(135deg, #059669, #0891b2);
+    --gradient-warm: linear-gradient(135deg, #d97706, #dc2626);
+    --gradient-cool: linear-gradient(135deg, #7c3aed, #2563eb);
+    --gradient-leaf: linear-gradient(135deg, #059669, #65a30d);
+    --glow-primary: 0 0 40px rgba(5,150,105,.15);
+    --glow-soft: 0 8px 32px rgba(15,23,42,.08);
+}
+
+/* Light mode body — açık-yeşil-mavi atmosfer */
+[data-theme="light"] body {
+    background:
+        radial-gradient(ellipse 80% 60% at 0% 0%, rgba(5,150,105,.07) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 50% at 100% 100%, rgba(124,58,237,.05) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(37,99,235,.04) 0%, transparent 60%),
+        var(--bg);
+    background-attachment: fixed;
+}
+[data-theme="light"] body::before {
+    background-image: radial-gradient(circle, rgba(15,23,42,.04) 1px, transparent 1px);
+}
+
+/* Light mode sidebar */
+[data-theme="light"] .sidebar {
+    background: rgba(255,255,255,.8);
+    border-right: 1px solid var(--border);
+}
+[data-theme="light"] .header {
+    background: rgba(255,255,255,.7);
+    border-bottom: 1px solid var(--border);
+}
+[data-theme="light"] .nav-item:hover { background: var(--surface-2); }
+[data-theme="light"] .nav-item.active { background: var(--primary-glow); color: var(--primary); }
+
+/* Light mode card / chart-box arka plan */
+[data-theme="light"] .card {
+    background: var(--surface);
+    box-shadow: 0 1px 3px rgba(15,23,42,.04);
+}
+[data-theme="light"] .card:hover {
+    box-shadow: 0 8px 32px rgba(5,150,105,.12);
+}
+[data-theme="light"] .chart-box,
+[data-theme="light"] .table-box,
+[data-theme="light"] .form-box {
+    background: var(--surface);
+    box-shadow: 0 1px 3px rgba(15,23,42,.04);
+}
+
+/* Light mode hero-banner */
+[data-theme="light"] .hero-banner {
+    background:
+        linear-gradient(135deg, rgba(5,150,105,.08), rgba(37,99,235,.05), rgba(124,58,237,.04));
+    border: 1px solid rgba(5,150,105,.15);
+    box-shadow: 0 4px 24px rgba(5,150,105,.06);
+}
+[data-theme="light"] .hero-stat {
+    background: rgba(255,255,255,.7);
+    border-color: rgba(15,23,42,.06);
+}
+[data-theme="light"] .hero-stat strong { color: var(--primary); }
+
+/* Light mode form input */
+[data-theme="light"] .form-group input,
+[data-theme="light"] .form-group select {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+/* Light mode result-card */
+[data-theme="light"] .result-card {
+    background: linear-gradient(135deg, rgba(5,150,105,.08), rgba(37,99,235,.06));
+}
+
+/* Light mode toast */
+[data-theme="light"] .toast {
+    background: var(--surface);
+    box-shadow: 0 8px 32px rgba(15,23,42,.12);
+}
+
+/* Light mode bg-leaves: biraz daha görünür */
+[data-theme="light"] .bg-leaf { opacity: .07; }
+
+/* Light mode mascot gölge */
+[data-theme="light"] .filiz-mascot {
+    filter: drop-shadow(0 8px 16px rgba(5,150,105,.3));
+}
+[data-theme="light"] .filiz-bubble {
+    background: var(--surface);
+    border-color: var(--primary);
+    box-shadow: 0 8px 32px rgba(5,150,105,.18);
+}
+[data-theme="light"] .filiz-bubble::after {
+    background: var(--surface);
+}
+
+/* Light mode badge */
+[data-theme="light"] .badge.active {
+    background: linear-gradient(135deg, rgba(5,150,105,.15), rgba(8,145,178,.15));
+    border: 1px solid rgba(5,150,105,.25);
+}
+
+/* Light mode card-value gradient text */
+[data-theme="light"] .card-value {
+    background: linear-gradient(180deg, var(--text) 0%, var(--text-muted) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Light mode table row hover */
+[data-theme="light"] tr:hover td {
+    background: linear-gradient(90deg, rgba(5,150,105,.06) 0%, transparent 30%);
+}
+
+/* Light mode refresh-badge */
+[data-theme="light"] .refresh-badge {
+    background: var(--primary-glow);
+    border-color: rgba(5,150,105,.2);
+    color: var(--primary);
+}
+
+/* ─── 🌗 TEMA TOGGLE PILL (sun ↔ moon) ─────────────── */
+.theme-toggle {
+    position: relative;
+    width: 64px;
+    height: 30px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 999px;
+    transition: transform .2s ease;
+}
+.theme-toggle:hover { transform: scale(1.05); }
+.theme-toggle:active { transform: scale(.97); }
+
+.toggle-track {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.06);
+}
+
+/* Arka plan katmanları (crossfade) */
+.toggle-bg {
+    position: absolute;
+    inset: 0;
+    transition: opacity .4s ease;
+}
+.toggle-bg-light {
+    background: linear-gradient(135deg, #60a5fa 0%, #93c5fd 60%, #bfdbfe 100%);
+    opacity: 0;
+}
+.toggle-bg-dark {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+    opacity: 1;
+}
+[data-theme="light"] .toggle-bg-light { opacity: 1; }
+[data-theme="light"] .toggle-bg-dark  { opacity: 0; }
+
+/* Bulutlar */
+.toggle-cloud {
+    position: absolute;
+    color: rgba(255,255,255,.9);
+    pointer-events: none;
+}
+.toggle-cloud.cloud-1 { right: 6px; top: 4px; width: 14px; height: 14px; }
+.toggle-cloud.cloud-2 { right: 22px; top: 13px; width: 10px; height: 10px; opacity: .65; }
+
+/* Yıldızlar */
+.star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(255,255,255,.6);
+}
+
+/* Knob (kayan top) */
+.toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    transform: translateX(34px);  /* Default dark: knob sağda */
+    transition: transform .45s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 2px 8px rgba(0,0,0,.5);
+    z-index: 2;
+    overflow: hidden;
+}
+[data-theme="light"] .toggle-knob {
+    transform: translateX(0);  /* Light: knob solda */
+}
+.toggle-knob svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transition: opacity .3s ease;
+}
+.toggle-knob .knob-sun  { opacity: 0; }
+.toggle-knob .knob-moon { opacity: 1; }
+[data-theme="light"] .toggle-knob .knob-sun  { opacity: 1; }
+[data-theme="light"] .toggle-knob .knob-moon { opacity: 0; }
+
+/* Light mode'da pill biraz farklı hover */
+[data-theme="light"] .theme-toggle:hover .toggle-track {
+    box-shadow: inset 0 2px 6px rgba(15,23,42,.2), 0 0 0 1px rgba(96,165,250,.4);
+}
+
+/* Smooth tema geçişi */
+body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
+.hero-stat, .toast, .filiz-bubble, .nav-item, .form-group input, .form-group select,
+.theme-toggle, td, th {
+    transition: background-color .3s ease, border-color .3s ease, color .3s ease, box-shadow .3s ease;
+}
     </style>
 </head>
 <body>
+<!-- ═══ ARKA PLAN YÜZEN YAPRAKLAR ═══ -->
+<div class="bg-leaves" aria-hidden="true">
+    <div class="bg-leaf"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg></div>
+    <div class="bg-leaf"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg></div>
+    <div class="bg-leaf"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg></div>
+    <div class="bg-leaf"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg></div>
+    <div class="bg-leaf"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg></div>
+</div>
+
 <div class="app">
     <!-- ═══ SIDEBAR ═══ -->
     <aside class="sidebar" id="sidebar">
@@ -205,6 +1095,10 @@ tr:hover td { background: var(--surface-2); }
             <a class="nav-item" href="#analytics" onclick="navigate('analytics')">
                 <span class="icon">📈</span> Analitik
             </a>
+            <a class="nav-item nav-item-help" href="/docs" target="_blank" rel="noopener">
+                <span class="icon">📖</span> API Rehberi
+                <span class="icon" style="margin-left:auto; font-size:.7rem; opacity:.6;">↗</span>
+            </a>
         </nav>
         <div class="sidebar-footer">
             <span class="status-dot online" id="statusDot"></span>
@@ -224,6 +1118,50 @@ tr:hover td { background: var(--surface-2); }
                 </div>
             </div>
             <div class="header-right">
+                <button class="theme-toggle" id="themeToggle" aria-label="Tema değiştir" title="Tema değiştir">
+                    <span class="toggle-track">
+                        <!-- Aydınlık arka plan: gökyüzü + bulutlar -->
+                        <span class="toggle-bg toggle-bg-light">
+                            <svg class="toggle-cloud cloud-1" viewBox="0 0 24 24" fill="currentColor"><path d="M19,17H7c-1.7,0-3-1.3-3-3s1.3-3,3-3c0.4,0,0.8,0.1,1.1,0.2C8.7,8.8,11,7,13.7,7c3,0,5.4,2.4,5.4,5.4c0,0.1,0,0.2,0,0.3c1.7,0.1,3,1.5,3,3.2C22,16.6,20.6,17,19,17z"/></svg>
+                            <svg class="toggle-cloud cloud-2" viewBox="0 0 24 24" fill="currentColor"><path d="M19,17H7c-1.7,0-3-1.3-3-3s1.3-3,3-3c0.4,0,0.8,0.1,1.1,0.2C8.7,8.8,11,7,13.7,7c3,0,5.4,2.4,5.4,5.4c0,0.1,0,0.2,0,0.3c1.7,0.1,3,1.5,3,3.2C22,16.6,20.6,17,19,17z"/></svg>
+                        </span>
+                        <!-- Karanlık arka plan: gece + yıldızlar -->
+                        <span class="toggle-bg toggle-bg-dark">
+                            <span class="star" style="top:6px;left:32px;width:2px;height:2px"></span>
+                            <span class="star" style="top:18px;left:24px;width:1.5px;height:1.5px;opacity:.8"></span>
+                            <span class="star" style="top:10px;left:46px;width:1px;height:1px;opacity:.7"></span>
+                            <span class="star" style="top:22px;left:38px;width:1px;height:1px;opacity:.6"></span>
+                            <span class="star" style="top:5px;left:18px;width:1px;height:1px;opacity:.5"></span>
+                        </span>
+                        <!-- Knob: güneş veya ay -->
+                        <span class="toggle-knob">
+                            <svg class="knob-sun" viewBox="0 0 24 24">
+                                <defs>
+                                    <radialGradient id="sunGrad" cx="40%" cy="40%">
+                                        <stop offset="0%" stop-color="#fef9c3"/>
+                                        <stop offset="55%" stop-color="#fcd34d"/>
+                                        <stop offset="100%" stop-color="#f59e0b"/>
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="12" cy="12" r="10" fill="url(#sunGrad)"/>
+                                <ellipse cx="9" cy="10" rx="2.5" ry="1.8" fill="#fef9c3" opacity=".6"/>
+                            </svg>
+                            <svg class="knob-moon" viewBox="0 0 24 24">
+                                <defs>
+                                    <radialGradient id="moonGrad" cx="40%" cy="40%">
+                                        <stop offset="0%" stop-color="#f8fafc"/>
+                                        <stop offset="70%" stop-color="#cbd5e1"/>
+                                        <stop offset="100%" stop-color="#94a3b8"/>
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="12" cy="12" r="10" fill="url(#moonGrad)"/>
+                                <circle cx="14.5" cy="9" r="1.6" fill="#94a3b8" opacity=".55"/>
+                                <circle cx="9" cy="13.5" r="1.2" fill="#94a3b8" opacity=".5"/>
+                                <circle cx="15" cy="15" r="1" fill="#94a3b8" opacity=".5"/>
+                            </svg>
+                        </span>
+                    </span>
+                </button>
                 <span class="refresh-badge" id="refreshBadge">🔄 30s</span>
             </div>
         </header>
@@ -231,7 +1169,19 @@ tr:hover td { background: var(--surface-2); }
         <div class="main-content">
             <!-- ═══ DASHBOARD PAGE ═══ -->
             <section class="page active" id="page-dashboard">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">🌾</span> Hoş geldin, çiftçi!</h1>
+                    <p>Tüm Türkiye'den toplanan toprak, hava ve sulama verilerini tek bir panelde gör. ML modelleri seninle çalışıyor.</p>
+                    <div class="hero-stats">
+                        <div class="hero-stat">🇹🇷 <strong id="heroFarms">81</strong> il</div>
+                        <div class="hero-stat">📡 <strong id="heroSensors">324</strong> sensör</div>
+                        <div class="hero-stat">📊 <strong id="heroReadings">4860</strong> okuma</div>
+                        <div class="hero-stat">🌱 <strong>17</strong> bitki türü</div>
+                    </div>
+                </div>
+                <div class="section-header">📊 Genel Bakış</div>
                 <div class="cards-grid" id="dashboardCards"></div>
+                <div class="section-header">📈 Trendler</div>
                 <div class="charts-row">
                     <div class="chart-box"><h3>💧 Toprak Nemi Trendi</h3><canvas id="moistureChart"></canvas></div>
                     <div class="chart-box"><h3>🌡️ Sıcaklık & Nem</h3><canvas id="tempHumChart"></canvas></div>
@@ -241,6 +1191,11 @@ tr:hover td { background: var(--surface-2); }
 
             <!-- ═══ SENSORS PAGE ═══ -->
             <section class="page" id="page-sensors">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">📡</span> Sensör Ağı</h1>
+                    <p>Toprak nemi ve sıcaklık sensörlerinden gelen okumaları takip et. Bir sensöre tıklayarak detaylı zaman serisini görüntüle.</p>
+                </div>
+                <div class="section-header">📋 Aktif Sensörler</div>
                 <div class="table-box">
                     <h3>📡 Sensör Listesi</h3>
                     <table><thead><tr><th>ID</th><th>Tip</th><th>Seri No</th><th>Durum</th></tr></thead>
@@ -254,6 +1209,11 @@ tr:hover td { background: var(--surface-2); }
 
             <!-- ═══ WEATHER PAGE ═══ -->
             <section class="page" id="page-weather">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">🌤️</span> Hava Durumu</h1>
+                    <p>81 ildeki çiftliklerin sıcaklık, nem, yağış ve rüzgar verileri. APScheduler her gün 02:00'de otomatik günceller.</p>
+                </div>
+                <div class="section-header">🌡️ Şu Anki Durum</div>
                 <div class="cards-grid" id="weatherCards"></div>
                 <div class="charts-row">
                     <div class="chart-box"><h3>🌡️ Sıcaklık Trendi</h3><canvas id="weatherTempChart"></canvas></div>
@@ -263,6 +1223,16 @@ tr:hover td { background: var(--surface-2); }
 
             <!-- ═══ IRRIGATION PAGE ═══ -->
             <section class="page" id="page-irrigation">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">💧</span> Sulama Optimizasyonu</h1>
+                    <p>RandomForest modeli toprak nemi, sıcaklık, hava nemi ve son yağışı analiz ederek önerilen sulama miktarını (litre) hesaplar.</p>
+                    <div class="hero-stats">
+                        <div class="hero-stat">🤖 <strong>scikit-learn</strong> 1.8</div>
+                        <div class="hero-stat">📚 <strong>1000</strong> sentetik örnek</div>
+                        <div class="hero-stat">⚡ <strong>~50ms</strong> tahmin</div>
+                    </div>
+                </div>
+                <div class="section-header">🔮 ML Tahmin</div>
                 <div class="form-box">
                     <h3>💧 ML Sulama Tahmini</h3>
                     <div class="form-grid">
@@ -284,6 +1254,16 @@ tr:hover td { background: var(--surface-2); }
 
             <!-- ═══ FERTILIZER PAGE ═══ -->
             <section class="page" id="page-fertilizer">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">🌱</span> Akıllı Gübreleme</h1>
+                    <p>Bitki türüne göre NPK ihtiyacını ve toprak analiz verilerini birleştirerek gerekli gübre miktarını hesaplarız. 17 bitki destekli.</p>
+                    <div class="hero-stats">
+                        <div class="hero-stat">🌾 <strong>4</strong> Tahıl</div>
+                        <div class="hero-stat">🍅 <strong>6</strong> Sebze & Endüstriyel</div>
+                        <div class="hero-stat">🍇 <strong>7</strong> Meyve & Çok Yıllık</div>
+                    </div>
+                </div>
+                <div class="section-header">🧪 NPK Önerisi</div>
                 <div class="form-box">
                     <h3>🌱 Gübreleme Önerisi Al</h3>
                     <div class="form-grid">
@@ -334,7 +1314,18 @@ tr:hover td { background: var(--surface-2); }
 
             <!-- ═══ ANALYTICS PAGE ═══ -->
             <section class="page" id="page-analytics">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">📈</span> Analitik Pano</h1>
+                    <p>81 ildeki çiftliklerden gelen verilerin 7 coğrafi bölgede gruplanmış görünümü. PDF ve Excel'e aktarabilir, iki periyot karşılaştırabilirsiniz.</p>
+                    <div class="hero-stats">
+                        <div class="hero-stat">🗺️ <strong>7</strong> bölge kırılımı</div>
+                        <div class="hero-stat">📄 PDF + Excel export</div>
+                        <div class="hero-stat">⏱️ Tarihsel karşılaştırma</div>
+                    </div>
+                </div>
+                <div class="section-header">📊 Sayısal Özet</div>
                 <div class="cards-grid" id="analyticsCards"></div>
+                <div class="section-header">🍩 Dağılımlar</div>
                 <div class="charts-row">
                     <div class="chart-box"><h3>🍩 Sensör Tipi Dağılımı</h3><canvas id="sensorTypeChart"></canvas></div>
                     <div class="chart-box"><h3>🏘️ Çiftlik Bazlı Sıcaklık Karşılaştırması</h3><canvas id="farmTempChart"></canvas></div>
@@ -343,6 +1334,7 @@ tr:hover td { background: var(--surface-2); }
                     <div class="chart-box"><h3>💧 Sulama Durumu Dağılımı</h3><canvas id="irrigationStatusChart"></canvas></div>
                     <div class="chart-box"><h3>🌿 Bitki NPK İhtiyaç Profili</h3><canvas id="npkRadarChart"></canvas></div>
                 </div>
+                <div class="section-header">📅 Trendler</div>
                 <div class="charts-row">
                     <div class="chart-box"><h3>🌡️ Günlük Sıcaklık Trendleri (Çiftlik Bazlı)</h3><canvas id="dailyTrendChart"></canvas></div>
                     <div class="chart-box"><h3>📊 Sensör Okuma İstatistikleri</h3><canvas id="sensorStatsChart"></canvas></div>
@@ -353,6 +1345,207 @@ tr:hover td { background: var(--surface-2); }
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══ FİLİZ MASKOTU ═══ -->
+<div class="filiz-bubble" id="filizBubble" role="status" aria-live="polite">
+    <strong>Filiz 🌱</strong>
+    <div id="filizMessage">Merhaba! Ben Filiz, senin tarım asistanın.</div>
+    <div class="filiz-tip" id="filizTip">Tıklayarak yeni ipucu al ✨</div>
+</div>
+<button class="filiz-mascot" id="filizMascot" aria-label="Filiz - tarım asistanı"
+        title="Filiz'e tıkla ve günün ipucunu al!">
+    <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <!-- Gövde: 3D küre etkisi için iki noktada parlayan radial -->
+            <radialGradient id="filizBody" cx="35%" cy="30%" r="80%">
+                <stop offset="0%" stop-color="#bbf7d0"/>
+                <stop offset="35%" stop-color="#86efac"/>
+                <stop offset="75%" stop-color="#22c55e"/>
+                <stop offset="100%" stop-color="#15803d"/>
+            </radialGradient>
+            <!-- Alt karanlık (dipte gölge halkası) -->
+            <radialGradient id="filizBodyShade" cx="50%" cy="100%" r="60%">
+                <stop offset="0%" stop-color="#14532d" stop-opacity=".55"/>
+                <stop offset="100%" stop-color="#14532d" stop-opacity="0"/>
+            </radialGradient>
+            <!-- Yaprak: 3D katmanlı -->
+            <radialGradient id="filizLeaf" cx="35%" cy="30%" r="80%">
+                <stop offset="0%" stop-color="#86efac"/>
+                <stop offset="60%" stop-color="#22c55e"/>
+                <stop offset="100%" stop-color="#15803d"/>
+            </radialGradient>
+            <!-- Yanak: pembe radial blob -->
+            <radialGradient id="filizCheek" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fb7185" stop-opacity=".85"/>
+                <stop offset="60%" stop-color="#fb7185" stop-opacity=".4"/>
+                <stop offset="100%" stop-color="#fb7185" stop-opacity="0"/>
+            </radialGradient>
+            <!-- Göz: derinlik için iki katmanlı -->
+            <radialGradient id="filizEyeBg" cx="35%" cy="30%" r="80%">
+                <stop offset="0%" stop-color="#1e293b"/>
+                <stop offset="100%" stop-color="#020617"/>
+            </radialGradient>
+            <!-- Glossy üst parıltı için (cam efekti) -->
+            <linearGradient id="filizGloss" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#fff" stop-opacity=".55"/>
+                <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+            </linearGradient>
+            <!-- Drop shadow filter (yumuşak gölge) -->
+            <filter id="filizSoftShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="1.2"/>
+            </filter>
+        </defs>
+
+        <!-- ═══ ZEMİN GÖLGESİ ═══ -->
+        <ellipse cx="60" cy="128" rx="32" ry="4" fill="#000" opacity=".22" filter="url(#filizSoftShadow)"/>
+
+        <!-- ═══ SAP ═══ -->
+        <path d="M 60 38 Q 59 30 60 22" fill="none" stroke="#15803d" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M 60 38 Q 59 30 60 22" fill="none" stroke="#22c55e" stroke-width="1.2" stroke-linecap="round" opacity=".7"/>
+
+        <!-- ═══ YAPRAK SOL ═══ -->
+        <g class="filiz-leaf-l">
+            <path d="M 60 26 Q 40 6 24 22 Q 32 36 60 32 Z" fill="url(#filizLeaf)"/>
+            <!-- Damar -->
+            <path d="M 60 28 Q 45 22 30 26" stroke="#15803d" stroke-width="1" fill="none" opacity=".55"/>
+            <!-- Yan damarlar -->
+            <path d="M 50 26 L 47 21" stroke="#15803d" stroke-width=".7" fill="none" opacity=".5"/>
+            <path d="M 42 27 L 39 23" stroke="#15803d" stroke-width=".7" fill="none" opacity=".5"/>
+            <!-- Üst parıltı -->
+            <ellipse cx="42" cy="20" rx="9" ry="3" fill="#fff" opacity=".22" transform="rotate(-25 42 20)"/>
+        </g>
+
+        <!-- ═══ YAPRAK SAĞ ═══ -->
+        <g class="filiz-leaf-r">
+            <path d="M 60 26 Q 80 6 96 22 Q 88 36 60 32 Z" fill="url(#filizLeaf)"/>
+            <path d="M 60 28 Q 75 22 90 26" stroke="#15803d" stroke-width="1" fill="none" opacity=".55"/>
+            <path d="M 70 26 L 73 21" stroke="#15803d" stroke-width=".7" fill="none" opacity=".5"/>
+            <path d="M 78 27 L 81 23" stroke="#15803d" stroke-width=".7" fill="none" opacity=".5"/>
+            <ellipse cx="78" cy="20" rx="9" ry="3" fill="#fff" opacity=".22" transform="rotate(25 78 20)"/>
+        </g>
+
+        <!-- ═══ GÖVDE: yuvarlak top, 3D küre ═══ -->
+        <ellipse cx="60" cy="78" rx="42" ry="44" fill="url(#filizBody)"/>
+        <!-- Alt karanlık (gövdenin alt kısmı koyu) -->
+        <ellipse cx="60" cy="78" rx="42" ry="44" fill="url(#filizBodyShade)"/>
+        <!-- Üst parıltı (cam efekti gibi büyük yarımay) -->
+        <path d="M 28 52 Q 40 36 70 38 Q 50 42 32 62 Z" fill="url(#filizGloss)" opacity=".8"/>
+        <!-- Mini parıltı (sağ üstte küçük spark) -->
+        <ellipse cx="78" cy="56" rx="4" ry="2.5" fill="#fff" opacity=".55"/>
+
+        <!-- ═══ KOLLAR (kabarcık) ═══ -->
+        <g class="filiz-arm-l">
+            <ellipse cx="18" cy="92" rx="7" ry="11" fill="#16a34a" transform="rotate(-25 18 92)"/>
+            <ellipse cx="18" cy="92" rx="3" ry="5" fill="#4ade80" opacity=".5" transform="rotate(-25 18 92)"/>
+            <circle cx="14" cy="100" r="6" fill="#22c55e"/>
+            <circle cx="13" cy="98" r="2" fill="#86efac" opacity=".7"/>
+        </g>
+        <g class="filiz-arm-r">
+            <ellipse cx="102" cy="92" rx="7" ry="11" fill="#16a34a" transform="rotate(25 102 92)"/>
+            <ellipse cx="102" cy="92" rx="3" ry="5" fill="#4ade80" opacity=".5" transform="rotate(25 102 92)"/>
+            <circle cx="106" cy="100" r="6" fill="#22c55e"/>
+            <circle cx="107" cy="98" r="2" fill="#86efac" opacity=".7"/>
+        </g>
+
+        <!-- ═══ YANAKLAR (pembe blob, daha belirgin) ═══ -->
+        <ellipse cx="30" cy="86" rx="10" ry="7" fill="url(#filizCheek)"/>
+        <ellipse cx="90" cy="86" rx="10" ry="7" fill="url(#filizCheek)"/>
+
+        <!-- ═══ SOL GÖZ — açık (o_o) ↔ kapalı (-_-) ↔ sevinçli (^_^) ═══ -->
+        <g class="filiz-eye">
+            <g class="eye-open">
+                <ellipse cx="42" cy="74" rx="11" ry="4" fill="#000" opacity=".15"/>
+                <ellipse cx="42" cy="70" rx="11" ry="13" fill="url(#filizEyeBg)"/>
+                <g id="filizPupilL" style="transform:translate(0,0); transition:transform .15s ease-out">
+                    <circle cx="44" cy="66" r="4" fill="#fff"/>
+                    <circle cx="40" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                    <circle cx="46" cy="68" r=".7" fill="#fff" opacity=".9"/>
+                </g>
+            </g>
+            <!-- Kapalı: hafif kavis (-_-) -->
+            <path class="eye-closed" d="M 32 70 Q 42 73 52 70" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round"/>
+            <!-- Sevinçli: yukarı kavis (^_^) — default gizli -->
+            <path class="eye-joyful" opacity="0" d="M 32 74 Q 42 60 52 74" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Sinirli: V şekli (>_<) — default gizli -->
+            <path class="eye-angry" opacity="0" d="M 32 64 L 42 75 L 52 64" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+
+        <!-- ═══ SAĞ GÖZ ═══ -->
+        <g class="filiz-eye">
+            <g class="eye-open">
+                <ellipse cx="78" cy="74" rx="11" ry="4" fill="#000" opacity=".15"/>
+                <ellipse cx="78" cy="70" rx="11" ry="13" fill="url(#filizEyeBg)"/>
+                <g id="filizPupilR" style="transform:translate(0,0); transition:transform .15s ease-out">
+                    <circle cx="80" cy="66" r="4" fill="#fff"/>
+                    <circle cx="76" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                    <circle cx="82" cy="68" r=".7" fill="#fff" opacity=".9"/>
+                </g>
+            </g>
+            <path class="eye-closed" d="M 68 70 Q 78 73 88 70" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round"/>
+            <path class="eye-joyful" opacity="0" d="M 68 74 Q 78 60 88 74" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="eye-angry" opacity="0" d="M 68 64 L 78 75 L 88 64" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+
+        <!-- ═══ AĞIZ — mood'a göre ═══ -->
+        <g id="filizMouth">
+            <!-- HAPPY (default): düz yatay çizgi (nötr) -->
+            <path class="mouth-happy" d="M 50 93 L 70 93" fill="none" stroke="#0a1224" stroke-width="3" stroke-linecap="round"/>
+            <!-- WORRIED: ters U çizgisel (üzgün kavis) -->
+            <path class="mouth-worried" d="M 48 96 Q 60 86 72 96" fill="none" stroke="#0a1224" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none"/>
+            <!-- SLEEPY: düz yatay çizgi -->
+            <path class="mouth-sleepy" d="M 50 93 L 70 93" fill="none" stroke="#0a1224" stroke-width="3" stroke-linecap="round" style="display:none"/>
+            <!-- JOYFUL (sadece .happy state'inde, tıklamada): hafif gülümseme -->
+            <path class="mouth-joyful" opacity="0" d="M 48 91 Q 60 99 72 91" fill="none" stroke="#0a1224" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- ANGRY (sadece .angry state'inde, uykuda tıklayınca): zigzag sinirli ağız -->
+            <path class="mouth-angry" opacity="0" d="M 48 94 L 54 90 L 60 94 L 66 90 L 72 94" fill="none" stroke="#0a1224" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+
+        <!-- ═══ UYKU Z'LERİ ═══ -->
+        <g class="filiz-zzz" style="display:none">
+            <text x="92" y="42" fill="#a78bfa" font-size="16" font-weight="700" font-family="sans-serif">z</text>
+            <text x="100" y="32" fill="#a78bfa" font-size="12" font-weight="700" font-family="sans-serif" opacity=".75">z</text>
+            <text x="106" y="22" fill="#a78bfa" font-size="9" font-weight="700" font-family="sans-serif" opacity=".55">z</text>
+        </g>
+
+        <!-- ═══ TER DAMLASI (worried) ═══ -->
+        <g class="filiz-sweat" style="display:none">
+            <path d="M 14 56 Q 11 64 14 68 Q 17 64 14 56 Z" fill="#38bdf8"/>
+            <ellipse cx="13" cy="60" rx="1" ry="1.5" fill="#fff" opacity=".7"/>
+        </g>
+
+        <!-- Anger mark (sinirli sembol — sadece .angry state'inde) -->
+        <g class="filiz-anger-mark" opacity="0">
+            <line x1="98" y1="20" x2="106" y2="28" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="106" y1="20" x2="98" y2="28" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="92" y1="24" x2="112" y2="24" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="102" y1="14" x2="102" y2="34" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"/>
+        </g>
+        <!-- Sinirli kaşlar (sadece .angry state'inde) -->
+        <g class="filiz-angry-brows" opacity="0">
+            <path d="M 28 56 L 50 62" stroke="#0a1224" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 92 56 L 70 62" stroke="#0a1224" stroke-width="3" stroke-linecap="round"/>
+        </g>
+
+        <!-- Kalpler (3 adet, tıklayınca uçar) -->
+        <g class="filiz-hearts" opacity="0">
+            <!-- Ana büyük kalp (merkez, kafa üstü) -->
+            <g class="heart-big">
+                <path d="M 60 -2 C 60 -10, 70 -14, 76 -6 C 82 -14, 92 -10, 92 -2 C 92 8, 76 22, 76 22 C 76 22, 60 8, 60 -2 Z" fill="#ef4444"/>
+                <ellipse cx="68" cy="2" rx="4" ry="2.5" fill="#fff" opacity=".55"/>
+            </g>
+            <!-- Sol orta kalp -->
+            <g class="heart-left">
+                <path d="M 14 14 C 14 10, 19 8, 22 11 C 25 8, 30 10, 30 14 C 30 18, 22 26, 22 26 C 22 26, 14 18, 14 14 Z" fill="#fb7185"/>
+                <ellipse cx="20" cy="14" rx="2" ry="1.2" fill="#fff" opacity=".55"/>
+            </g>
+            <!-- Sağ küçük kalp -->
+            <g class="heart-right">
+                <path d="M 96 22 C 96 19, 100 17, 102 19 C 104 17, 108 19, 108 22 C 108 25, 102 31, 102 31 C 102 31, 96 25, 96 22 Z" fill="#fda4af"/>
+                <ellipse cx="100" cy="22" rx="1.5" ry="1" fill="#fff" opacity=".55"/>
+            </g>
+        </g>
+    </svg>
+</button>
 
 <script>
 /* ============================================================
@@ -872,6 +2065,256 @@ async function init() {
     // Clock
     updateClock();
     setInterval(updateClock, 1000);
+
+    // Filiz maskotu
+    initFiliz();
+
+    // Tema (light/dark)
+    initTheme();
+}
+
+/* ─── 🌗 TEMA YÖNETİMİ ───────────────────────────────────── */
+function initTheme() {
+    const STORAGE_KEY = 'sfdap-theme';
+    const root = document.documentElement;
+    const btn = document.getElementById('themeToggle');
+    if (!btn) return;
+
+    // İlk tema: localStorage > sistem tercihi > dark default
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
+    const initial = stored || (prefersLight ? 'light' : 'dark');
+    applyTheme(initial);
+
+    btn.addEventListener('click', () => {
+        const current = root.dataset.theme || 'dark';
+        const next = current === 'light' ? 'dark' : 'light';
+        applyTheme(next);
+        localStorage.setItem(STORAGE_KEY, next);
+        // Sayfa yeniden yüklenmiyor — toast bildirimi çıkmasın diye.
+        // Chart.js renkleri mevcut sayfada eski temada kalır; sayfa değişince güncellenir.
+    });
+
+    function applyTheme(theme) {
+        if (theme === 'light') {
+            root.dataset.theme = 'light';
+            btn.setAttribute('aria-label', 'Karanlık temaya geç');
+            btn.setAttribute('title', 'Karanlık temaya geç');
+        } else {
+            delete root.dataset.theme;
+            btn.setAttribute('aria-label', 'Aydınlık temaya geç');
+            btn.setAttribute('title', 'Aydınlık temaya geç');
+        }
+    }
+}
+
+/* ─── 🌱 FİLİZ MASKOTU ─────────────────────────────────────── */
+
+// Filiz'in tüm tarımsal ipuçları — tek havuz, sayfaya bağımsız
+const FILIZ_TIPS = [
+    // ─── 💧 SULAMA ─────────────────────────────────────────────
+    {msg: "Toprak nemi %30 altına düştüyse bitki susamış demektir, hemen su ver.", emoji: "💧"},
+    {msg: "Akşamüstü veya sabah erken sulama yap — gündüz buharlaşma çok yüksek.", emoji: "🌅"},
+    {msg: "Yapraklara değil toprağa su ver — ıslak yaprak hastalık çağırır.", emoji: "🍃"},
+    {msg: "Damla sulama %30-50 daha az su tüketir, yatırımına kısa sürede değer.", emoji: "♻️"},
+    {msg: "Yağmurdan sonra 1-2 gün sulama yapma — toprak zaten doymuştur.", emoji: "🌧️"},
+    {msg: "Köklü bitkilere az ve derin sulama yap; sığ sulama kökü yüzeye çeker.", emoji: "🪴"},
+    {msg: "Soğuk suyla sulama bitkiyi şoklar — su, hava sıcaklığına yakın olmalı.", emoji: "🥶"},
+    {msg: "Tuzlu kuyu suyunu yağmur suyuyla seyret — toprağa zarar vermesin.", emoji: "🧂"},
+
+    // ─── 🌱 GÜBRELEME & TOPRAK ────────────────────────────────
+    {msg: "Gübrelemeden önce mutlaka pH ölç — 6.0-7.0 çoğu bitki için ideal.", emoji: "🧪"},
+    {msg: "Aşırı azot bitkiyi tatlı meyve yerine bol yaprak yapmaya iter — dengeli kullan.", emoji: "⚖️"},
+    {msg: "Çay asit toprak sever (pH 4.5-6.0), patates de hafif asitten hoşlanır.", emoji: "🍵"},
+    {msg: "Hasat öncesi son gübrelemeyi 30 gün önce kes — meyve/tane sağlıklı olgunlaşsın.", emoji: "📅"},
+    {msg: "Yaprakta sararma demir ya da magnezyum eksikliği işaretidir — yapraktan tatbik et.", emoji: "💛"},
+    {msg: "Domates için potasyum, mısır için azot, buğday için fosfor öne çıkar.", emoji: "🍅"},
+    {msg: "Toprak yorgunsa bir mevsim baklagil ek — fasulye, mercimek toprağa azot kazandırır.", emoji: "🌾"},
+    {msg: "Kompost altın değerinde — mutfak atığını çürütüp toprağa kazandır.", emoji: "♻️"},
+    {msg: "Hayvan gübresini taze kullanma, en az 6 ay olgunlaştır — kökü yakar.", emoji: "🐄"},
+    {msg: "Sonbahar yaprakları toprağa kazandır — doğal organik madde, ücretsiz!", emoji: "🍂"},
+    {msg: "Toprak iyi tutunmuyorsa kil az demektir — humus ekle, su tutma artsın.", emoji: "🟫"},
+
+    // ─── 🌿 EKİM & ROTASYON ───────────────────────────────────
+    {msg: "Aynı tarlaya üst üste aynı bitkiyi ekme — toprak yorulur, hastalık birikir.", emoji: "🔁"},
+    {msg: "Soğan veya sarımsak ekersen yanına nane koy — zararlı böcekleri uzaklaştırır.", emoji: "🌿"},
+    {msg: "Bal arıları olmadan tozlaşma yok — tarla kenarına çiçek bandı bırak, faydası büyük.", emoji: "🐝"},
+    {msg: "Karadeniz'de fındık + çay, Akdeniz'de narenciye + domates en doğal seçim.", emoji: "🗺️"},
+    {msg: "İç Anadolu'da buğday ve şeker pancarı kuraklığa daha dayanıklıdır.", emoji: "🌾"},
+    {msg: "Domates ve fesleğen yan yana — ikisi de daha iyi büyür, lezzet artar.", emoji: "🍃"},
+    {msg: "Mısır + fasulye + kabak (üç kız kardeş) yan yana — birbirini destekler.", emoji: "🌽"},
+    {msg: "Tohum ekmeden önce çimlenme testi yap: 10 tohumdan kaçı çimleniyor?", emoji: "🌱"},
+    {msg: "Fide dikiminde toprağı bastır ama ezme — kök hava da ister.", emoji: "👐"},
+
+    // ─── 🌤️ HAVA & İKLİM ─────────────────────────────────────
+    {msg: "Yağmur bekleniyorsa sulamayı bir gün ertele, su tasarrufu yapmış olursun.", emoji: "☔"},
+    {msg: "Sıcaklık 30°C üstüne çıkarsa bitki stres altına girer — gölgelik ya da sulama düşün.", emoji: "🥵"},
+    {msg: "Sabah don uyarısı varsa hassas bitkiler için tülbent ya da malçlama hayat kurtarır.", emoji: "❄️"},
+    {msg: "Rüzgar sonrası ilaçlama yapma — etken madde uçar, paranı boşa harcarsın.", emoji: "💨"},
+    {msg: "Dolu beklentisinde fide ve sera örtülerini güçlendir — kayıp büyük olabilir.", emoji: "🧊"},
+    {msg: "Sabah çiyiyle yapraklarda mantar başlayabilir — erken saatlerde kontrole alış.", emoji: "🍄"},
+    {msg: "Aşırı sıcak günlerde sera havalandırması şart — kapılar yarım açık dursun.", emoji: "🪟"},
+
+    // ─── 🐛 HASTALIK & ZARARLI ────────────────────────────────
+    {msg: "Yaprak alt yüzünde beyaz noktacıklar varsa beyaz sinek olabilir — sarı yapışkan tuzak kur.", emoji: "🪰"},
+    {msg: "Külleme (mantar) çoğu sebzenin baş düşmanı — havalandırmayı arttır, sulamayı azalt.", emoji: "⚪"},
+    {msg: "Salyangoz için tarla kenarına bira tuzağı kur — basit ama etkili.", emoji: "🍺"},
+    {msg: "Birden fazla bitki ekersen tek tip zararlı tarlanın hepsini biçemez.", emoji: "🦗"},
+    {msg: "Köstebek toprağı havalandırır ama köke zarar verirse koruma altına al.", emoji: "🐀"},
+
+    // ─── 🌾 HASAT & SAKLAMA ───────────────────────────────────
+    {msg: "Domatesi sap kısmı yarı yeşilken topla — sonra olgunlaşır, daha lezzetli.", emoji: "🍅"},
+    {msg: "Buğdayı tane sertleşmeden hasat etme; saman tadı verir.", emoji: "🌾"},
+    {msg: "Patates hasadı sonrası 2 hafta serin yerde dinlendir — kabuk sertleşir.", emoji: "🥔"},
+    {msg: "Üzümü sabah kuru havada topla — daha uzun saklanır.", emoji: "🍇"},
+    {msg: "Soğan ve sarımsak hasat sonrası 1 hafta gölgede kurutulmalı.", emoji: "🧄"},
+    {msg: "Tohum saklamak için cam kavanoz kullan, kuru ve serin yerde tut.", emoji: "🥚"},
+
+    // ─── ⚙️ SENSÖR & PRATİK ──────────────────────────────────
+    {msg: "Sensörler 15-30 cm derinlikte ölçüm alır — bitki köklerinin olduğu yer.", emoji: "📏"},
+    {msg: "Sensörü en kritik tarla bölgesine yerleştir — uzak köşeye değil.", emoji: "📍"},
+    {msg: "Sensör verisi günlerdir gelmiyorsa pil bitmiş ya da bağlantı kopmuş olabilir.", emoji: "🔋"},
+    {msg: "Toprak elektrik iletkenliği yüksekse tuzluluk var — sulama suyunu kontrol et.", emoji: "⚡"},
+    {msg: "Yaz aylarında toprağı malçla — nem korunur, yabani ot azalır, sulama azalır.", emoji: "🟫"},
+
+    // ─── 💰 EKONOMİ & PLANLAMA ────────────────────────────────
+    {msg: "Hasat tahminini önceden yap — pazar fiyatı dalgalanmasında kazançlı çık.", emoji: "📈"},
+    {msg: "Tarım sigortası don ve doluya karşı koruma sağlar; başvuruyu erken yap.", emoji: "🛡️"},
+    {msg: "Kooperatife üye olmak girdi maliyetini düşürür ve toplu satış imkanı verir.", emoji: "🤝"},
+    {msg: "Bu yıl iyi giden bitkiyi defterine yaz — gelecek yıl plana ışık tutar.", emoji: "📓"},
+
+    // ─── 🤗 FİLİZ KARAKTER ───────────────────────────────────
+    {msg: "Selam çiftçi! Bugün de toprağın bereketli olsun.", emoji: "🌾"},
+    {msg: "Bana tıklamayı unutma, hep yeni bir şey biliyorum!", emoji: "✨"},
+    {msg: "Sağ üstten karanlık/aydınlık temayı değiştirebilirsin, gözlerim hep takip eder.", emoji: "🌗"},
+    {msg: "Ben uyumayı severim ama gece gelip beni dürtersen sinirlenirim! Uyku 00:00-05:00 arası.", emoji: "😴"},
+    {msg: "Yağmuru duyduğumda yapraklarım titrer — sevimli bir tepki vermiş oluyorum 💧", emoji: "🌧️"},
+    {msg: "Filizden hasada uzun bir yol var, sabırlı ol — ben de yavaş yavaş büyüyorum.", emoji: "🌱"},
+];
+
+const FILIZ_GREETINGS = ["Merhaba! 🌱", "Hey çiftçi! 👋", "Filiz hizmette!", "Şşt, dinliyor musun?", "Yine birlikteyiz! 🤝"];
+const FILIZ_GREETINGS_WORRIED = ["Aaa, bir şey var 😟", "Dikkat! ⚠️", "Olamaz!", "Acele etmen lazım..."];
+const FILIZ_GREETINGS_SLEEPY = ["Mhmm... 😴", "Geç oldu... zzz", "Uykum geldi 🌙"];
+
+let filizMood = 'happy';        // 'happy' | 'worried' | 'sleepy'
+let filizCriticalAlerts = [];
+
+function setFilizMood(mood) {
+    filizMood = mood;
+    const mascot = document.getElementById('filizMascot');
+    if (!mascot) return;
+    mascot.dataset.mood = mood;
+    // Ağız değişimi
+    mascot.querySelectorAll('.mouth-happy, .mouth-worried, .mouth-sleepy').forEach(el => el.style.display = 'none');
+    mascot.querySelectorAll(`.mouth-${mood}`).forEach(el => el.style.display = '');
+    // Z'ler ve ter damlası
+    const zzz = mascot.querySelector('.filiz-zzz');
+    const sweat = mascot.querySelector('.filiz-sweat');
+    if (zzz) zzz.style.display = mood === 'sleepy' ? '' : 'none';
+    if (sweat) sweat.style.display = mood === 'worried' ? '' : 'none';
+}
+
+function initFiliz() {
+    const mascot = document.getElementById('filizMascot');
+    const bubble = document.getElementById('filizBubble');
+    const messageEl = document.getElementById('filizMessage');
+    const tipEl = document.getElementById('filizTip');
+    if (!mascot || !bubble) return;
+
+    let bubbleVisible = false;
+    let hideTimer = null;
+
+    const showCustomMessage = (greeting, msg, tip = 'Tıklayarak başka bir ipucu al ✨', autoCloseMs = 8000) => {
+        messageEl.innerHTML = `<div style="margin-bottom:6px;font-weight:500;">${greeting}</div>${msg}`;
+        tipEl.textContent = tip;
+        bubble.classList.add('show');
+        bubbleVisible = true;
+        clearTimeout(hideTimer);
+        if (autoCloseMs > 0) {
+            hideTimer = setTimeout(() => {
+                bubble.classList.remove('show');
+                bubbleVisible = false;
+            }, autoCloseMs);
+        }
+    };
+
+    const pickTip = () => {
+        // Tek havuzdan rastgele tarımsal ipucu
+        const tip = FILIZ_TIPS[Math.floor(Math.random() * FILIZ_TIPS.length)];
+        const greetingList = filizMood === 'sleepy' ? FILIZ_GREETINGS_SLEEPY : FILIZ_GREETINGS;
+        const greeting = greetingList[Math.floor(Math.random() * greetingList.length)];
+        return {
+            greeting,
+            msg: `${tip.emoji} ${tip.msg}`,
+            tip: 'Tıklayarak başka bir ipucu al ✨',
+        };
+    };
+
+    const showSmart = () => {
+        const t = pickTip();
+        showCustomMessage(t.greeting, t.msg, t.tip);
+    };
+
+    mascot.addEventListener('click', () => {
+        // Uyku zamanında tıklanırsa Filiz sinirlenir (uyandırıldı!), aksi halde sevinir
+        const stateClass = filizMood === 'sleepy' ? 'angry' : 'happy';
+        const duration = stateClass === 'angry' ? 1500 : 1700;
+        mascot.classList.add(stateClass);
+        setTimeout(() => mascot.classList.remove(stateClass), duration);
+        showSmart();
+    });
+
+    // İlk selam (3 sn)
+    setTimeout(() => { if (!bubbleVisible) showSmart(); }, 3000);
+
+    // Bubble dışına tıklayınca kapat
+    document.addEventListener('click', (e) => {
+        if (bubbleVisible && !mascot.contains(e.target) && !bubble.contains(e.target)) {
+            bubble.classList.remove('show');
+            bubbleVisible = false;
+            clearTimeout(hideTimer);
+        }
+    });
+
+    // ─── 👀 GÖZ TAKİBİ ──────────────────────────────────────
+    const pupilL = document.getElementById('filizPupilL');
+    const pupilR = document.getElementById('filizPupilR');
+    document.addEventListener('mousemove', (e) => {
+        if (!pupilL || !pupilR) return;
+        const rect = mascot.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        const max = 2.2;  // SVG koordinatlarında pupil hareket aralığı
+        const ux = (dx / Math.max(dist, 1)) * Math.min(dist / 100, 1) * max;
+        const uy = (dy / Math.max(dist, 1)) * Math.min(dist / 100, 1) * max;
+        pupilL.style.transform = `translate(${ux}px, ${uy}px)`;
+        pupilR.style.transform = `translate(${ux}px, ${uy}px)`;
+    });
+
+    // ─── 🎭 MOOD: sadece gündüz/gece — happy ↔ sleepy ─────────
+    // (Worried otomatik tetiklenmez; alert mesajları konuşma balonunda gösterilir.)
+    const updateMood = async () => {
+        const hour = new Date().getHours();
+        const isLateNight = hour < 5;
+        setFilizMood(isLateNight ? 'sleepy' : 'happy');
+
+        // Alert listesini balon için arka planda topla (mood'u etkilemez)
+        if (apiOnline) {
+            try {
+                const alerts = await api('/api/alerts/?severity=critical&is_resolved=false&limit=10');
+                filizCriticalAlerts = alerts || [];
+            } catch {
+                filizCriticalAlerts = [];
+            }
+        } else {
+            filizCriticalAlerts = [];
+        }
+    };
+    updateMood();
+    setInterval(updateMood, 60000);  // 1 dk'da bir tekrar kontrol
 }
 
 init();
