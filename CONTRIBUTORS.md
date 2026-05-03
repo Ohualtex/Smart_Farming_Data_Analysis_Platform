@@ -38,16 +38,61 @@
 - **Ecenur**: Dashboard veri görselleştirme (Chart.js)
 - **Mehmet Sait**: Temel veri erişim API (FastAPI + Swagger)
 
-### Cycle 5 — Test ve İyileştirme (11 – 28 Nis)
+### Cycle 5 — Test ve İyileştirme (14 – 27 Nis)
 - **Miraç**: CI/CD pipeline (GitHub Actions), test altyapısı, proje raporu
 - **Emirhan**: Alembic migration sistemi, seed data, DB performans optimizasyonu
 - **Ayşe Eslem**: Gübreleme öneri servisi (NPK), weather pipeline genişletme
 - **Ecenur**: Dashboard modernizasyonu (dark mode, responsive, 6 sayfa SPA)
 - **Mehmet Sait**: API güvenlik (rate limiting, auth, exception handling)
 
-### Cycle 6 — Son Sprint (28 Nis – 7 May)
-- **Miraç**: Analitik pano, 81 il genişletme, mega seed data (7500+ kayıt)
+### Cycle 6 — Son Sprint (28 Nis – 3 May)
+**Planlanan görevler** (`projeakisi.md`):
+- **Miraç**: Analitik pano, 81 il genişletme, mega seed data, rapor export, repo profesyonelleştirme
 - **Emirhan**: Veri temizleme iyileştirmeleri
 - **Ayşe Eslem**: ML model değerlendirme ve optimizasyon
 - **Ecenur**: Veri hattı izleme ve uyarı sistemi
 - **Mehmet Sait**: Model performans izleme ve raporlama altyapısı
+
+> **Not:** Cycle 6 deadline'ı (3 May) sonrasında bazı görevler `shiftSession`
+> branch'inde tamamlandı/devam ediyor. Detaylı durum için `git log`
+> üzerinden ekip commit'lerine bakınız.
+
+### shiftSession — Borç Kapatma (3 May+)
+- **Miraç**: Production stability fix'leri (scheduler, hardcoded secrets,
+  env-driven CORS), ekip için skeleton router/helper'lar (alerts, metrics,
+  model_performance, ML eval, data_quality), 52 yeni test
+- **Miraç (Mehmet'ten devralarak)**: 🤖 **Model Performans İzleme &
+  Raporlama Altyapısı** (Cycle 6 görevi) — `PATCH /{id}` (gerçek değer
+  doldurma), `/timeseries/{model}` (günlük accuracy zaman serisi),
+  `/compare` (multi-model karşılaştırma), `/drift/{model}` (otomatik
+  SystemAlert ile drift tespiti), `irrigation/predict`'e otomatik log
+  entegrasyonu, `/api/health/deep` zenginleştirme (DB latency, scheduler
+  job listesi, data freshness, alert sayaçları), 10+ yeni test
+- **Miraç**: Seed verisi gerçekçilik revizyonu (diurnal pattern, alert
+  temizliği). Filiz maskotu + UX cilası lokal olarak hazır, Cycle 7
+  içinde ayrı PR ile main'e alınacak.
+- **Ecenur**: Veri hattı izleme modülü (script + dokümantasyon)
+- *Diğer üyeler kendi Cycle 6 görevlerini devam ettirmekte*
+
+---
+
+## 📊 Proje Metrikleri (Cycle 6 sonu)
+
+| Metrik | Değer |
+|:---|:---:|
+| Toplam Python LOC | **6 538** (`app/`, `database/`, `tests/`) |
+| Frontend LOC | 2 323 satır (`frontend/index.html`) |
+| Endpoint sayısı | **41** (11 router) |
+| ORM tablo sayısı | **14** |
+| Pydantic schema sayısı | 30+ |
+| Toplam test | **220** (Cycle 4'te 41 → +179, 19 dosya) |
+| Test coverage | %91+ |
+| Cycle 6 commit sayısı | 33 (Cycle 5 sonrasından) |
+| Bitki türü | 17 (Türkiye'nin 7 coğrafi bölgesi için) |
+| Çiftlik kapsamı | 81 il × 2 tarla = 162 tarla |
+| Sensör seed | 324 sensör, ~4 860 okuma (diurnal pattern) |
+| Hava durumu seed | 1 215 kayıt (sıcaklık/nem diurnal cycle) |
+| ML modeli | RandomForest (sklearn 1.8.0, sentetik 1000 örnek) |
+| Docker support | ✅ multi-stage Dockerfile + docker-compose |
+| CI/CD | GitHub Actions: ruff + pytest |
+| Pre-commit hooks | ruff, ruff-format, trim whitespace, EOF, large files |

@@ -1,3 +1,17 @@
+"""
+SFDAP API — FastAPI Giriş Noktası
+====================================
+Uygulamanın ana giriş noktası: FastAPI app objesini oluşturur, middleware'leri
+(rate limit, CORS, request logger, exception handler) bağlar ve tüm router'ları
+register eder. Lifespan'de scheduler başlatılıp kapatılır.
+
+Tüm konfigürasyon `app.config.settings` (pydantic-settings) üzerinden gelir.
+Static dashboard SPA `frontend/index.html` dosyası `/dashboard` altında
+mount edilir.
+
+Miraç Duran — Cycle 4/5/6 Görevi
+"""
+
 import os
 from contextlib import asynccontextmanager
 
@@ -13,7 +27,19 @@ from app.database import init_db
 from app.middleware.exceptions import register_exception_handlers
 from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 from app.middleware.request_logger import RequestLoggerMiddleware
-from app.routers import analytics, fertilizer, health, irrigation, plants, sensors, weather
+from app.routers import (
+    alerts,
+    analytics,
+    auth,
+    fertilizer,
+    health,
+    irrigation,
+    metrics,
+    model_performance,
+    plants,
+    sensors,
+    weather,
+)
 from app.tasks.scheduler import shutdown_scheduler, start_scheduler
 
 
@@ -32,18 +58,105 @@ async def lifespan(app: FastAPI):
     logger.info("SFDAP API kapatiliyor...")
 
 
+# Swagger UI tag'leri — her bölüm için Türkçe rehber
+TAGS_METADATA = [
+    {
+        "name": "Sensör Verileri",
+        "description": "📡 **Toprak sensörleri** ile ilgili tüm işlemler. Sensör eklemek/silmek için "
+        "sağ üstteki 🔒 **Authorize** butonu üzerinden API anahtarı girin (`dev-api-key`).",
+    },
+    {
+        "name": "Hava Durumu",
+        "description": "🌤️ Çiftliklerin **hava verileri**. Sıcaklık, yağış, nem ve rüzgar bilgisi. "
+        "OpenWeatherMap'ten otomatik çekilir; veriyi temizlemek için `/clean` kullanın.",
+    },
+    {
+        "name": "Sulama Optimizasyonu",
+        "description": "💧 **ML tabanlı sulama tahmini** ve sulama programı. Toprak nemini ve hava "
+        "verilerini girin, model size kaç litre su gerektiğini söyler.",
+    },
+    {
+        "name": "Gübreleme",
+        "description": "🌱 **NPK önerisi** ve gübreleme takvimi. 17 bitki türü (buğday, domates, "
+        "üzüm, fındık, çay, vb.) için toprak analizinize göre özelleştirilmiş öneri.",
+    },
+    {
+        "name": "Bitki Sağlığı",
+        "description": "🦠 Bitki yaprak görüntülerinin yüklenmesi. *Cycle 7'de CNN tabanlı hastalık "
+        "tespiti devreye girecek.*",
+    },
+    {
+        "name": "Analitik & Görselleştirme",
+        "description": "📊 **Toplu istatistik, dönem karşılaştırma ve PDF/Excel rapor üretimi.** "
+        "81 il × 7 bölge bazlı kırılımlar, dashboard'un veri kaynağıdır.",
+    },
+    {
+        "name": "Sistem Uyarıları",
+        "description": "🚨 **SystemAlert kayıtları** — sensör anomalisi, hava uyarısı, sistem "
+        "hatalarının tutulduğu yer. Severity (low/medium/critical) ile filtrelenebilir.",
+    },
+    {
+        "name": "Sistem Metrikleri",
+        "description": "🩺 **Derin sağlık kontrolü** — DB, scheduler ve ML modelinin durumunu "
+        "raporlar. Production'da Kubernetes liveness/readiness probe'ları için uygun.",
+    },
+    {
+        "name": "Model Performansı",
+        "description": "🤖 **ML modellerin tahmin başarı oranları** ve agregat raporlama. "
+        "Hangi modelin ne kadar doğru olduğunu zaman içinde takip eder.",
+    },
+    {
+        "name": "Health Check",
+        "description": "✅ **Sığ sağlık kontrolü** — load balancer/uptime monitoring için.",
+    },
+    {
+        "name": "Root",
+        "description": "🏠 API ana sayfa.",
+    },
+]
+
 # FastAPI uygulamasi
 app = FastAPI(
     title=settings.API_TITLE,
     version=settings.API_VERSION,
-    description=(
-        "Akilli Tarim Veri Analizi Platformu API - "
-        "Toprak sensorleri, hava durumu verileri ve bitki sagligi "
-        "goruntulerini analiz ederek ciftcilere sulama optimizasyonu, "
-        "gubreleme onerileri ve hastalik tahmini sunar."
-    ),
+    description="""
+## 🌾 Akıllı Tarım Veri Analizi Platformu
+
+Bu API, **çiftçilerin tarımsal verimliliğini artırmak** için 81 il genelinden toplanan
+toprak sensörleri, hava durumu verileri ve makine öğrenimi tahminlerini birleştirir.
+
+### 🎯 Ne sunuyoruz?
+
+| Özellik | Açıklama |
+|:--------|:---------|
+| 💧 **Sulama Optimizasyonu** | Toprak nemine ve hava verilerine bakıp size kaç litre su gerektiğini söyleriz |
+| 🌱 **Akıllı Gübreleme** | 17 farklı bitki türü için NPK (azot/fosfor/potasyum) önerisi |
+| 📊 **Analitik** | 7 coğrafi bölge bazlı karşılaştırma, PDF/Excel rapor |
+| 🚨 **İzleme** | Sensör anomalisi, hava uyarısı, sistem hataları |
+
+### 🔐 API Anahtarı
+
+Yazma işlemleri (POST/DELETE/PATCH) `X-API-Key` header'ı ister.
+Yukarıdaki **🔒 Authorize** butonuna tıklayıp şu anahtarı girin: `dev-api-key`
+
+### 🏃 Hızlı Test
+
+1. Aşağıda bir endpoint seç (örn. `/api/fertilizer/recommend`)
+2. **Try it out** → istenen alanları doldur (örnek değerler önceden gelir)
+3. **Execute** → cevabı aşağıda gör
+
+### 📚 Daha kapsamlı kullanım kılavuzu
+
+`docs/api/API_Kullanim_Kilavuzu.md` dosyası — curl örnekleri, hata kodları, Postman import.
+
+### 👥 Bu Platform Hakkında
+
+**SFDAP**, 5 kişilik öğrenci ekibi tarafından geliştirilen Scrum tabanlı bir projedir.
+Türkiye'nin tüm illerinde geçerli verilerle çalışır.
+""",
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=TAGS_METADATA,
     lifespan=lifespan,
 )
 
@@ -56,14 +169,10 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 # Request Logger
 app.add_middleware(RequestLoggerMiddleware)
 
-# CORS ayarlari (güvenli: spesifik origin'ler)
+# CORS ayarlari (env-driven: settings.CORS_ORIGINS virgulle ayrilmis liste)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8000",
-        "http://localhost:3000",
-        "http://127.0.0.1:8000",
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,6 +191,12 @@ app.include_router(irrigation.router)
 app.include_router(plants.router)
 app.include_router(fertilizer.router)
 app.include_router(analytics.router)
+
+# Cycle 6 / shiftSession ekipleri tarafindan genisletilecek skeleton router'lar
+app.include_router(alerts.router)  # Ecenur — Sistem Uyarilari (SystemAlert CRUD)
+app.include_router(metrics.router)  # Mehmet — /api/health/deep
+app.include_router(model_performance.router)  # Mehmet — Model Performans Raporlama
+app.include_router(auth.router)  # Cycle 7/8 — JWT auth skeleton (Cycle 8'de bcrypt/JWT'ye yukseltilecek)
 
 
 @app.get("/", tags=["Root"])

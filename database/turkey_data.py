@@ -61,7 +61,8 @@ REGION_CROPS = {
     "Güneydoğu Anadolu": [0, 1, 3, 14],  # Buğday, Mısır, Pamuk, Antep Fıstığı
 }
 
-# 15 bitki türü verileri: (isim, bilimsel_ad, ph_min, ph_max, temp_min, temp_max, su_mm, gün)
+# 17 bitki türü verileri: (isim, bilimsel_ad, ph_min, ph_max, temp_min, temp_max, su_mm, gün)
+# fertilizer_service.CROP_NPK_REQUIREMENTS ile birebir uyumlu (aynı 17 bitki).
 CROP_DATA = [
     ("Buğday", "Triticum aestivum", 6.0, 7.5, 12, 25, 5.0, 120),
     ("Mısır", "Zea mays", 5.8, 7.0, 18, 33, 7.0, 90),
@@ -78,6 +79,8 @@ CROP_DATA = [
     ("Elma", "Malus domestica", 5.5, 7.0, 10, 25, 4.0, 200),
     ("Narenciye", "Citrus spp.", 5.5, 7.5, 18, 35, 5.0, 365),
     ("Antep Fıstığı", "Pistacia vera", 7.0, 8.0, 20, 38, 3.0, 200),
+    ("Biber", "Capsicum annuum", 5.5, 7.0, 18, 30, 6.0, 90),
+    ("Pirinç", "Oryza sativa", 5.0, 7.0, 20, 35, 12.0, 130),
 ]
 
 SOIL_TYPES = ["killi-tınlı", "kumlu-tınlı", "tınlı", "kumlu", "killi", "siltli-tınlı"]

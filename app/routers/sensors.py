@@ -1,3 +1,14 @@
+"""
+Sensör API Endpoint'leri
+==========================
+Toprak nem / sıcaklık sensörlerinin CRUD işlemleri ve okuma kayıtları.
+Yazma işlemleri (POST/DELETE) için X-API-Key auth zorunludur.
+
+Emirhan Günay & Mehmet Sait Tayşi — Cycle 4 Görevi
+"""
+
+from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -6,15 +17,23 @@ from app.middleware.auth import verify_api_key
 from app.models.models import Sensor, SoilMoistureReading
 from app.schemas.schemas import SensorCreate, SensorReadingCreate, SensorReadingResponse, SensorResponse
 
-router = APIRouter(prefix="/api/sensors", tags=["Sensor Verileri"])
+router = APIRouter(prefix="/api/sensors", tags=["Sensör Verileri"])
 
 
-@router.get("/", response_model=list[SensorResponse])
+@router.get(
+    "/",
+    response_model=list[SensorResponse],
+    summary="Tüm sensörleri listele",
+)
 def get_all_sensors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return db.query(Sensor).offset(skip).limit(limit).all()
 
 
-@router.get("/{sensor_id}", response_model=SensorResponse)
+@router.get(
+    "/{sensor_id}",
+    response_model=SensorResponse,
+    summary="Tek bir sensörün detayı",
+)
 def get_sensor(sensor_id: int, db: Session = Depends(get_db)):
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
@@ -22,7 +41,13 @@ def get_sensor(sensor_id: int, db: Session = Depends(get_db)):
     return sensor
 
 
-@router.post("/", response_model=SensorResponse, status_code=201, dependencies=[Depends(verify_api_key)])
+@router.post(
+    "/",
+    response_model=SensorResponse,
+    status_code=201,
+    dependencies=[Depends(verify_api_key)],
+    summary="Yeni sensör ekle",
+)
 def create_sensor(sensor: SensorCreate, db: Session = Depends(get_db)):
     db_sensor = Sensor(**sensor.model_dump())
     db.add(db_sensor)
@@ -31,7 +56,11 @@ def create_sensor(sensor: SensorCreate, db: Session = Depends(get_db)):
     return db_sensor
 
 
-@router.delete("/{sensor_id}", dependencies=[Depends(verify_api_key)])
+@router.delete(
+    "/{sensor_id}",
+    dependencies=[Depends(verify_api_key)],
+    summary="Sensör sil",
+)
 def delete_sensor(sensor_id: int, db: Session = Depends(get_db)):
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
@@ -42,7 +71,13 @@ def delete_sensor(sensor_id: int, db: Session = Depends(get_db)):
 
 
 # ===== SENSOR READINGS =====
-@router.post("/readings", response_model=SensorReadingResponse, status_code=201, dependencies=[Depends(verify_api_key)])
+@router.post(
+    "/readings",
+    response_model=SensorReadingResponse,
+    status_code=201,
+    dependencies=[Depends(verify_api_key)],
+    summary="Yeni sensör okuması kaydet",
+)
 def create_reading(reading: SensorReadingCreate, db: Session = Depends(get_db)):
     db_reading = SoilMoistureReading(**reading.model_dump())
     db.add(db_reading)
@@ -51,7 +86,11 @@ def create_reading(reading: SensorReadingCreate, db: Session = Depends(get_db)):
     return db_reading
 
 
-@router.get("/{sensor_id}/readings", response_model=list[SensorReadingResponse])
+@router.get(
+    "/{sensor_id}/readings",
+    response_model=list[SensorReadingResponse],
+    summary="Sensörün okumalarını listele",
+)
 def get_sensor_readings(sensor_id: int, limit: int = 50, db: Session = Depends(get_db)):
     return (
         db.query(SoilMoistureReading)

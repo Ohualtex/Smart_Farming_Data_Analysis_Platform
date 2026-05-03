@@ -1,3 +1,18 @@
+"""
+SFDAP Veritabanı Bağlantı Yönetimi
+====================================
+SQLAlchemy engine, sessionmaker ve dependency-injection için `get_db()` helper.
+
+- Engine `settings.DATABASE_URL` üzerinden yapılandırılır:
+  dev → SQLite (`sfdap_dev.db`), prod → PostgreSQL.
+- `naming_convention` ile constraint adlandırma standartlaştırılır
+  (Alembic auto-generate'in tutarlı isim üretmesi için).
+- `init_db()` sadece testlerde / ilk başlangıçta `create_all` ile tabloları
+  yaratır; üretimde Alembic migration kullanılmalıdır.
+
+Emirhan Günay — Cycle 3/4 Görevi
+"""
+
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 

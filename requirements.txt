@@ -37,6 +37,13 @@ httpx>=0.27.0
 loguru>=0.7.2
 apscheduler>=3.10.4
 
-# Reporting & Export (Cycle 7)
+# Reporting & Export (Cycle 6)
 fpdf2>=2.7.0
 openpyxl>=3.1.0
+
+# Cycle 7 — IoT Stream & ML Görüntü Analizi
+# Emirhan: MQTT broker üzerinden gerçek zamanlı sensör verisi alımı
+paho-mqtt>=2.1.0
+# Ayşe: CNN bitki sağlığı modeli (lightweight inference; tensorflow yerine)
+onnxruntime>=1.18.0
+pillow>=10.3.0

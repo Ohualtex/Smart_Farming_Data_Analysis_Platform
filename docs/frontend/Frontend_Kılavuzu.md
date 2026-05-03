@@ -3,10 +3,10 @@
 Bu doküman, Ecenur Üner tarafından geliştirilen ve kullanıcıların sistemle etkileşim kurduğu "Veri Görselleştirme Panosu" (Dashboard) hakkında teknik bilgiler içerir.
 
 ## 📁 Dizin Yapısı
-Frontend kodları projenin kök dizinindeki `frontend/` klasörü altında bulunur:
-- `index.html`: Uygulamanın ana iskeleti ve tek sayfalık yapısı (Single Page Application - SPA).
-- `css/`: Ortak tasarım token'larını (renkler, fontlar, glassmorphism efektleri) içeren stil dosyaları.
-- `js/`: API'den verileri `fetch` ederek grafikleri render eden asenkron iş mantığı dosyaları.
+Frontend kodları projenin kök dizinindeki `frontend/` klasörü altında bulunur ve şu an **tek dosyalı SPA** mimarisindedir:
+- `index.html` (≈3700 satır): Tüm uygulama — HTML iskelet, CSS (inline `<style>`, dark/light tema, glassmorphism), JavaScript (vanilla, asenkron `fetch`, Chart.js render, Filiz mascot logic).
+
+> **Cycle 8 planı:** Bu tek dosya Vite/esbuild ile `css/`, `js/` çıktılarına ayrılacak (HMR + minify + cache busting). Bkz. `projeakisi.md` → Cycle 8 → Ecenur "Frontend Build Pipeline".
 
 ## 🚀 Çalıştırma ve Test
 Frontend dosyaları doğrudan tarayıcıda açılabilir veya FastAPI üzerinden sunulur:

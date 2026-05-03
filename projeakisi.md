@@ -123,7 +123,7 @@ Platformun temel veri erişim API'sini geliştir. API, toprak sensörü ve hava 
 
 ## 🟣 Cycle 5 — Test, İyileştirme ve Canlıya Çıkarma Hazırlığı
 
-📅 **11 – 28 Nisan 2026**
+📅 **14 – 27 Nisan 2026**
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
@@ -200,11 +200,21 @@ Modelin performansını düzenli olarak izlemek ve raporlamak için bir altyapı
 
 ## 🟤 Cycle 7 — İzleme, Raporlama ve Gelişmiş Özellikler
 
-📅 **4 Mayıs – 13 Mayıs 2026**
+📅 **3 Mayıs – 10 Mayıs 2026**
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
-> ⏸️ *Mevcut görev yok.*
+#### 📌 Filiz — Çiftçi-Dostu Akıllı Asistan Maskotu ve UX Cilası
+Platformun çiftçi kullanıcılar için tanıdık ve sevimli bir yüzü olması amacıyla **Filiz** adlı SVG tabanlı bir maskot karakter tasarla ve dashboard'a entegre et:
+
+1) **Karakter tasarımı**: 3D-cartoon stilinde yapraklı kafa, gradient gövde, büyük parıltılı gözler, pembe yanaklar, kollar ve yumuşak gölge. Tüm bileşenler inline SVG (harici asset yok), tema değişimine duyarlı.
+2) **Davranış sistemi**:
+   - Idle animasyonlar: float, yaprak salınımı, mouse takibi (göz pupil), senkron blink (`o_o → -_-`).
+   - Mood otomasyonu: gündüz **happy**, gece 00:00–05:00 **sleepy** (gözler kapalı, Zzz uçuşur).
+   - Tıklama tepkileri: gündüz `^_^` + 3 kalp animasyonu, uyku saatinde `>_<` sinirli (uyandırıldı tepkisi).
+3) **Tarımsal asistan**: 65+ Türkçe pratik ipucu havuzu (sulama, gübreleme, ekim/rotasyon, hava, hastalık/zararlı, hasat). 8 saniyelik konuşma balonu, otomatik ve manuel kapanabilir.
+4) **UX cilası**: Tüm sayfalara hero banner, dekoratif section header'lar, light/dark tema toggle (localStorage persist), 5 floating arka plan yaprağı, kart hover glow efektleri.
+5) **Swagger dokümantasyon iyileştirmesi**: Çiftçi-dostu Türkçe rehber metni, 11 tag açıklaması, 4 kritik endpoint'e canlı örnek body, sidebar'a "API Rehberi" kısayolu.
 
 ### 👤 EMİRHAN GÜNAY
 
@@ -230,3 +240,85 @@ Dashboard üzerinde eksik kalan 3 kritik ekranı tamamla:
 Sistemin sağlığını ve performansını izlemek üzere eksikleri kapat:
 1) Veri hattı izleme (Health/Metrics) endpoint'lerini ve Sistem Uyarı (Alert) CRUD işlemlerini tamamla,
 2) Halihazırda tablosu bulunan `ModelPerformanceLog` yapısı için, eğitilen modellerin başarı oranlarını ve tahmin/gerçekleşen sapmalarını döndürecek bir Raporlama API'si geliştir.
+
+## ⚫️ Cycle 8 — Üretim Hazırlığı, Güvenlik ve Cila
+
+📅 **11 – 20 Mayıs 2026**
+
+> Cycle 7 tüm temel özellikleri bitirdikten sonra projeyi pilot/üretim seviyesine
+> taşıyacak teknik borçların kapanması ve son cila için ara döngü.
+
+### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
+
+#### 📌 Üretim Altyapısı: Migration, Auth Backend, Rate Limit ve Performans
+Projenin gerçek kullanıma çıkabilmesi için kritik altyapı eksikliklerini kapat:
+
+1) **Alembic migration autogenerate** — `alembic/versions/8f05*.py` `pass` ile dolu durumda; `alembic revision --autogenerate -m "initial schema"` ile mevcut 14 tabloyu yansıtan migration üret. PostgreSQL'e geçişte `Base.metadata.create_all` yerine alembic kullanılmalı.
+2) **JWT tabanlı kullanıcı authentication backend** — Mevcut `User` tablosu var ama `password_hash` kullanılmıyor. `/api/auth/register`, `/api/auth/login`, `/api/auth/me` endpoint'lerini ekle (`python-jose` + `passlib[bcrypt]`). Ecenur'un Cycle 7'de yaptığı Auth UI'a backend desteği sağlar.
+3) **Rate limiting bağlama** — `slowapi` import edilmiş ama hiçbir endpoint'te `@limiter.limit(...)` decorator'ı yok. Kritik POST/DELETE endpoint'lerine (sensors, weather, alerts, model-performance) `30/minute` limiti uygula.
+4) **N+1 query fix** — `app/routers/analytics.py:71-153` dashboard isteğinde 81 farm × 2 loop = ~162 query yapıyor. Tek `group_by` SQL ile tek sorguya indirgeme.
+5) **HTTPS / reverse proxy konfigürasyonu** — Docker compose'a nginx (veya traefik) servisi ekle, `letsencrypt` placeholder'ı ile prod-hazır şablon.
+
+### 👤 EMİRHAN GÜNAY
+
+#### 📌 Veri Yedekleme & Veritabanı Optimizasyonu
+1) **Backup/restore script** — PostgreSQL ve SQLite için `pg_dump`/`sqlite3 .backup` tabanlı `scripts/backup.sh` ve `scripts/restore.sh`; cron ile günlük otomatik yedek + 7 günlük rotation. Makefile target'ları (`make backup`, `make restore`).
+2) **DB connection pool tuning** — `app/database.py` engine konfigürasyonuna `pool_size`, `max_overflow`, `pool_pre_ping` ayarları (env-driven). Prod yükü senaryosu için.
+3) **Sensör okumaları arşivleme** — Cycle 7'de IoT stream eklendiğinde tablo hızla şişer; 30 günden eski okumaları aylık özet tabloya taşıyan periyodik görev (APScheduler ile haftalık).
+
+### 👤 AYŞE ESLEM ÇEKİCİ
+
+#### 📌 Test Kapsamı Güçlendirme & Edge Case Senaryoları
+Mevcut 198 testi prod-hazır seviyeye çıkar:
+1) **Rate limit testleri** — `test_security.py`'a 5+ test: limit aşımında 429 döner, header'ları doğrulanır.
+2) **Edge case'ler** — Aşırı büyük payload (1MB JSON), unicode/emoji ile injection denemesi, concurrent insert race, oversized image upload (CNN endpoint'i için), SQL injection deneme stringi.
+3) **Auth flow integration testleri** — register → login → token ile protected endpoint çağrısı.
+4) **Coverage hedefini %95+'a çıkar** — şu an %91; en zayıf modüller `tasks/scheduler.py` (%56) ve `weather_service.py` (%74).
+
+### 👤 ECENUR ÜNER
+
+#### 📌 Frontend Build Pipeline ve Erişilebilirlik
+1) **Frontend bundling** — `frontend/index.html` 2200+ satırlık tek dosya; Vite veya esbuild ile CSS/JS extract, minify, cache busting (hashed filenames). Geliştirme deneyimi için HMR.
+2) **Erişilebilirlik (a11y)** — ARIA labels, keyboard navigation (sidebar nav, modal'lar), focus indicator'ları, screen reader test (axe-core), kontrast oranı (WCAG AA).
+3) **Loading / error UX** — Skeleton placeholder'ları kart/grafik için (Cycle 6 sonu hâlâ toast tabanlı), 5xx hata sayfası, offline durum indikatörü.
+
+### 👤 MEHMET SAİT TAYŞİ
+
+#### 📌 Gözlemlenebilirlik: Sentry, Prometheus, Structured Logging
+1) **Sentry entegrasyonu** — `SENTRY_DSN` env varsa hata raporlamayı aç; FastAPI ve loguru handler'ı ile uncaught exception'ları topla. Production'da kritik.
+2) **Prometheus metrics export** — `/api/metrics` endpoint'i (text/plain), `prometheus-client` ile: `http_requests_total`, `http_request_duration_seconds`, `model_predictions_total{model_name}`, `db_query_duration_seconds`. `app/routers/metrics.py` docstring'inde planlanmıştı.
+3) **Structured logging** — Loguru'ya JSON output formatı opsiyonu (`LOG_FORMAT=json` env), trace_id propagation (request_id middleware'le entegre), log rotation (`log_dir/sfdap.log` günlük rotate).
+
+---
+
+## 🟣 Cycle 9 — Final Rapor, Sunum ve Akademik Teslim
+
+📅 **21 – 31 Mayıs 2026**
+
+> Tüm teknik geliştirme bittikten sonra projeyi akademik olarak teslim etmek
+> ve kapsamlı şekilde belgelemek için son döngü.
+
+### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
+
+#### 📌 Proje Dokümantasyonunun Tamamlanması
+Projenin tüm aşamalarını detaylı bir şekilde belgeleyin. Kod açıklamaları, veri işleme adımları, algoritma seçim nedenleri ve karşılaşılan zorluklar gibi bilgileri içeren kapsamlı bir dokümantasyon hazırlayın.
+
+### 👤 EMİRHAN GÜNAY
+
+#### 📌 Proje Final Raporu ve Sunum Hazırlığı
+Projenin genel bir özetini, kullanılan veri kümelerini, uygulanan algoritmaları ve elde edilen sonuçları içeren kapsamlı bir final raporu hazırlayın. Raporun tüm teknik detayları içerdiğinden ve kolayca anlaşılabilir olduğundan emin olun.
+
+### 👤 AYŞE ESLEM ÇEKİCİ
+
+#### 📌 Veri Seti ve Algoritma Optimizasyonu
+Kullanılan veri setlerini ve makine öğrenimi algoritmalarını optimize ederek projenin performansını artırın. Daha iyi sonuçlar elde etmek için farklı parametreler deneyin ve sonuçları karşılaştırın.
+
+### 👤 ECENUR ÜNER
+
+#### 📌 Sunum Materyallerinin Oluşturulması
+Projenin temel hedeflerini, kullanılan yöntemleri ve elde edilen sonuçları özetleyen etkili bir sunum hazırlayın. Görsel materyallerle destekleyerek sunumun anlaşılırlığını artırın.
+
+### 👤 MEHMET SAİT TAYŞİ
+
+#### 📌 Test ve Validasyon Süreçlerinin Tamamlanması
+Projenin tüm bileşenlerini kapsamlı bir şekilde test edin ve elde edilen sonuçları doğrulayın. Hata ayıklama süreçlerini tamamlayın ve projenin güvenilirliğini sağlayın.

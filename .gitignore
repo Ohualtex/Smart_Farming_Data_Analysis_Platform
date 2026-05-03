@@ -135,4 +135,6 @@ app/ml/models/
 alembic/versions/*.py
 *_old.html
 *_backup.*
-
+*.backup-*
+sfdap_dev.db
+sfdap_dev.db.backup-*
