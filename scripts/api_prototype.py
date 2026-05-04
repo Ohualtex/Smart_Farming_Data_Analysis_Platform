@@ -17,8 +17,6 @@ standardize edilmiş JSON formatında sunar.
 """
 
 from fastapi import Depends, FastAPI, HTTPException, Security, status
-
-# ... (Kodun geri kalanı buradan devam edecek)from fastapi import FastAPI, Depends, HTTPException, status, Security
 from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel, Field
 
