@@ -1226,6 +1226,15 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <a class="nav-item" href="#analytics" onclick="navigate('analytics')">
                 <span class="icon">📈</span> Raporlar
             </a>
+            <a class="nav-item" href="#plants" onclick="navigate('plants')">
+                <span class="icon">🦠</span> Bitki Sağlığı
+            </a>
+            <a class="nav-item" href="#alerts" onclick="navigate('alerts')">
+                <span class="icon">🚨</span> Uyarılar
+            </a>
+            <a class="nav-item" href="#auth" onclick="navigate('auth')">
+                <span class="icon">👤</span> Hesabım
+            </a>
             <!-- API Rehberi sidebar'dan çıkarıldı, header'a `</>` ikonu olarak taşındı.
                  Çiftçi-dostu UI için: çiftçi sekmeleri ile geliştirici aracını ayır. -->
         </nav>
@@ -1459,6 +1468,115 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                 <div class="charts-row">
                     <div class="chart-box"><h3>🌡️ Çiftliklerin Günlük Sıcaklık Trendi</h3><canvas id="dailyTrendChart"></canvas></div>
                     <div class="chart-box"><h3>📊 Sensör Okuma İstatistikleri</h3><canvas id="sensorStatsChart"></canvas></div>
+                </div>
+            </section>
+
+            <!-- ═══ PLANTS (BİTKİ SAĞLIĞI) PAGE ═══ -->
+            <section class="page" id="page-plants">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">🦠</span> Bitki Sağlığı Tespiti</h1>
+                    <p>Yapraktan bir fotoğraf yükle, model anında hastalık olup olmadığını söylesin. Desteklenen formatlar: JPG, PNG, WebP (max 5 MB).</p>
+                </div>
+                <div class="section-header">📷 Yeni Görsel Yükle</div>
+                <div class="form-box">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="plantsFieldId">Tarla ID</label>
+                            <input type="number" id="plantsFieldId" value="1" min="1" />
+                        </div>
+                        <div class="form-group">
+                            <label for="plantsFile">Yaprak Görseli</label>
+                            <input type="file" id="plantsFile" accept="image/jpeg,image/png,image/webp" />
+                        </div>
+                    </div>
+                    <div id="plantsPreviewWrap" style="display:none;text-align:center;margin:12px 0;">
+                        <img id="plantsPreview" alt="Önizleme" style="max-width:240px;max-height:180px;border-radius:12px;border:1px solid var(--border);" />
+                    </div>
+                    <button class="btn-primary" id="plantsAnalyzeBtn" onclick="analyzePlantImage()">🔬 Hastalığı Tespit Et</button>
+                </div>
+                <div id="plantsResultBox" style="display:none;margin-top:20px;"></div>
+                <div class="section-header">🗂️ Geçmiş Analizler</div>
+                <div class="table-box"><div id="plantsHistoryTable"></div></div>
+            </section>
+
+            <!-- ═══ ALERTS (UYARILAR) PAGE ═══ -->
+            <section class="page" id="page-alerts">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">🚨</span> Sistem Uyarıları</h1>
+                    <p>Sensör anomalisi, hava uyarısı veya model drift gibi olayların listesi. Çözülenleri işaretleyebilirsin.</p>
+                </div>
+                <div class="section-header">🔍 Filtreler</div>
+                <div class="form-box">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="alertSeverity">Öncelik</label>
+                            <select id="alertSeverity" onchange="loadAlerts()">
+                                <option value="">Hepsi</option>
+                                <option value="low">Düşük</option>
+                                <option value="medium">Orta</option>
+                                <option value="critical">Kritik</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alertResolved">Durum</label>
+                            <select id="alertResolved" onchange="loadAlerts()">
+                                <option value="">Hepsi</option>
+                                <option value="false">Açık</option>
+                                <option value="true">Çözüldü</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="cards-grid" id="alertsSummaryCards"></div>
+                <div class="section-header">📋 Uyarı Listesi</div>
+                <div class="table-box"><div id="alertsTable"></div></div>
+            </section>
+
+            <!-- ═══ AUTH (GİRİŞ / KAYIT) PAGE ═══ -->
+            <section class="page" id="page-auth">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">👤</span> Hesabım</h1>
+                    <p>Profil bilgisi, oturum açma ve yeni hesap oluşturma. Token 24 saat geçerlidir.</p>
+                </div>
+                <div id="authLoggedOut">
+                    <div class="charts-row" style="grid-template-columns:1fr 1fr;">
+                        <div class="form-box">
+                            <h3 style="margin-top:0;">🔑 Giriş Yap</h3>
+                            <div class="form-group">
+                                <label for="loginEmail">E-posta</label>
+                                <input type="email" id="loginEmail" placeholder="ahmet@ornek.com" />
+                            </div>
+                            <div class="form-group">
+                                <label for="loginPassword">Şifre</label>
+                                <input type="password" id="loginPassword" placeholder="En az 8 karakter" />
+                            </div>
+                            <button class="btn-primary" onclick="doLogin()">Giriş Yap</button>
+                        </div>
+                        <div class="form-box">
+                            <h3 style="margin-top:0;">📝 Yeni Hesap</h3>
+                            <div class="form-group">
+                                <label for="regName">Ad Soyad</label>
+                                <input type="text" id="regName" placeholder="Ahmet Yılmaz" />
+                            </div>
+                            <div class="form-group">
+                                <label for="regEmail">E-posta</label>
+                                <input type="email" id="regEmail" placeholder="ahmet@ornek.com" />
+                            </div>
+                            <div class="form-group">
+                                <label for="regPassword">Şifre</label>
+                                <input type="password" id="regPassword" placeholder="En az 8 karakter" />
+                            </div>
+                            <button class="btn-primary" onclick="doRegister()">Hesap Oluştur</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="authLoggedIn" style="display:none;">
+                    <div class="form-box">
+                        <h3 style="margin-top:0;">👋 Hoş geldin, <span id="authName">çiftçi</span>!</h3>
+                        <p><strong>E-posta:</strong> <span id="authEmail">—</span></p>
+                        <p><strong>Rol:</strong> <span id="authRole">—</span></p>
+                        <button class="btn-primary" onclick="doLogout()">Çıkış Yap</button>
+                    </div>
                 </div>
             </section>
         </div>
@@ -1700,6 +1818,9 @@ const pageTitles = {
     fertilizer: ['Gübreleme', 'NPK önerisi ve takvim'],
     sensors: ['Sensörler', 'Tarladaki ölçüm cihazları'],
     analytics: ['Raporlar', 'Bölge bazında özet ve dışa aktarma'],
+    plants: ['Bitki Sağlığı', 'Yapraktan hastalık tespiti'],
+    alerts: ['Uyarılar', 'Sistem ve sensör uyarıları'],
+    auth: ['Hesabım', 'Giriş, kayıt ve profil'],
 };
 
 function navigate(page) {
@@ -1715,6 +1836,9 @@ function navigate(page) {
     else if (page === 'weather') loadWeather();
     else if (page === 'irrigation') loadIrrigation();
     else if (page === 'analytics') loadAnalytics();
+    else if (page === 'plants') loadPlants();
+    else if (page === 'alerts') loadAlerts();
+    else if (page === 'auth') refreshAuthState();
     // Close sidebar on mobile
     document.getElementById('sidebar').classList.remove('open');
 }
@@ -2141,6 +2265,277 @@ function renderSensorStatsChart(stats) {
             }
         }
     });
+}
+
+// ─── PLANTS (BİTKİ SAĞLIĞI) ───────────────────────────────────
+async function loadPlants() {
+    const list = await api('/api/plants/health-images?limit=20');
+    const tbl = document.getElementById('plantsHistoryTable');
+    if (!list || list.length === 0) {
+        tbl.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:24px;">Henüz analiz edilmiş görsel yok.</p>';
+        return;
+    }
+    let html = '<table style="width:100%;border-collapse:collapse;"><thead><tr>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tarih</th>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tarla</th>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Teşhis</th>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Güven</th>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Şiddet</th>'
+        + '</tr></thead><tbody>';
+    for (const r of list) {
+        const sev = r.severity || '—';
+        const sevColor = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f59e0b' : sev === 'low' ? '#eab308' : '#22c55e';
+        const conf = r.confidence_score ? (r.confidence_score * 100).toFixed(0) + '%' : '—';
+        const date = r.captured_at ? new Date(r.captured_at).toLocaleDateString('tr-TR') : '—';
+        html += `<tr>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${date}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">#${r.field_id}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${r.diagnosis || '—'}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${conf}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${sev}</span></td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    tbl.innerHTML = html;
+}
+
+async function analyzePlantImage() {
+    const fieldId = document.getElementById('plantsFieldId').value;
+    const fileInput = document.getElementById('plantsFile');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showToast('Lütfen bir görsel seç', 'warning');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Dosya 5 MB\'dan büyük', 'error');
+        return;
+    }
+    const btn = document.getElementById('plantsAnalyzeBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Analiz ediliyor...';
+    const fd = new FormData();
+    fd.append('field_id', fieldId);
+    fd.append('image', file);
+    try {
+        const resp = await fetch(`${API_BASE}/api/plants/health-images/analyze`, {
+            method: 'POST',
+            headers: { 'X-API-Key': 'dev-api-key' },
+            body: fd,
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || `Hata ${resp.status}`, 'error');
+            return;
+        }
+        const data = await resp.json();
+        renderPlantResult(data);
+        showToast('Analiz tamamlandı', 'success');
+        loadPlants();
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔬 Hastalığı Tespit Et';
+    }
+}
+
+function renderPlantResult(data) {
+    const sev = data.severity || 'none';
+    const sevColor = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f59e0b' : sev === 'low' ? '#eab308' : '#22c55e';
+    const conf = (data.confidence_score * 100).toFixed(1);
+    let html = `<div class="form-box" style="border-left:4px solid ${sevColor};">
+        <h3 style="margin-top:0;">🧪 Sonuç: ${data.diagnosis}</h3>
+        <p><strong>Güven:</strong> %${conf}</p>
+        <p><strong>Şiddet:</strong> <span style="color:${sevColor};font-weight:600;">${sev}</span></p>
+        <p><strong>Model:</strong> ${data.model_version}</p>
+        <details style="margin-top:12px;"><summary style="cursor:pointer;">Tüm sınıf skorları</summary>
+        <ul style="margin-top:8px;">`;
+    for (const [cls, score] of Object.entries(data.all_scores || {})) {
+        html += `<li>${cls}: ${(score * 100).toFixed(1)}%</li>`;
+    }
+    html += '</ul></details></div>';
+    const box = document.getElementById('plantsResultBox');
+    box.innerHTML = html;
+    box.style.display = 'block';
+}
+
+// File input preview
+document.addEventListener('change', (e) => {
+    if (e.target && e.target.id === 'plantsFile') {
+        const file = e.target.files && e.target.files[0];
+        const wrap = document.getElementById('plantsPreviewWrap');
+        const img = document.getElementById('plantsPreview');
+        if (!file) { wrap.style.display = 'none'; return; }
+        img.src = URL.createObjectURL(file);
+        wrap.style.display = 'block';
+    }
+});
+
+// ─── ALERTS ───────────────────────────────────────────────────
+async function loadAlerts() {
+    const sev = document.getElementById('alertSeverity')?.value || '';
+    const resolved = document.getElementById('alertResolved')?.value || '';
+    let qs = 'limit=100';
+    if (sev) qs += `&severity=${encodeURIComponent(sev)}`;
+    if (resolved) qs += `&is_resolved=${resolved}`;
+    const list = await api(`/api/alerts/?${qs}`);
+    const tbl = document.getElementById('alertsTable');
+    const cards = document.getElementById('alertsSummaryCards');
+
+    // Özet kartları
+    const total = list ? list.length : 0;
+    const critical = list ? list.filter(a => a.severity === 'critical').length : 0;
+    const open = list ? list.filter(a => !a.is_resolved).length : 0;
+    cards.innerHTML = `
+        <div class="card"><div class="card-icon">📋</div><div class="card-value">${total}</div><div class="card-label">Toplam</div></div>
+        <div class="card"><div class="card-icon">⚠️</div><div class="card-value">${open}</div><div class="card-label">Açık</div></div>
+        <div class="card"><div class="card-icon">🚨</div><div class="card-value">${critical}</div><div class="card-label">Kritik</div></div>`;
+
+    if (!list || list.length === 0) {
+        tbl.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:24px;">Bu filtre için uyarı yok.</p>';
+        return;
+    }
+    let html = '<table style="width:100%;border-collapse:collapse;"><thead><tr>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tarih</th>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Öncelik</th>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tip</th>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Mesaj</th>'
+        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Durum</th>'
+        + '</tr></thead><tbody>';
+    for (const a of list) {
+        const sevColor = a.severity === 'critical' ? '#ef4444' : a.severity === 'medium' ? '#f59e0b' : '#eab308';
+        const date = a.created_at ? new Date(a.created_at).toLocaleString('tr-TR') : '—';
+        const status = a.is_resolved
+            ? '<span style="color:#22c55e;">✓ Çözüldü</span>'
+            : `<button class="btn-secondary" style="padding:4px 10px;" onclick="resolveAlert(${a.id})">Çöz</button>`;
+        html += `<tr>
+            <td style="padding:8px;border-bottom:1px solid var(--border);font-size:.85rem;">${date}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${a.severity}</span></td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${a.alert_type}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${a.message}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${status}</td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    tbl.innerHTML = html;
+}
+
+async function resolveAlert(id) {
+    try {
+        const resp = await fetch(`${API_BASE}/api/alerts/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': 'dev-api-key' },
+            body: JSON.stringify({ is_resolved: true }),
+        });
+        if (resp.ok) {
+            showToast('Uyarı çözüldü olarak işaretlendi', 'success');
+            loadAlerts();
+        } else {
+            showToast(`Hata ${resp.status}`, 'error');
+        }
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    }
+}
+
+// ─── AUTH (KULLANICI GİRİŞİ) ──────────────────────────────────
+const AUTH_TOKEN_KEY = 'sfdap_auth_token';
+
+function getAuthToken() { return localStorage.getItem(AUTH_TOKEN_KEY); }
+function setAuthToken(t) { localStorage.setItem(AUTH_TOKEN_KEY, t); }
+function clearAuthToken() { localStorage.removeItem(AUTH_TOKEN_KEY); }
+
+async function refreshAuthState() {
+    const token = getAuthToken();
+    const loggedOut = document.getElementById('authLoggedOut');
+    const loggedIn = document.getElementById('authLoggedIn');
+    if (!token) {
+        loggedOut.style.display = 'block';
+        loggedIn.style.display = 'none';
+        return;
+    }
+    try {
+        const resp = await fetch(`${API_BASE}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!resp.ok) { clearAuthToken(); refreshAuthState(); return; }
+        const me = await resp.json();
+        document.getElementById('authName').textContent = me.name;
+        document.getElementById('authEmail').textContent = me.email;
+        document.getElementById('authRole').textContent = me.role;
+        loggedOut.style.display = 'none';
+        loggedIn.style.display = 'block';
+    } catch (e) {
+        loggedOut.style.display = 'block';
+        loggedIn.style.display = 'none';
+    }
+}
+
+async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) { showToast('E-posta ve şifre gerekli', 'warning'); return; }
+    try {
+        const resp = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || 'Giriş başarısız', 'error');
+            return;
+        }
+        const data = await resp.json();
+        setAuthToken(data.access_token);
+        showToast('Giriş yapıldı', 'success');
+        refreshAuthState();
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    }
+}
+
+async function doRegister() {
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    if (!name || !email || !password) { showToast('Tüm alanlar gerekli', 'warning'); return; }
+    if (password.length < 8) { showToast('Şifre en az 8 karakter olmalı', 'warning'); return; }
+    try {
+        const resp = await fetch(`${API_BASE}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password }),
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || 'Kayıt başarısız', 'error');
+            return;
+        }
+        showToast('Hesap oluşturuldu, giriş yapabilirsin', 'success');
+        // Otomatik giriş
+        document.getElementById('loginEmail').value = email;
+        document.getElementById('loginPassword').value = password;
+        doLogin();
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    }
+}
+
+async function doLogout() {
+    const token = getAuthToken();
+    if (token) {
+        try {
+            await fetch(`${API_BASE}/api/auth/logout`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+        } catch (e) { /* ignore */ }
+    }
+    clearAuthToken();
+    showToast('Çıkış yapıldı', 'info');
+    refreshAuthState();
 }
 
 // ─── STATUS & UTILITIES ───────────────────────────────────────
