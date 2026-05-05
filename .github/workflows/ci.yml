@@ -11,7 +11,7 @@ name: SFDAP CI Pipeline
 
 on:
   push:
-    branches: [ main, cycle_5, cycle_6 ]
+    branches: [ main, cycle_5, cycle_6, cycle_7, cycle_8 ]
   pull_request:
     branches: [ main ]
 
