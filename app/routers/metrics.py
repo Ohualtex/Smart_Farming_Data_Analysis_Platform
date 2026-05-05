@@ -112,6 +112,20 @@ def _check_data_freshness(db: Session) -> dict:
         return {"status": "fail", "error": str(e)[:200]}
 
 
+def _check_mqtt() -> dict:
+    """MQTT listener durumu (broker connection)."""
+    try:
+        from app.services.mqtt_listener import mqtt_listener
+
+        status = mqtt_listener.status()
+        # MQTT_ENABLED=false ise sistem sağlıksız sayılmaz
+        if not status["enabled"]:
+            return {"status": "disabled", **status}
+        return {"status": "ok" if status["connected"] else "degraded", **status}
+    except Exception as e:  # noqa: BLE001
+        return {"status": "fail", "error": str(e)[:200]}
+
+
 def _check_alerts(db: Session) -> dict:
     """Aktif (unresolved) alert sayıları."""
     try:
@@ -159,9 +173,10 @@ def deep_health_check(db: Session = Depends(get_db)) -> HealthCheckResponse:
         "ml_model": _check_ml_model(),
         "data_freshness": _check_data_freshness(db),
         "alerts": _check_alerts(db),
+        "mqtt": _check_mqtt(),
     }
-    # Bileşen durumlarını birleştir: hepsi 'ok' → healthy, herhangi biri 'fail' → unhealthy,
-    # 'degraded' veya 'stopped' varsa → degraded
+    # Bileşen durumlarını birleştir: 'fail' → unhealthy, 'degraded'/'stopped' → degraded,
+    # aksi takdirde healthy. 'disabled' (MQTT_ENABLED=false) sağlıksızlık sayılmaz.
     statuses = [c.get("status") for c in components.values()]
     if any(s == "fail" for s in statuses):
         overall = "unhealthy"

@@ -40,6 +40,7 @@ from app.routers import (
     sensors,
     weather,
 )
+from app.services.mqtt_listener import mqtt_listener
 from app.tasks.scheduler import shutdown_scheduler, start_scheduler
 
 
@@ -50,11 +51,15 @@ async def lifespan(app: FastAPI):
     setup_logging()
     init_db()
     start_scheduler()
+    if settings.MQTT_ENABLED:
+        mqtt_listener.start()
     logger.info("SFDAP API baslatildi!")
     logger.info(f"Dokumantasyon: http://localhost:{settings.API_PORT}/docs")
     yield
     # Shutdown
     shutdown_scheduler()
+    if settings.MQTT_ENABLED:
+        mqtt_listener.stop()
     logger.info("SFDAP API kapatiliyor...")
 
 

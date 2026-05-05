@@ -4,7 +4,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-
 # NOT: User/Farm/Field/SoilAnalysis/CropPlanting/FertilizerRecommendationLog
 # için Pydantic schema'ları henüz endpoint tarafından tüketilmediği için
 # silindi. Auth schema'ları `app/routers/auth.py` içinde tanımlıdır
