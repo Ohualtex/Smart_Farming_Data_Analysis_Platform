@@ -212,3 +212,12 @@ def root():
 _dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.isdir(_dashboard_dir):
     app.mount("/dashboard", StaticFiles(directory=_dashboard_dir, html=True), name="dashboard")
+
+# Bitki sağlığı görsel upload'ları (plants.py içinde URL üretiliyor)
+_plant_uploads_dir = os.path.join(os.path.dirname(__file__), "ml", "plant_uploads")
+if os.path.isdir(_plant_uploads_dir):
+    app.mount(
+        "/static/plant_uploads",
+        StaticFiles(directory=_plant_uploads_dir),
+        name="plant_uploads",
+    )
