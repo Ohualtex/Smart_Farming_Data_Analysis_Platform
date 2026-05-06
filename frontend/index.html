@@ -71,7 +71,6 @@ input, select { font-family: var(--font); }
 .header-left h2 { font-size: 1.4rem; font-weight: 600; }
 .header-left p { font-size: .8rem; color: var(--text-muted); margin-top: 2px; }
 .header-right { display: flex; align-items: center; gap: 16px; }
-.refresh-badge { font-size: .75rem; color: var(--text-dim); background: var(--surface-2); padding: 4px 12px; border-radius: 20px; }
 .hamburger { display: none; background: none; color: var(--text); font-size: 1.5rem; padding: 8px; }
 
 /* ─── CARDS ──────────────────────────────────────── */
@@ -661,13 +660,6 @@ body::before {
     .filiz-bubble { max-width: 220px; bottom: 84px; right: 16px; font-size: .8rem; }
 }
 
-/* Refresh badge: yeşil ışık */
-.refresh-badge {
-    background: var(--primary-glow);
-    color: var(--primary);
-    border: 1px solid rgba(34,197,94,.2);
-}
-
 /* Status dot glow güçlendirme */
 .status-dot.online {
     box-shadow: 0 0 12px var(--primary), 0 0 4px var(--primary);
@@ -1055,12 +1047,6 @@ tr:hover td { background: linear-gradient(90deg, var(--primary-glow) 0%, transpa
     background: linear-gradient(90deg, rgba(5,150,105,.06) 0%, transparent 30%);
 }
 
-/* Light mode refresh-badge */
-[data-theme="light"] .refresh-badge {
-    background: var(--primary-glow);
-    border-color: rgba(5,150,105,.2);
-    color: var(--primary);
-}
 
 /* ─── 🌗 TEMA TOGGLE PILL (sun ↔ moon) ─────────────── */
 /* Geliştirici link — header'da küçük </> ikon, çiftçiye görünmez kalır */
@@ -2749,7 +2735,6 @@ const FILIZ_TIPS = [
 const FILIZ_GREETINGS_MORNING = ["Günaydın çiftçi! 🌅", "Erken başlayan kazanır ☀️", "İyi sabahlar 🐓", "Tarla seni bekliyor 🌱"];
 const FILIZ_GREETINGS_NOON    = ["İyi günler! 🌞", "Bereketli öğleden sonra 🌾", "Tarla nasıl bugün?", "Şu güneşe bak ☀️"];
 const FILIZ_GREETINGS_EVENING = ["İyi akşamlar 🌇", "Hava serinliyor 🌙", "Akşamın hayrına 🌒", "Bugün de bereketli geçti mi? 🌾"];
-const FILIZ_GREETINGS         = FILIZ_GREETINGS_NOON;   // legacy fallback
 const FILIZ_GREETINGS_WORRIED = ["Aaa, bir şey var 😟", "Dikkat! ⚠️", "Olamaz!", "Acele etmen lazım..."];
 const FILIZ_GREETINGS_SLEEPY  = ["Mhmm... 😴", "Geç oldu... zzz", "Uykum geldi 🌙", "Sen de uyu artık 🛏️"];
 
