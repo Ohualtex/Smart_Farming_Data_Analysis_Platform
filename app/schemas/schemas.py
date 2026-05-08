@@ -4,65 +4,11 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-
-# ========== USER ==========
-class UserCreate(BaseModel):
-    name: str
-    email: str
-    password: str
-    role: str = "farmer"
-    phone: str | None = None
-
-
-class UserResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    name: str
-    email: str
-    role: str
-    created_at: datetime
-
-
-# ========== FARM ==========
-class FarmCreate(BaseModel):
-    name: str
-    location_lat: float | None = None
-    location_lng: float | None = None
-    area_hectares: float | None = None
-    city: str | None = None
-    region: str | None = None
-
-
-class FarmResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    user_id: int
-    name: str
-    location_lat: float | None
-    location_lng: float | None
-    area_hectares: float | None
-    city: str | None
-    region: str | None
-
-
-# ========== FIELD ==========
-class FieldCreate(BaseModel):
-    name: str
-    area_hectares: float | None = None
-    soil_type: str | None = None
-    elevation_m: float | None = None
-
-
-class FieldResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    farm_id: int
-    name: str
-    area_hectares: float | None
-    soil_type: str | None
+# NOT: User/Farm/Field/SoilAnalysis/CropPlanting/FertilizerRecommendationLog
+# için Pydantic schema'ları henüz endpoint tarafından tüketilmediği için
+# silindi. Auth schema'ları `app/routers/auth.py` içinde tanımlıdır
+# (UserRegisterRequest, UserLoginRequest, TokenResponse, CurrentUserResponse).
+# CRUD endpoint'leri eklendiğinde schema'lar burada yeniden tanımlanmalı.
 
 
 # ========== SENSOR ==========
@@ -235,81 +181,6 @@ class FertilizerScheduleResponse(BaseModel):
     amount_kg_per_hectare: float
     total_amount_kg: float
     notes: str
-
-
-# ========== SOIL ANALYSIS (Toprak Analizi) ==========
-class SoilAnalysisCreate(BaseModel):
-    field_id: int
-    ph_level: float | None = None
-    organic_matter_pct: float | None = None
-    nitrogen_mg_kg: float | None = None
-    phosphorus_mg_kg: float | None = None
-    potassium_mg_kg: float | None = None
-    calcium_mg_kg: float | None = None
-    magnesium_mg_kg: float | None = None
-    texture_class: str | None = None
-    notes: str | None = None
-
-
-class SoilAnalysisResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    field_id: int
-    analysis_date: datetime
-    ph_level: float | None
-    organic_matter_pct: float | None
-    nitrogen_mg_kg: float | None
-    phosphorus_mg_kg: float | None
-    potassium_mg_kg: float | None
-    texture_class: str | None
-
-
-# ========== CROP PLANTING (Ekim Takibi) ==========
-class CropPlantingCreate(BaseModel):
-    field_id: int
-    crop_id: int
-    planting_date: datetime
-    expected_harvest_date: datetime | None = None
-    season: str | None = None
-
-
-class CropPlantingResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    field_id: int
-    crop_id: int
-    planting_date: datetime
-    expected_harvest_date: datetime | None
-    season: str | None
-    yield_kg_per_hectare: float | None
-    status: str
-
-
-# ========== FERTILIZER RECOMMENDATION LOG ==========
-class FertilizerRecommendationLogCreate(BaseModel):
-    field_id: int
-    crop_id: int
-    nitrogen_kg: float
-    phosphorus_kg: float
-    potassium_kg: float
-    total_fertilizer_kg: float
-    recommendation_text: str | None = None
-
-
-class FertilizerRecommendationLogResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    field_id: int
-    crop_id: int
-    recommended_at: datetime
-    nitrogen_kg: float
-    phosphorus_kg: float
-    potassium_kg: float
-    total_fertilizer_kg: float
-    is_applied: bool
 
 
 # ========== SYSTEM ALERT (Ecenur — Cycle 6: Veri hatti izleme & uyari) ==========

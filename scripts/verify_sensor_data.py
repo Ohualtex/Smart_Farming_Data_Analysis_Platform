@@ -123,9 +123,9 @@ def check_data_quality(df: pd.DataFrame):
         print("   └─ ✓ TÜM nem değerleri geçerli aralıkta")
 
     # Sıcaklık aralığı kontrolü (-10 ~ 60°C)
-    TEMP_MIN, TEMP_MAX = -10, 60
-    invalid_temp = df[(df["soil_temperature_c"] < TEMP_MIN) | (df["soil_temperature_c"] > TEMP_MAX)]
-    print(f"\n🌡 Sıcaklık Aralığı Kontrolü ({TEMP_MIN}-{TEMP_MAX}°C):")
+    temp_min, temp_max = -10, 60
+    invalid_temp = df[(df["soil_temperature_c"] < temp_min) | (df["soil_temperature_c"] > temp_max)]
+    print(f"\n🌡 Sıcaklık Aralığı Kontrolü ({temp_min}-{temp_max}°C):")
     print(f"   ├─ Geçerli: {len(df) - len(invalid_temp)}")
     print(f"   ├─ Hatalı: {len(invalid_temp)}")
 

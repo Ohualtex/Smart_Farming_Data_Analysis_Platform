@@ -152,15 +152,3 @@ def _ensure_gitignore():
 
 
 _ensure_gitignore()
-
-
-# Yüklenen görselleri serve etmek için (frontend image_url ile erişebilsin)
-# Not: gerçek production'da bu CDN/S3'e taşınır.
-def mount_upload_static(app):  # noqa: ANN001
-    """app.main.py'den çağrılır — yüklenen görselleri /static/plant_uploads/ altında serve eder."""
-    from fastapi.staticfiles import StaticFiles
-
-    if UPLOAD_DIR.exists():
-        app.mount("/static/plant_uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="plant_uploads")
-        return True
-    return False

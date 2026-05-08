@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     # ─── ML & dosya yolları ────────────────────────────────────
     MODEL_PATH: str = "app/ml/models/"
 
+    # ─── MQTT (Cycle 7 — IoT stream) ──────────────────────────
+    # MQTT_ENABLED=false iken listener no-op kalır (test ve dev için).
+    MQTT_ENABLED: bool = False
+    MQTT_BROKER_HOST: str = "localhost"
+    MQTT_BROKER_PORT: int = 1883
+    MQTT_CLIENT_ID: str = "sfdap-listener"
+
     # ─── CORS ──────────────────────────────────────────────────
     # Virgülle ayrılmış origin listesi.
     CORS_ORIGINS: str = "http://localhost:8000,http://localhost:3000,http://127.0.0.1:8000"

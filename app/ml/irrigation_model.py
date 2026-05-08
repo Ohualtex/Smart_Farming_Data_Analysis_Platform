@@ -55,8 +55,8 @@ class IrrigationOptimizer:
             self._train_with_synthetic_data()
 
     def _train_with_synthetic_data(self):
-        np.random.seed(42)
-        n_samples = 1000
+        np.random.seed(self.RANDOM_SEED)
+        n_samples = self.N_TRAINING_SAMPLES
 
         soil_moisture = np.random.uniform(10, 90, n_samples)
         soil_temp = np.random.uniform(5, 40, n_samples)

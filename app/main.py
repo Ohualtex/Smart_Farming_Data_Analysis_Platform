@@ -40,6 +40,7 @@ from app.routers import (
     sensors,
     weather,
 )
+from app.services.mqtt_listener import mqtt_listener
 from app.tasks.scheduler import shutdown_scheduler, start_scheduler
 
 
@@ -50,11 +51,15 @@ async def lifespan(app: FastAPI):
     setup_logging()
     init_db()
     start_scheduler()
+    if settings.MQTT_ENABLED:
+        mqtt_listener.start()
     logger.info("SFDAP API baslatildi!")
     logger.info(f"Dokumantasyon: http://localhost:{settings.API_PORT}/docs")
     yield
     # Shutdown
     shutdown_scheduler()
+    if settings.MQTT_ENABLED:
+        mqtt_listener.stop()
     logger.info("SFDAP API kapatiliyor...")
 
 
@@ -212,3 +217,12 @@ def root():
 _dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.isdir(_dashboard_dir):
     app.mount("/dashboard", StaticFiles(directory=_dashboard_dir, html=True), name="dashboard")
+
+# Bitki sağlığı görsel upload'ları (plants.py içinde URL üretiliyor)
+_plant_uploads_dir = os.path.join(os.path.dirname(__file__), "ml", "plant_uploads")
+if os.path.isdir(_plant_uploads_dir):
+    app.mount(
+        "/static/plant_uploads",
+        StaticFiles(directory=_plant_uploads_dir),
+        name="plant_uploads",
+    )

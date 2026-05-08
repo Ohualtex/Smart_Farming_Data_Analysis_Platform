@@ -1,13 +1,24 @@
 """
 Bitki Sağlığı (PlantHealthImage) endpoint testleri
 ====================================================
-Cycle 7'de Ayşe tarafından genişletilecek (CNN entegrasyonu) öncesi
-mevcut endpoint'in regression koruması.
+Cycle 7'de heuristic CNN modeli ile entegre edildi; URL upload, multipart
+analyze ve liste endpoint'lerini kapsar.
 """
 
 from __future__ import annotations
 
+import io
+
+from PIL import Image
+
 from app.models.models import PlantHealthImage
+
+
+def _png_bytes(color: tuple[int, int, int] = (40, 180, 60)) -> bytes:
+    img = Image.new("RGB", (32, 32), color)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
 
 
 class TestHealthImagesList:
@@ -80,3 +91,66 @@ class TestHealthImageUpload:
         record = db.query(PlantHealthImage).filter_by(field_id=42).first()
         assert record is not None
         assert record.image_url == "https://x.com/leaf.jpg"
+
+
+class TestHealthImageAnalyze:
+    """`/health-images/analyze` — multipart upload + heuristic CNN."""
+
+    def test_analyze_green_image_returns_healthy(self, client):
+        files = {"image": ("leaf.png", _png_bytes((40, 180, 60)), "image/png")}
+        resp = client.post(
+            "/api/plants/health-images/analyze",
+            data={"field_id": 1},
+            files=files,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["diagnosis"] == "healthy"
+        assert 0.0 <= data["confidence_score"] <= 1.0
+        assert data["model_version"] == "heuristic-v1"
+        assert "all_scores" in data
+        assert data["size_bytes"] > 0
+
+    def test_analyze_persists_record(self, client, db):
+        files = {"image": ("leaf.png", _png_bytes((40, 180, 60)), "image/png")}
+        resp = client.post(
+            "/api/plants/health-images/analyze",
+            data={"field_id": 7},
+            files=files,
+        )
+        assert resp.status_code == 201
+        record = db.query(PlantHealthImage).filter_by(field_id=7).first()
+        assert record is not None
+        assert record.diagnosis == "healthy"
+
+    def test_analyze_rejects_unsupported_extension(self, client):
+        files = {"image": ("doc.pdf", b"%PDF-1.4 fake", "application/pdf")}
+        resp = client.post(
+            "/api/plants/health-images/analyze",
+            data={"field_id": 1},
+            files=files,
+        )
+        assert resp.status_code == 415
+
+    def test_analyze_rejects_empty_file(self, client):
+        files = {"image": ("empty.png", b"", "image/png")}
+        resp = client.post(
+            "/api/plants/health-images/analyze",
+            data={"field_id": 1},
+            files=files,
+        )
+        assert resp.status_code == 400
+
+    def test_analyze_without_auth_returns_401(self):
+        from fastapi.testclient import TestClient
+
+        from app.main import app
+
+        files = {"image": ("leaf.png", _png_bytes(), "image/png")}
+        with TestClient(app) as c:
+            resp = c.post(
+                "/api/plants/health-images/analyze",
+                data={"field_id": 1},
+                files=files,
+            )
+            assert resp.status_code == 401
