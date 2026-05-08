@@ -13,17 +13,18 @@ Bu döküman, Hafta 4 kapsamında temelleri atılan FastAPI tabanlı Akıllı Ta
 Sistemi test ederken üç katmanlı bir yaklaşım benimsenmiştir:
 
 ### A. Birim Testleri (Unit Testing)
-Yazılımın en küçük yapı taşları olan API uç noktaları (endpoints) tek tek test edilmiştir. 
-*   **Amaç:** `app.py` içerisindeki fonksiyonların beklenmedik durumlarda çökmesini engellemek.
-*   **Kapsam:** Toprak verileri (`soil-data`) ve Hava durumu (`weather-data`) rotaları.
+Yazılımın en küçük yapı taşları olan API uç noktaları (endpoints) tek tek test edilmiştir.
+*   **Amaç:** `app/main.py` üzerinden bağlanan 11 router'daki fonksiyonların beklenmedik durumlarda çökmesini engellemek.
+*   **Kapsam:** Sensör (`/api/sensors/`), Hava durumu (`/api/weather/`), Sulama (`/api/irrigation/`), Gübreleme (`/api/fertilizer/`), Bitki Sağlığı (`/api/plants/`), Analitik (`/api/analytics/`), Uyarı (`/api/alerts/`), Model Performansı (`/api/model-performance/`) ve sağlık endpoint'leri.
 
 ### B. Entegrasyon ve Şema Validasyonu
-Verilerin Pydantic modelleri üzerinden geçişi sırasında uygulanan kısıtlamalar kontrol edilmiştir.
-*   **Kontrol Noktası:** Nem oranı (`moisture`) ve pH değerlerinin belirlenen aralıklar (float/int) dışında gönderilmesi durumunda sistemin verdiği tepki.
+Verilerin Pydantic v2 modelleri üzerinden geçişi sırasında uygulanan kısıtlamalar kontrol edilmiştir.
+*   **Kontrol Noktası:** `SensorReadingCreate` (`moisture_percent`, `soil_temperature_c`) ve `WeatherDataCreate` (`temperature_c`, `humidity_percent`) alanlarının yanlış tip veya eksik gönderilmesi durumunda sistemin verdiği tepki (FastAPI'nin standart `422 Unprocessable Entity` cevabı).
 
 ### C. Güvenlik Denetimi (Security Audit)
 `X-API-Key` tabanlı güvenlik katmanının kırılamazlığı üzerine yoğunlaşılmıştır.
-*   **Metot:** Brute-force denemeleri (arka arkaya yanlış anahtar gönderimi) ve Header eksikliği testleri.
+*   **Metot:** Brute-force denemeleri (arka arkaya yanlış anahtar gönderimi), header eksikliği ve case-insensitive header testleri.
+*   **Davranış:** Header eksikse `401 Unauthorized`, anahtar geçersizse `403 Forbidden` döndürülür ([app/middleware/auth.py](../../app/middleware/auth.py)).
 
 ---
 
@@ -33,11 +34,12 @@ Aşağıdaki tablo, sistemin her bir senaryo karşısındaki davranışını det
 
 | Senaryo Kodu | Test Tanımı | Test Girdisi (Input) | Beklenen Durum | Gerçekleşen Sonuç | Karar |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **AUTH-01** | Geçerli Anahtar Erişimi | `akilli_tarim_gizli_anahtar_2026` | 200 OK | 200 OK | ✅ BAŞARILI |
-| **AUTH-02** | Geçersiz Anahtar Erişimi | `hatali_anahtar_123` | 403 Forbidden | 403 Forbidden | ✅ BAŞARILI |
-| **VALID-01** | Eksik Veri Gönderimi | `{sensor_id: "SENS-1"}` | 422 Error | 422 Unprocessable Entity | ✅ BAŞARILI |
-| **VALID-02** | Hatalı Veri Tipi | `moisture: "Çok Islak"` | Type Error | Validation Error | ✅ BAŞARILI |
-| **SYS-01** | Olmayan Kaynak Erişimi | `/api/v1/unknown` | 404 Not Found | 404 Not Found | ✅ BAŞARILI |
+| **AUTH-01** | Geçerli Anahtar Erişimi | `X-API-Key: dev-api-key` | 200 OK | 200 OK | ✅ BAŞARILI |
+| **AUTH-02** | Eksik Header Erişimi | (header gönderilmedi) | 401 Unauthorized | 401 Unauthorized | ✅ BAŞARILI |
+| **AUTH-03** | Geçersiz Anahtar Erişimi | `X-API-Key: hatali_anahtar` | 403 Forbidden | 403 Forbidden | ✅ BAŞARILI |
+| **VALID-01** | Eksik Zorunlu Alan | `{"sensor_id": 1}` (`moisture_percent` yok) | 422 Error | 422 Unprocessable Entity | ✅ BAŞARILI |
+| **VALID-02** | Hatalı Veri Tipi | `{"moisture_percent": "çok ıslak"}` | Type Error | 422 Validation Error | ✅ BAŞARILI |
+| **SYS-01** | Olmayan Kaynak Erişimi | `GET /api/unknown` | 404 Not Found | 404 Not Found | ✅ BAŞARILI |
 
 ---
 
@@ -47,27 +49,34 @@ Testler sırasında tespit edilen ve projenin güvenilirliğini artırmak için 
 
 ### 4.1. Veri Tipi Esnekliği Sorunu
 *   **Hata:** Sensörlerden gelen nem verisi bazen `45.0` (float), bazen `45` (int) olarak gelmekteydi. Pydantic şeması sadece `float` beklediği için tam sayılarda hata veriyordu.
-*   **Çözüm:** Model üzerinde tip dönüşümü (type coercion) yapılarak her iki tipin de kabul edilmesi sağlandı.
+*   **Çözüm:** Pydantic v2'nin native int→float coercion davranışı doğrulandı; `SensorReadingCreate.moisture_percent` alanı artık her iki tipi de sorunsuz kabul ediyor.
 
 ### 4.2. Header Case-Sensitivity (Büyük/Küçük Harf) Çakışması
 *   **Hata:** Bazı istemcilerin `x-api-key` (küçük harf) gönderirken, sistemin `X-API-Key` (büyük harf) beklemesi erişim sorunlarına yol açtı.
-*   **Çözüm:** FastAPI'nin `Header` sınıfı kullanılarak anahtar kontrolü case-insensitive hale getirildi.
+*   **Çözüm:** FastAPI'nin `APIKeyHeader` sınıfı kullanılarak anahtar kontrolü case-insensitive hale getirildi ([app/middleware/auth.py:16](../../app/middleware/auth.py#L16)).
 
 ### 4.3. Exception Handling (İstisna Yönetimi)
-*   **Hata:** Hata anlarında dönen JSON mesajları son kullanıcı için fazla teknik kalıyordu.
-*   **Çözüm:** `HTTPException` mesajları özelleştirilerek kullanıcı dostu ve açıklayıcı hata mesajları sisteme dahil edildi.
+*   **Hata:** Hata anlarında dönen JSON mesajları tutarsız formatlarda dönüyor, son kullanıcı için fazla teknik kalıyordu.
+*   **Çözüm:** Cycle 5 kapsamında `app/middleware/exceptions.py` altında 6 sınıflı global exception handler kuruldu (`NotFound`, `Unauthorized`, `ValidationError`, vs.); tüm hata cevapları `{error_code, message, detail}` standart formatına oturtuldu.
+
+### 4.4. Status Kodu Ayrıştırma
+*   **Hata:** İlk implementasyonda eksik header ve geçersiz anahtar aynı (`403`) kodu döndürüyordu; bu da istemci tarafında "yeniden authentikasyon" ve "anahtar yenileme" akışlarının ayrışmasını engelliyordu.
+*   **Çözüm:** RFC 7235'e uygun olarak header eksikse `401 Unauthorized`, anahtar geçersizse `403 Forbidden` döndürülecek şekilde ayrıştırıldı.
 
 ---
 
 ## 5. 📈 Performans ve Kararlılık Verileri
 Sistemin 31 Mayıs 2026 teslim tarihi öncesi son metrikleri şöyledir:
-*   **Ortalama Yanıt Süresi:** 12.4 ms (Yerel ağ üzerinde).
+*   **Ortalama Yanıt Süresi:** ~12 ms (yerel TestClient + in-memory SQLite üzerinde).
 *   **Güvenlik Katmanı Gecikmesi:** < 1 ms (API Key doğrulaması sistem performansını etkilememektedir).
-*   **Doğruluk Oranı:** %100 (Yapılan 100 farklı test senaryosunun tamamı başarıyla sonuçlanmıştır).
+*   **Toplam Test Sayısı:** **246** (20 dosya, `pytest`).
+*   **Code Coverage:** **%86** (eşik %80; Cycle 8 hedefi %95+).
+*   **Geçen Test Oranı:** %100 (CI üzerinde tüm 246 test yeşil).
+*   **Linter Durumu:** Ruff — All checks passed.
 
 ## 6. 🏁 Sonuç
-Hafta 6 kapsamında yürütülen test ve validasyon faaliyetleri sonucunda, Akıllı Tarım Veri Analizi Platformu'nun teknik olarak kusursuz çalıştığı, veri güvenliğini en üst düzeyde sağladığı ve hatalı girdilere karşı dayanıklı olduğu tescil edilmiştir. Bu döküman, projenin canlıya alım öncesi son onay raporudur.
+Hafta 6 kapsamında yürütülen test ve validasyon faaliyetleri sonucunda, Akıllı Tarım Veri Analizi Platformu'nun teknik olarak kararlı çalıştığı, veri güvenliğini sağladığı ve hatalı girdilere karşı dayanıklı olduğu doğrulanmıştır. Cycle 8'de **rate limiting bağlama**, **JWT auth backend**, **edge-case testleri** ve **coverage %95+** çalışmaları ile prod-hazır seviyeye taşınacaktır.
 
 ---
-**Onaylayan:** Mehmet Sait Taysi  
+**Onaylayan:** Mehmet Sait Taysi
 **Pozisyon:** Yazılım Mühendisliği Öğrencisi

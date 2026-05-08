@@ -10,11 +10,11 @@ Aşağıdaki tablo, sistemin her bir parçasının hangi koşullar altında test
 
 | Test ID | Senaryo Tanımı | Girdi (Input) | Beklenen Çıktı | Sonuç | Karar |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **TC-01** | Kimlik Doğrulama | Boş Header | 403 Forbidden | 403 Forbidden | ✅ GEÇTİ |
-| **TC-02** | Yetki Denetimi | Yanlış API Key | "Erişim İzniniz Yok" Mesajı | Mesaj Doğrulandı | ✅ GEÇTİ |
-| **TC-03** | Veri Bütünlüğü | `/soil-data` isteği | JSON List (Sensor Data) | JSON Formatı Okundu | ✅ GEÇTİ |
-| **TC-04** | Veri Tipi Kontrolü | Pydantic Model Check | Float/Int Validasyonu | Veri Tipleri Uyumlu | ✅ GEÇTİ |
-| **TC-05** | Olmayan Kaynak | `/api/v2/invalid` | 404 Not Found | 404 Not Found | ✅ GEÇTİ |
+| **TC-01** | Header Eksikliği | `X-API-Key` gönderilmedi | 401 Unauthorized | 401 Unauthorized | ✅ GEÇTİ |
+| **TC-02** | Yetki Denetimi | Yanlış API Key (`hatali_anahtar`) | 403 Forbidden + "Gecersiz API anahtari" | Mesaj Doğrulandı | ✅ GEÇTİ |
+| **TC-03** | Veri Bütünlüğü | `GET /api/sensors/` (geçerli key) | JSON List (`SensorResponse[]`) | JSON Formatı Okundu | ✅ GEÇTİ |
+| **TC-04** | Veri Tipi Kontrolü | `SensorReadingCreate` (`moisture_percent`) | Float/Int Coercion | Veri Tipleri Uyumlu | ✅ GEÇTİ |
+| **TC-05** | Olmayan Kaynak | `GET /api/unknown` | 404 Not Found | 404 Not Found | ✅ GEÇTİ |
 
 ---
 
@@ -24,22 +24,29 @@ Geliştirme aşamasında tespit edilen ve sisteme entegre edilen iyileştirmeler
 
 ### A. Pydantic Model Çakışmaları
 * **Gözlem:** Sensörlerden gelen nem verisi bazen tam sayı (Integer) bazen ondalıklı (Float) geliyordu. Bu durum, modelin katı kuralları nedeniyle `422` hatasına sebep oluyordu.
-* **Aksiyon:** `SoilData` şemasındaki ilgili alanlar `Union[int, float]` veya genel olarak `float` olarak revize edildi.
+* **Aksiyon:** `SensorReadingCreate.moisture_percent` alanı için Pydantic v2'nin native int→float coercion davranışı doğrulandı; ek özelleştirmeye gerek kalmadan her iki tip kabul edildi.
 * **Sonuç:** Veri kabul oranı %100'e çıkarıldı.
 
 ### B. Header Okuma Optimizasyonu
 * **Gözlem:** Bazı tarayıcıların ve Postman sürümlerinin header isimlerini küçük harfe (case-insensitive) çevirdiği fark edildi.
-* **Aksiyon:** FastAPI'nin `APIKeyHeader` sınıfı kullanılarak büyük-küçük harf duyarlılığı standart hale getirildi.
+* **Aksiyon:** FastAPI'nin `APIKeyHeader` sınıfı kullanılarak büyük-küçük harf duyarlılığı standart hale getirildi ([app/middleware/auth.py:16](../../app/middleware/auth.py#L16)).
 * **Sonuç:** Farklı istemcilerden gelen isteklerin tamamı sorunsuz işlenmeye başlandı.
+
+### C. 401 vs 403 Status Kod Ayrımı
+* **Gözlem:** İlk implementasyonda eksik header ve geçersiz anahtar aynı `403` kodu ile dönüyordu; istemci tarafında "yeniden authentikasyon" / "anahtar yenileme" akışları ayrışmıyordu.
+* **Aksiyon:** RFC 7235'e uygun olarak header eksikse `401 Unauthorized`, anahtar geçersizse `403 Forbidden` döndürülecek şekilde ayrıştırıldı.
+* **Sonuç:** Frontend tarafında `401` cevabı login modal'ını tetikleyebilir hâle geldi.
 
 ---
 
 ## 3. 🛡️ Validasyon ve Güvenilirlik Kanıtları
 
 Sistemin kararlılığını ölçmek için yapılan stres testlerinde şu veriler elde edilmiştir:
-- **Eşzamanlı İstek:** Aynı anda gönderilen 10 istekte veri kaybı yaşanmadı.
-- **Güvenlik Duvarı:** API anahtarı koruması, uygulamanın en dış katmanında (Dependency Injection) çalıştığı için iç fonksiyonlara yetkisiz erişim tamamen engellendi.
-- **Hata Mesajı Standardizasyonu:** Tüm hatalar (`403`, `404`, `422`) kullanıcıya anlaşılır teknik mesajlarla döndürülecek şekilde yapılandırıldı.
+- **Test Suite:** 246 test (20 dosya) `pytest` üzerinde yeşil; CI pipeline'da Ruff + Pytest sürekli koşuyor.
+- **Coverage:** %86 (eşik %80; en zayıf modüller `tasks/scheduler.py` ve `weather_service.py` Cycle 8 hedefinde).
+- **Eşzamanlı İstek:** TestClient üzerinden ardışık atılan 10 istekte veri kaybı yaşanmadı; concurrent insert race testi Cycle 8 edge-case paketinde planlı.
+- **Güvenlik Duvarı:** API Key koruması FastAPI Dependency Injection katmanında çalıştığı için yetkisiz erişim handler fonksiyonlarına erişemeden 401/403 ile reddedilir.
+- **Hata Mesajı Standardizasyonu:** Tüm hatalar (`401`, `403`, `404`, `422`, `5xx`) Cycle 5 global exception handler'ı üzerinden tutarlı `{error_code, message, detail}` formatında döner.
 
 ---
 
