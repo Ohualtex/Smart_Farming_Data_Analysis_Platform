@@ -4,7 +4,7 @@ Miraç Duran tarafindan Cycle 6 kapsaminda eklendi.
 """
 
 import io
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pandas as pd
 from fpdf import FPDF
@@ -91,7 +91,7 @@ class ReportService:
         pdf.cell(
             0,
             10,
-            f"Olusturulma Tarihi: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            f"Olusturulma Tarihi: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M')}",
             new_x="LMARGIN",
             new_y="NEXT",
             align="C",
