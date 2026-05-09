@@ -151,6 +151,130 @@ class TestCompare:
         assert resp.status_code == 422
 
 
+class TestDriftDetection:
+    """`/drift/{model_name}` endpoint — model accuracy drift tespiti."""
+
+    def test_drift_no_data_returns_nones(self, client):
+        """Hiç log yoksa recent_avg ve baseline_avg None, drift False."""
+        resp = client.get("/api/model-performance/drift/unknown_model")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["recent_avg_accuracy"] is None
+        assert data["baseline_avg_accuracy"] is None
+        assert data["drift_detected"] is False
+        assert data["alert_created"] is False
+
+    def test_drift_detected_creates_alert(self, client, db, sample_log):
+        """Baseline yüksek, recent çok düşük → drift detected + SystemAlert."""
+        from datetime import UTC, datetime, timedelta
+
+        from app.models.models import ModelPerformanceLog, SystemAlert
+
+        now = datetime.now(UTC)
+
+        # 14 gün önce → baseline (yüksek accuracy)
+        for _ in range(5):
+            log = ModelPerformanceLog(
+                model_name="drift_test_model",
+                prediction_data="{}",
+                accuracy_score=0.95,
+                logged_at=now - timedelta(days=14),
+            )
+            db.add(log)
+
+        # 2 gün önce → recent (çok düşük accuracy → drift)
+        for _ in range(5):
+            log = ModelPerformanceLog(
+                model_name="drift_test_model",
+                prediction_data="{}",
+                accuracy_score=0.40,
+                logged_at=now - timedelta(days=2),
+            )
+            db.add(log)
+        db.commit()
+
+        resp = client.get(
+            "/api/model-performance/drift/drift_test_model" "?recent_days=7&baseline_days=30&threshold_percent=10"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["drift_detected"] is True
+        assert data["alert_created"] is True
+        # SystemAlert tablosunda model_drift kayıt olmalı
+        alert = db.query(SystemAlert).filter(SystemAlert.alert_type == "model_drift").first()
+        assert alert is not None
+        assert "drift_test_model" in alert.message
+
+    def test_drift_dedup_skips_recent_alert(self, client, db):
+        """Son 24 saatte aynı model için alert varsa tekrar yaratma."""
+        from datetime import UTC, datetime, timedelta
+
+        from app.models.models import ModelPerformanceLog, SystemAlert
+
+        now = datetime.now(UTC)
+        # Mevcut bir model_drift alert'i — son 1 saatte yaratılmış
+        existing = SystemAlert(
+            alert_type="model_drift",
+            severity="medium",
+            message="Model 'dedup_model' drift gösterdi",
+            is_resolved=False,
+            created_at=now - timedelta(hours=1),
+        )
+        db.add(existing)
+        # Drift verisi
+        for _ in range(3):
+            db.add(
+                ModelPerformanceLog(
+                    model_name="dedup_model",
+                    prediction_data="{}",
+                    accuracy_score=0.95,
+                    logged_at=now - timedelta(days=14),
+                )
+            )
+            db.add(
+                ModelPerformanceLog(
+                    model_name="dedup_model",
+                    prediction_data="{}",
+                    accuracy_score=0.40,
+                    logged_at=now - timedelta(days=2),
+                )
+            )
+        db.commit()
+
+        resp = client.get(
+            "/api/model-performance/drift/dedup_model?recent_days=7&baseline_days=30&threshold_percent=10"
+        )
+        data = resp.json()
+        assert data["drift_detected"] is True
+        # Alert oluşturulmaz çünkü son 24 saatte zaten var
+        assert data["alert_created"] is False
+
+    def test_no_drift_when_accuracy_stable(self, client, db):
+        """Accuracy stabil ise drift_detected False."""
+        from datetime import UTC, datetime, timedelta
+
+        from app.models.models import ModelPerformanceLog
+
+        now = datetime.now(UTC)
+        for offset in (14, 14, 2, 2):
+            db.add(
+                ModelPerformanceLog(
+                    model_name="stable_model",
+                    prediction_data="{}",
+                    accuracy_score=0.85,
+                    logged_at=now - timedelta(days=offset),
+                )
+            )
+        db.commit()
+
+        resp = client.get(
+            "/api/model-performance/drift/stable_model?recent_days=7&baseline_days=30&threshold_percent=10"
+        )
+        data = resp.json()
+        assert data["drift_detected"] is False
+        assert data["alert_created"] is False
+
+
 class TestAutoLogging:
     def test_irrigation_predict_creates_log(self, client):
         # Önce log boş olmalı
