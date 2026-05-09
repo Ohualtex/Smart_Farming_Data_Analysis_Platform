@@ -243,7 +243,7 @@ Sistemin sağlığını ve performansını izlemek üzere eksikleri kapat:
 
 ## ⚫️ Cycle 8 — Üretim Hazırlığı, Güvenlik ve Cila
 
-📅 **11 – 20 Mayıs 2026**
+📅 **10 – 19 Mayıs 2026**
 
 > Cycle 7 tüm temel özellikleri bitirdikten sonra projeyi pilot/üretim seviyesine
 > taşıyacak teknik borçların kapanması ve son cila için ara döngü.
@@ -293,7 +293,7 @@ Mevcut 198 testi prod-hazır seviyeye çıkar:
 
 ## 🟣 Cycle 9 — Final Rapor, Sunum ve Akademik Teslim
 
-📅 **21 – 31 Mayıs 2026**
+📅 **20 – 31 Mayıs 2026**
 
 > Tüm teknik geliştirme bittikten sonra projeyi akademik olarak teslim etmek
 > ve kapsamlı şekilde belgelemek için son döngü.
