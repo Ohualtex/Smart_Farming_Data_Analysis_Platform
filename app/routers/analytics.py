@@ -64,15 +64,24 @@ def get_analytics_summary(
     sensor_types_raw = db.query(Sensor.sensor_type, func.count(Sensor.id)).group_by(Sensor.sensor_type).all()
     sensor_type_distribution = [{"type": row[0], "count": row[1]} for row in sensor_types_raw]
 
-    # ─── ÇİFTLİK BAZLI HAVA DURUMU KARŞILAŞTIRMASI ───────────────
+    # ─── HAVA DURUMU VERİLERİNİ TEK SORGUDA ÇEK ──────────────────
+    # N+1 önleme: Önceki yaklaşım her çiftlik için ayrı sorgu yapıyordu
+    # (81 il × 2 döngü ≈ 162 query). Şimdi tüm 'since' sonrası WeatherData
+    # kayıtlarını tek sorguda alıp Python'da farm_id ile gruplandırıyoruz.
+    # EN: N+1 fix — was 1 + 2N queries (≈162 for 81 farms); now 1 + 1 = 2.
     farms = db.query(Farm).all()
+    all_weather_records = db.query(WeatherData).filter(WeatherData.recorded_at >= since).all()
+
+    records_by_farm: dict[int, list[WeatherData]] = {}
+    for record in all_weather_records:
+        if record.farm_id is None:
+            continue
+        records_by_farm.setdefault(record.farm_id, []).append(record)
+
+    # ─── ÇİFTLİK BAZLI HAVA DURUMU KARŞILAŞTIRMASI ───────────────
     farm_weather_comparison = []
-
     for farm in farms:
-        weather_records = (
-            db.query(WeatherData).filter(WeatherData.farm_id == farm.id, WeatherData.recorded_at >= since).all()
-        )
-
+        weather_records = records_by_farm.get(farm.id, [])
         if not weather_records:
             continue
 
@@ -108,26 +117,20 @@ def get_analytics_summary(
     irrigation_status_distribution = [{"status": row[0], "count": row[1]} for row in irrigation_status_raw]
 
     # ─── GÜNLÜK SICAKLIK TRENDİ (ÇİFTLİK BAZLI) ──────────────────
+    # Aynı `records_by_farm` dict'ini yeniden kullanıyoruz; ek sorgu yok.
     daily_trends = []
     for farm in farms:
-        records = (
-            db.query(WeatherData)
-            .filter(WeatherData.farm_id == farm.id, WeatherData.recorded_at >= since)
-            .order_by(WeatherData.recorded_at)
-            .all()
-        )
-
+        records = records_by_farm.get(farm.id, [])
         if not records:
             continue
 
-        # Günlük grupla
+        # Günlük grupla (in-memory; tarih sıralı erişim için sort)
+        records_sorted = sorted(records, key=lambda r: r.recorded_at or datetime.min.replace(tzinfo=UTC))
         day_groups: dict[str, list] = {}
-        for r in records:
+        for r in records_sorted:
             if r.recorded_at:
                 day_key = r.recorded_at.strftime("%Y-%m-%d")
-                if day_key not in day_groups:
-                    day_groups[day_key] = []
-                day_groups[day_key].append(r)
+                day_groups.setdefault(day_key, []).append(r)
 
         farm_trend = {
             "farm_id": farm.id,

@@ -228,3 +228,66 @@ def test_analytics_sensor_reading_stats(client, db):
     assert stats["moisture"]["avg"] is not None
     assert stats["moisture"]["min"] <= stats["moisture"]["max"]
     assert stats["soil_temperature"]["avg"] is not None
+
+
+def test_analytics_summary_avoids_n_plus_one(client, db):
+    """N+1 regresyon koruması — farm başına ek WeatherData sorgusu yapılmamalı.
+
+    Önceki implementasyon her çiftlik için 2 ayrı WeatherData sorgusu atıyordu
+    (81 il × 2 = ~162 sorgu). Refactor sonrası tüm WeatherData kayıtları tek
+    sorguda alınmalı.
+
+    EN: Regression guard — was 1+2N WeatherData queries (≈162 for 81 farms);
+    after the refactor only one WeatherData SELECT is allowed per request.
+    """
+    from sqlalchemy import event
+
+    # 3 çiftlik kuralım — N+1 olsaydı 6+ WeatherData sorgusu olurdu
+    seed = _seed_demo_data(db)
+    extra_user = User(name="U2", email="u2@x.com", password_hash="x", role="farmer")
+    db.add(extra_user)
+    db.flush()
+    for i, city in enumerate(("Bursa", "Izmir"), start=2):
+        farm = Farm(
+            user_id=extra_user.id,
+            name=f"Test Çiftliği {i}",
+            location_lat=40.0,
+            location_lng=29.0,
+            area_hectares=30.0,
+            city=city,
+            region="Ege",
+        )
+        db.add(farm)
+        db.flush()
+        for j in range(5):
+            db.add(
+                WeatherData(
+                    farm_id=farm.id,
+                    recorded_at=datetime.now(UTC) - timedelta(days=j),
+                    temperature_c=20.0 + j,
+                    humidity_percent=60.0,
+                    precipitation_mm=0.0,
+                )
+            )
+    db.commit()
+    assert seed["farm"] is not None  # sanity
+
+    weather_data_queries: list[str] = []
+
+    def capture(_conn, _cursor, statement, *_args, **_kwargs):
+        sql = statement.lower() if isinstance(statement, str) else str(statement).lower()
+        if "from weather_data" in sql and sql.lstrip().startswith("select"):
+            weather_data_queries.append(statement)
+
+    event.listen(db.bind, "before_cursor_execute", capture)
+    try:
+        response = client.get("/api/analytics/summary?days=30")
+        assert response.status_code == 200
+    finally:
+        event.remove(db.bind, "before_cursor_execute", capture)
+
+    # Beklenen: 1 (count) + 1 (since-filtreli SELECT) ≤ 3 (kompare bağı için tolerans)
+    # N+1 olsaydı: 1 + 2*3 = 7 sorgu (3 farm × 2 döngü)
+    assert (
+        len(weather_data_queries) <= 3
+    ), f"N+1 olabilir: WeatherData üzerinde {len(weather_data_queries)} SELECT sorgusu yapıldı."
