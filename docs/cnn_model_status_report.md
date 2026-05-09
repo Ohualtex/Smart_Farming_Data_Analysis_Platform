@@ -39,7 +39,8 @@ Model şu an 8 sınıfı desteklemektedir:
 
 ## 3. Model Test Çıktısı
 
-Heuristic modun 4 farklı yaprak görüntüsü senaryosu üzerindeki tahmin sonuçları (ekran görüntüsü: test_output.png):
+Heuristic modun 4 farklı yaprak görüntüsü senaryosu üzerindeki tahmin sonuçları
+![Test Ciktisi](test_output.png)
 
 | Test Senaryosu | Teşhis | Güven Skoru | Şiddet |
 |---|---|---|---|
