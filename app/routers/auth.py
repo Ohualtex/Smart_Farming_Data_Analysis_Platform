@@ -24,12 +24,13 @@ import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 # TODO Cycle 8: pydantic[email] kurulduğunda EmailStr'e geç (email-validator gerekli)
 from app.database import get_db
+from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.models.models import User
 
 router = APIRouter(prefix="/api/auth", tags=["Kimlik Doğrulama"])
@@ -133,7 +134,8 @@ def _get_current_user(authorization: str = Header(default=""), db: Session = Dep
     summary="Yeni kullanıcı oluştur",
     description="Yeni hesap kaydı. Şifre sha256+salt ile hash'lenir (Cycle 8'de bcrypt'e geçilecek).",
 )
-def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit(AUTH_RATE)
+def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta zaten kayitli")
     if len(payload.password) < 8:
@@ -158,7 +160,8 @@ def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     summary="Giriş yap, token al",
     description="Doğru e-posta + şifre ile bearer token alınır. Token 24 saat geçerlidir.",
 )
-def login(payload: UserLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit(AUTH_RATE)
+def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if user is None or not _verify_password(payload.password, user.password_hash or ""):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="E-posta veya sifre hatali")
@@ -182,7 +185,8 @@ def me(user: User = Depends(_get_current_user)):
     summary="Çıkış yap",
     description="Mevcut bearer token'ı iptal eder. Cycle 8'de JWT blacklist'e geçilir.",
 )
-def logout(authorization: str = Header(default="")):
+@limiter.limit(STRICT_RATE)
+def logout(request: Request, authorization: str = Header(default="")):
     if authorization.startswith("Bearer "):
         token = authorization[7:]
         _TOKENS.pop(token, None)

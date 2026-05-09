@@ -20,12 +20,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import verify_api_key
+from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import ModelPerformanceLog, SystemAlert
 from app.schemas.schemas import (
     ModelPerformanceCompareItem,
@@ -63,7 +64,8 @@ def list_logs(
     dependencies=[Depends(verify_api_key)],
     summary="Yeni performans logu kaydet",
 )
-def create_log(payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def create_log(request: Request, payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)):
     log = ModelPerformanceLog(**payload.model_dump())
     db.add(log)
     db.commit()
@@ -80,7 +82,8 @@ def create_log(payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)
     "günceller. Tipik akış: önce POST ile log yaratılır, gerçek sonuç bilindiğinde bu PATCH "
     "ile doldurulur.",
 )
-def update_log(log_id: int, payload: ModelPerformanceLogUpdate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def update_log(request: Request, log_id: int, payload: ModelPerformanceLogUpdate, db: Session = Depends(get_db)):
     log = db.query(ModelPerformanceLog).filter(ModelPerformanceLog.id == log_id).first()
     if log is None:
         raise HTTPException(status_code=404, detail=f"Log {log_id} bulunamadi")

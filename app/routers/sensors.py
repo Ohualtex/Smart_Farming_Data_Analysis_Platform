@@ -9,11 +9,12 @@ Emirhan Günay & Mehmet Sait Tayşi — Cycle 4 Görevi
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import verify_api_key
+from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import Sensor, SoilMoistureReading
 from app.schemas.schemas import SensorCreate, SensorReadingCreate, SensorReadingResponse, SensorResponse
 
@@ -48,7 +49,8 @@ def get_sensor(sensor_id: int, db: Session = Depends(get_db)):
     dependencies=[Depends(verify_api_key)],
     summary="Yeni sensör ekle",
 )
-def create_sensor(sensor: SensorCreate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def create_sensor(request: Request, sensor: SensorCreate, db: Session = Depends(get_db)):
     db_sensor = Sensor(**sensor.model_dump())
     db.add(db_sensor)
     db.commit()
@@ -61,7 +63,8 @@ def create_sensor(sensor: SensorCreate, db: Session = Depends(get_db)):
     dependencies=[Depends(verify_api_key)],
     summary="Sensör sil",
 )
-def delete_sensor(sensor_id: int, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def delete_sensor(request: Request, sensor_id: int, db: Session = Depends(get_db)):
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
         raise HTTPException(status_code=404, detail="Sensor bulunamadi")
@@ -78,7 +81,8 @@ def delete_sensor(sensor_id: int, db: Session = Depends(get_db)):
     dependencies=[Depends(verify_api_key)],
     summary="Yeni sensör okuması kaydet",
 )
-def create_reading(reading: SensorReadingCreate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def create_reading(request: Request, reading: SensorReadingCreate, db: Session = Depends(get_db)):
     db_reading = SoilMoistureReading(**reading.model_dump())
     db.add(db_reading)
     db.commit()

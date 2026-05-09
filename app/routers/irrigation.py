@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from loguru import logger
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import verify_api_key
+from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.ml.irrigation_model import irrigation_optimizer
 from app.models.models import IrrigationSchedule, ModelPerformanceLog
 from app.schemas.schemas import (
@@ -56,7 +57,8 @@ def _log_prediction(db: Session, request: IrrigationPredictionRequest, result: d
     "su miktarını (litre) ve aciliyet seviyesini döndürür. Tahmin sonucu "
     "`ModelPerformanceLog` tablosuna otomatik kaydedilir (model_name='irrigation_rf').",
 )
-def predict_irrigation(data: IrrigationPredictionRequest, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def predict_irrigation(request: Request, data: IrrigationPredictionRequest, db: Session = Depends(get_db)):
     result = irrigation_optimizer.predict(
         soil_moisture=data.soil_moisture,
         soil_temperature=data.soil_temperature,
@@ -87,7 +89,8 @@ def get_schedules(field_id: int | None = None, limit: int = 20, db: Session = De
     dependencies=[Depends(verify_api_key)],
     summary="Yeni sulama programı oluştur",
 )
-def create_schedule(schedule: IrrigationCreate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def create_schedule(request: Request, schedule: IrrigationCreate, db: Session = Depends(get_db)):
     db_schedule = IrrigationSchedule(**schedule.model_dump())
     db.add(db_schedule)
     db.commit()
