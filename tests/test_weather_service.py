@@ -5,6 +5,9 @@ WeatherService sınıfının veri temizleme, dönüştürme
 ve enterpolasyon fonksiyonları test edilir.
 """
 
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from app.services.weather_service import WeatherService
@@ -221,3 +224,114 @@ class TestWeatherStatsEndpoint:
         body = response.json()
         assert body["record_count"] == 3
         assert body["temperature"]["avg"] == 25.0
+
+
+# ───── DIŞ API ENTEGRASYONU (HTTPX MOCK) ─────────────────────────────────────
+
+
+class TestFetchCurrentWeather:
+    """`fetch_current_weather` async metodu — API key yok ve var path'leri."""
+
+    def test_returns_demo_when_no_api_key(self, service, monkeypatch):
+        """API key boşsa httpx çağrılmadan demo veri dönmeli."""
+        service.api_key = None
+        result = asyncio.run(service.fetch_current_weather(40.0, 33.0))
+        # Demo veri tüm alanları içerir
+        assert "temperature_c" in result
+        assert "humidity_percent" in result
+        assert "recorded_at" in result
+
+    def test_calls_httpx_when_api_key_set(self, service, monkeypatch):
+        """API key set edilmişse httpx.AsyncClient.get çağrılmalı."""
+        service.api_key = "test-key"
+
+        # httpx.AsyncClient'i mock'la
+        fake_response = MagicMock()
+        fake_response.json.return_value = {
+            "main": {"temp": 18.5, "humidity": 70},
+            "wind": {"speed": 4.0},
+            "rain": {"1h": 1.2},
+            "clouds": {"all": 30},
+        }
+        fake_response.raise_for_status = MagicMock()
+
+        fake_client = MagicMock()
+        fake_client.__aenter__ = AsyncMock(return_value=fake_client)
+        fake_client.__aexit__ = AsyncMock(return_value=None)
+        fake_client.get = AsyncMock(return_value=fake_response)
+
+        monkeypatch.setattr(
+            "app.services.weather_service.httpx.AsyncClient",
+            lambda **kwargs: fake_client,
+        )
+
+        result = asyncio.run(service.fetch_current_weather(40.0, 33.0))
+
+        assert result["temperature_c"] == 18.5
+        assert result["humidity_percent"] == 70
+        assert result["precipitation_mm"] == 1.2
+        fake_client.get.assert_called_once()
+
+
+class TestFetchForecast:
+    """`fetch_forecast` async metodu — demo ve gerçek API path'leri."""
+
+    def test_returns_demo_list_when_no_api_key(self, service):
+        """API key boşsa N×8 demo kayıtlık liste dönmeli."""
+        service.api_key = None
+        result = asyncio.run(service.fetch_forecast(40.0, 33.0, days=2))
+        # 2 gün × 8 = 16 kayıt
+        assert len(result) == 16
+        assert all("temperature_c" in r for r in result)
+
+    def test_transforms_api_list_when_api_key_set(self, service, monkeypatch):
+        """API key varsa list[dict] döndürmeli — her item _transform'dan geçer."""
+        service.api_key = "test-key"
+        fake_response = MagicMock()
+        fake_response.json.return_value = {
+            "list": [
+                {"main": {"temp": 22.0, "humidity": 60}, "wind": {"speed": 3.0}, "rain": {}, "clouds": {"all": 20}},
+                {
+                    "main": {"temp": 24.0, "humidity": 55},
+                    "wind": {"speed": 4.0},
+                    "rain": {"3h": 0.5},
+                    "clouds": {"all": 60},
+                },
+            ]
+        }
+        fake_response.raise_for_status = MagicMock()
+
+        fake_client = MagicMock()
+        fake_client.__aenter__ = AsyncMock(return_value=fake_client)
+        fake_client.__aexit__ = AsyncMock(return_value=None)
+        fake_client.get = AsyncMock(return_value=fake_response)
+
+        monkeypatch.setattr(
+            "app.services.weather_service.httpx.AsyncClient",
+            lambda **kwargs: fake_client,
+        )
+
+        result = asyncio.run(service.fetch_forecast(40.0, 33.0))
+        assert len(result) == 2
+        assert result[0]["temperature_c"] == 22.0
+        assert result[1]["precipitation_mm"] == 0.5
+
+
+class TestSaveWeatherRecord:
+    """`save_weather_record` veri temizleme + DB persistence akışı."""
+
+    def test_persists_cleaned_filled_record(self, service, db, client):
+        """Temizleme + doldurma + DB INSERT akışı tutarlı çalışmalı."""
+        # client fixture seed çalıştırarak farm_id=1'i hazırlar
+        # Ham veri eksik alan + sınır ihlali içeriyor
+        raw = {
+            "temperature_c": 200,  # sınır ihlali → 60'a clip
+            "humidity_percent": -5,  # negatif → 0
+            "precipitation_mm": None,  # None → fill default
+        }
+        record = service.save_weather_record(db, farm_id=1, data=raw)
+
+        assert record.id is not None
+        assert record.temperature_c == 60.0  # clipped
+        assert record.humidity_percent == 0.0  # clipped from negative
+        assert record.precipitation_mm == 0.0  # filled default
