@@ -52,6 +52,19 @@ API çalışınca şu adreslerde erişebilirsin:
 - 📖 **Swagger Docs:** http://localhost:8000/docs
 - 📊 **Dashboard:** http://localhost:8000/dashboard
 
+### 🌐 Production Deploy (HTTPS + nginx + Let's Encrypt)
+
+Cycle 8'de eklenen prod-hazır şablon — `nginx` reverse proxy önünde TLS termination, otomatik Let's Encrypt sertifika alma, opsiyonel PostgreSQL profili. Kurulum adımları için: **[`docs/setup/PROD_DEPLOY.md`](docs/setup/PROD_DEPLOY.md)**
+
+```bash
+# Hızlı bakış
+docker compose up -d nginx api                    # API + reverse proxy
+docker compose --profile letsencrypt run --rm \    # SSL cert
+  certbot certonly --webroot -w /var/www/certbot ...
+docker compose --profile postgres up -d db         # PostgreSQL'e geçiş
+docker compose exec api alembic upgrade head       # Migration uygula
+```
+
 ---
 
 ## 🌟 Temel Özellikler

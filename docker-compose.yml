@@ -1,33 +1,100 @@
-version: '3.8'
+# SFDAP Docker Compose
+# =======================
+# Default profil (`docker compose up`):
+#   - api       → FastAPI uygulamasi
+#   - nginx     → TLS termination + reverse proxy (80, 443)
+#
+# Opt-in profiller:
+#   - postgres  → PostgreSQL servisi (`docker compose --profile postgres up`)
+#   - letsencrypt → certbot, ilk SSL sertifikasi alma (`docker compose --profile letsencrypt up certbot`)
+#
+# Production deploy adimlari icin: docs/setup/PROD_DEPLOY.md
 
 services:
   api:
     build: .
     container_name: sfdap_api
-    ports:
-      - "8000:8000"
+    # Production'da harici porta direkt acilmaz; nginx onunde proxy yapar.
+    # Local debug icin yorumdan cikarip 8000:8000 mapping'i ekleyebilirsiniz.
+    expose:
+      - "8000"
     environment:
-      - ENVIRONMENT=production
-      - API_KEY=dev-api-key
-      # To switch to PostgreSQL, uncomment the lines below and use the db service
-      # - DATABASE_URL=postgresql://sfdap_user:sfdap_password@db:5432/sfdap_db
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - API_KEY=${API_KEY:-dev-api-key}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - API_HOST=0.0.0.0
+      # PostgreSQL'e gecmek icin .env'de DATABASE_URL'i set'leyin:
+      # DATABASE_URL=postgresql://sfdap_user:sfdap_password@db:5432/sfdap_db
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./sfdap_dev.db}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://${DOMAIN:-localhost}}
     volumes:
       - .:/app
-      - /app/venv
+      - /app/.venv
     restart: unless-stopped
+    networks:
+      - sfdap_net
 
-  # db:
-  #   image: postgres:15-alpine
-  #   container_name: sfdap_db
-  #   environment:
-  #     - POSTGRES_USER=sfdap_user
-  #     - POSTGRES_PASSWORD=sfdap_password
-  #     - POSTGRES_DB=sfdap_db
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   restart: unless-stopped
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: sfdap_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Template auto-processing (nginx 1.19+): ${DOMAIN} substitute edilir
+      - ./nginx/conf.d:/etc/nginx/templates:ro
+      # Let's Encrypt sertifikalari (certbot tarafindan yazilir)
+      - certbot_etc:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - sfdap_net
+
+  # ─── certbot (Let's Encrypt) — opt-in profil ────────────────────
+  # Ilk sertifika alma:
+  #   docker compose --profile letsencrypt run --rm certbot \
+  #     certonly --webroot -w /var/www/certbot -d ${DOMAIN} --email ${EMAIL} --agree-tos --no-eff-email
+  # Yenileme (90 gunde bir; cron'la otomatize):
+  #   docker compose --profile letsencrypt run --rm certbot renew
+  certbot:
+    image: certbot/certbot:latest
+    container_name: sfdap_certbot
+    profiles: ["letsencrypt"]
+    volumes:
+      - certbot_etc:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: certbot
+    networks:
+      - sfdap_net
+
+  # ─── PostgreSQL — opt-in profil ─────────────────────────────────
+  # Aktivasyon: docker compose --profile postgres up
+  # Migration: docker compose exec api alembic upgrade head
+  db:
+    image: postgres:16-alpine
+    container_name: sfdap_db
+    profiles: ["postgres"]
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-sfdap_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sfdap_password}
+      - POSTGRES_DB=${POSTGRES_DB:-sfdap_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - sfdap_net
 
 volumes:
   postgres_data:
+  certbot_etc:
+  certbot_www:
+
+networks:
+  sfdap_net:
+    driver: bridge
