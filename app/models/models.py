@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -87,6 +87,44 @@ class SoilMoistureReading(Base):
     sensor = relationship("Sensor", back_populates="readings")
 
     __table_args__ = (Index("ix_readings_sensor_timestamp", "sensor_id", "reading_timestamp"),)
+
+
+class SensorReadingMonthlyAggregate(Base):
+    """30 günden eski sensör okumalarının aylık özeti.
+
+    `sensor_archiver.archive_old_readings` periyodik görevi tarafından
+    doldurulur; orijinal `SoilMoistureReading` satırları aggregate'e
+    yansıdıktan sonra silinir. (sensor_id, year, month) bazlı tek satır
+    garantilidir (UniqueConstraint).
+
+    EN: Monthly aggregate of soil-moisture readings older than 30 days.
+    Populated by sensor_archiver.archive_old_readings; the source rows
+    are deleted after a successful archive. Idempotent via the
+    (sensor_id, year, month) unique constraint.
+    """
+
+    __tablename__ = "sensor_reading_monthly_aggregates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)  # 1–12
+
+    reading_count = Column(Integer, nullable=False)
+    moisture_avg = Column(Float, nullable=False)
+    moisture_min = Column(Float, nullable=False)
+    moisture_max = Column(Float, nullable=False)
+    soil_temperature_avg = Column(Float)
+    soil_temperature_min = Column(Float)
+    soil_temperature_max = Column(Float)
+    electrical_conductivity_avg = Column(Float)
+
+    archived_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("sensor_id", "year", "month", name="uq_sensor_reading_aggregate_month"),
+        Index("ix_sensor_reading_aggregate_year_month", "year", "month"),
+    )
 
 
 class WeatherData(Base):

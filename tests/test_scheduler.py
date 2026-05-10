@@ -59,18 +59,20 @@ def farms_setup(db):
 class TestStartScheduler:
     """`start_scheduler()` add_job + start davranışı."""
 
-    def test_adds_job_and_starts_when_not_running(self, monkeypatch):
+    def test_adds_jobs_and_starts_when_not_running(self, monkeypatch):
         mock_scheduler = MagicMock()
         mock_scheduler.running = False
         monkeypatch.setattr(scheduler_module, "scheduler", mock_scheduler)
 
         scheduler_module.start_scheduler()
 
-        mock_scheduler.add_job.assert_called_once()
-        # Job ID kontrolü — replace_existing=True olmalı
-        kwargs = mock_scheduler.add_job.call_args.kwargs
-        assert kwargs["id"] == "fetch_daily_weather"
-        assert kwargs["replace_existing"] is True
+        # 2 job eklenmeli: fetch_daily_weather + archive_old_sensor_readings
+        assert mock_scheduler.add_job.call_count == 2
+        registered_ids = {call.kwargs["id"] for call in mock_scheduler.add_job.call_args_list}
+        assert registered_ids == {"fetch_daily_weather", "archive_old_sensor_readings"}
+        # Tüm job'lar replace_existing=True ile eklenmeli
+        for call in mock_scheduler.add_job.call_args_list:
+            assert call.kwargs["replace_existing"] is True
         mock_scheduler.start.assert_called_once()
 
     def test_skips_start_if_already_running(self, monkeypatch):
@@ -81,8 +83,50 @@ class TestStartScheduler:
         scheduler_module.start_scheduler()
 
         # add_job hâlâ çağrılır (replace_existing) ama start çağrılmaz
-        mock_scheduler.add_job.assert_called_once()
+        assert mock_scheduler.add_job.call_count == 2
         mock_scheduler.start.assert_not_called()
+
+
+class TestArchiveJob:
+    """`archive_old_sensor_readings_job` wrapper davranışı."""
+
+    def test_calls_archive_old_readings_with_session(self, db, monkeypatch):
+        """Job test session ile archive_old_readings'i çağırmalı."""
+
+        called_with = {}
+
+        def fake_archive(session, cutoff_days=30):
+            called_with["session"] = session
+            from datetime import UTC, datetime, timedelta
+
+            from app.services.sensor_archiver import ArchiveResult
+
+            return ArchiveResult(
+                aggregates_written=0,
+                readings_deleted=0,
+                cutoff=datetime.now(UTC) - timedelta(days=cutoff_days),
+            )
+
+        # scheduler modülündeki referansı override et (sensor_archiver'dan import edilmiş)
+        monkeypatch.setattr(scheduler_module, "archive_old_readings", fake_archive)
+        monkeypatch.setattr(scheduler_module, "get_db", lambda: iter([db]))
+
+        scheduler_module.archive_old_sensor_readings_job()
+        assert called_with["session"] is db
+
+    def test_swallows_exception_and_closes_db(self, monkeypatch):
+        """Archive hata atsa job exception fırlatmamalı, db.close() yine çağrılmalı."""
+        bad_db = MagicMock()
+
+        def fake_archive(_session, cutoff_days=30):
+            raise RuntimeError("DB unreachable")
+
+        monkeypatch.setattr(scheduler_module, "archive_old_readings", fake_archive)
+        monkeypatch.setattr(scheduler_module, "get_db", lambda: iter([bad_db]))
+
+        # Exception sessizce yakalanır
+        scheduler_module.archive_old_sensor_readings_job()
+        bad_db.close.assert_called_once()
 
 
 class TestShutdownScheduler:
