@@ -86,7 +86,7 @@
 | ORM tablo sayısı | **14** |
 | Pydantic schema sayısı | 25+ |
 | Toplam test | **246** (Cycle 4'te 41 → +205, 20 dosya) |
-| Test coverage | %86 (eşik %80, Cycle 8 hedefi %95) |
+| Test coverage | %94.67 (eşik %80, shiftFinal hedefi %95+ resmî tutuş) |
 | Cycle 6 commit sayısı | 33 (Cycle 5 sonrasından) |
 | Bitki türü | 17 (Türkiye'nin 7 coğrafi bölgesi için) |
 | Çiftlik kapsamı | 81 il × 2 tarla = 162 tarla |

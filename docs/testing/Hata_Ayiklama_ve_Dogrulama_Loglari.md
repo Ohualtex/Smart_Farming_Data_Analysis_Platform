@@ -42,9 +42,9 @@ Geliştirme aşamasında tespit edilen ve sisteme entegre edilen iyileştirmeler
 ## 3. 🛡️ Validasyon ve Güvenilirlik Kanıtları
 
 Sistemin kararlılığını ölçmek için yapılan stres testlerinde şu veriler elde edilmiştir:
-- **Test Suite:** 246 test (20 dosya) `pytest` üzerinde yeşil; CI pipeline'da Ruff + Pytest sürekli koşuyor.
-- **Coverage:** %86 (eşik %80; en zayıf modüller `tasks/scheduler.py` ve `weather_service.py` Cycle 8 hedefinde).
-- **Eşzamanlı İstek:** TestClient üzerinden ardışık atılan 10 istekte veri kaybı yaşanmadı; concurrent insert race testi Cycle 8 edge-case paketinde planlı.
+- **Test Suite:** 290 test (22 dosya) `pytest` üzerinde yeşil; CI pipeline'da Ruff + Pytest sürekli koşuyor.
+- **Coverage:** %94.67 (eşik %80; shiftFinal hedefi %95+ resmî tutuş — kalan zayıf modüller `app/routers/metrics.py` ve `app/services/report_service.py`).
+- **Eşzamanlı İstek:** TestClient üzerinden ardışık atılan 10 istekte veri kaybı yaşanmadı; concurrent insert race testi shiftFinal edge-case paketinde planlı.
 - **Güvenlik Duvarı:** API Key koruması FastAPI Dependency Injection katmanında çalıştığı için yetkisiz erişim handler fonksiyonlarına erişemeden 401/403 ile reddedilir.
 - **Hata Mesajı Standardizasyonu:** Tüm hatalar (`401`, `403`, `404`, `422`, `5xx`) Cycle 5 global exception handler'ı üzerinden tutarlı `{error_code, message, detail}` formatında döner.
 

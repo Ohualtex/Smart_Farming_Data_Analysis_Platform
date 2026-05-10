@@ -69,13 +69,13 @@ Testler sırasında tespit edilen ve projenin güvenilirliğini artırmak için 
 Sistemin 31 Mayıs 2026 teslim tarihi öncesi son metrikleri şöyledir:
 *   **Ortalama Yanıt Süresi:** ~12 ms (yerel TestClient + in-memory SQLite üzerinde).
 *   **Güvenlik Katmanı Gecikmesi:** < 1 ms (API Key doğrulaması sistem performansını etkilememektedir).
-*   **Toplam Test Sayısı:** **246** (20 dosya, `pytest`).
-*   **Code Coverage:** **%86** (eşik %80; Cycle 8 hedefi %95+).
-*   **Geçen Test Oranı:** %100 (CI üzerinde tüm 246 test yeşil).
+*   **Toplam Test Sayısı:** **290** (22 dosya, `pytest`).
+*   **Code Coverage:** **%94.67** (eşik %80; shiftFinal hedefi %95+ resmî tutuş).
+*   **Geçen Test Oranı:** %100 (CI üzerinde tüm 290 test yeşil).
 *   **Linter Durumu:** Ruff — All checks passed.
 
 ## 6. 🏁 Sonuç
-Hafta 6 kapsamında yürütülen test ve validasyon faaliyetleri sonucunda, Akıllı Tarım Veri Analizi Platformu'nun teknik olarak kararlı çalıştığı, veri güvenliğini sağladığı ve hatalı girdilere karşı dayanıklı olduğu doğrulanmıştır. Cycle 8'de **rate limiting bağlama**, **JWT auth backend**, **edge-case testleri** ve **coverage %95+** çalışmaları ile prod-hazır seviyeye taşınacaktır.
+Hafta 6 kapsamında yürütülen test ve validasyon faaliyetleri sonucunda, Akıllı Tarım Veri Analizi Platformu'nun teknik olarak kararlı çalıştığı, veri güvenliğini sağladığı ve hatalı girdilere karşı dayanıklı olduğu doğrulanmıştır. Cycle 8'de **rate limiting bağlama**, **JWT auth backend**, **N+1 fix**, **Alembic migration** ve **HTTPS reverse proxy** çalışmaları tamamlandı; `shiftFinal` bridge sprint'inde **edge-case testleri**, **coverage %95+ resmî tutuş**, **Sentry/Prometheus gözlemlenebilirlik** ve **frontend a11y** ile prod-hazır seviyeye taşınacaktır.
 
 ---
 **Onaylayan:** Mehmet Sait Taysi

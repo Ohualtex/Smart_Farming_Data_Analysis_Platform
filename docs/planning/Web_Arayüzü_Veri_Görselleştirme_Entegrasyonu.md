@@ -2,7 +2,7 @@
 
 > ⚠️ **TARİHSEL DOKÜMAN — Cycle 4 (Hafta 4) çıktısı.**
 > Bu rapor dashboard'un ilk prototip aşamasını belgeler (Chart.js + line chart).
-> **Güncel frontend mimarisi için** [`docs/frontend/Frontend_Kılavuzu.md`](../frontend/Frontend_Kılavuzu.md) ve [`docs/architecture.md`](../architecture.md) bölümlerine bakınız (6 sayfalı SPA, 81 il bölge filtresi, Filiz mascot, Cycle 8 Vite bundling planı dahil).
+> **Güncel frontend mimarisi için** [`docs/frontend/Frontend_Kılavuzu.md`](../frontend/Frontend_Kılavuzu.md) ve [`docs/architecture.md`](../architecture.md) bölümlerine bakınız (6 sayfalı SPA, 81 il bölge filtresi, Filiz mascot, shiftFinal Vite bundling planı dahil).
 
 ---
 

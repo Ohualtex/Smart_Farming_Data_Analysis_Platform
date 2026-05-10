@@ -23,7 +23,7 @@ make run                # ya da: uvicorn app.main:app --reload
 İki paralel mekanizma çalışır:
 
 1. **`X-API-Key` header** — eski/admin yazma endpoint'leri (POST/DELETE/PATCH) için. Okuma (GET) auth gerektirmez.
-2. **`Authorization: Bearer <token>` header** — `/api/auth/*` skeleton (Cycle 7) ile elde edilen kullanıcı token'ı için. Cycle 8'de JWT'ye geçecek.
+2. **`Authorization: Bearer <token>` header** — `/api/auth/*` ile elde edilen kullanıcı token'ı için. Cycle 7 skeleton (sha256+salt + in-memory dict) Cycle 8'de bcrypt + HS256 JWT'ye yükseltildi.
 
 | Ortam | API Key |
 |:------|:--------|
