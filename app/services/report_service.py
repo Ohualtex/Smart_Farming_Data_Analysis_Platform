@@ -47,21 +47,19 @@ class ReportService:
             counts_df.to_excel(writer, sheet_name="Genel Ozet", index=False)
 
             # 2. Ciftlik Hava Durumu
-            weather_data = data.get("farm_weather_comparison", [])
-            # Icerideki dict'leri flatten etmek icin
-            flat_weather = []
-            for w in weather_data:
-                flat_weather.append(
-                    {
-                        "Farm ID": w.get("farm_id"),
-                        "Farm Name": w.get("farm_name"),
-                        "City": w.get("city"),
-                        "Temp Avg (C)": w.get("temperature", {}).get("avg"),
-                        "Humidity Avg (%)": w.get("humidity", {}).get("avg"),
-                        "Precipitation (mm)": w.get("precipitation_total_mm"),
-                        "Records": w.get("record_count"),
-                    }
-                )
+            # Icerideki dict'leri flatten etmek icin (list comprehension)
+            flat_weather = [
+                {
+                    "Farm ID": w.get("farm_id"),
+                    "Farm Name": w.get("farm_name"),
+                    "City": w.get("city"),
+                    "Temp Avg (C)": w.get("temperature", {}).get("avg"),
+                    "Humidity Avg (%)": w.get("humidity", {}).get("avg"),
+                    "Precipitation (mm)": w.get("precipitation_total_mm"),
+                    "Records": w.get("record_count"),
+                }
+                for w in data.get("farm_weather_comparison", [])
+            ]
             pd.DataFrame(flat_weather).to_excel(writer, sheet_name="Hava Durumu", index=False)
 
             # 3. Sensor Dagilimi

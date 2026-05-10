@@ -194,7 +194,7 @@ class TestDriftDetection:
         db.commit()
 
         resp = client.get(
-            "/api/model-performance/drift/drift_test_model" "?recent_days=7&baseline_days=30&threshold_percent=10"
+            "/api/model-performance/drift/drift_test_model?recent_days=7&baseline_days=30&threshold_percent=10"
         )
         assert resp.status_code == 200
         data = resp.json()

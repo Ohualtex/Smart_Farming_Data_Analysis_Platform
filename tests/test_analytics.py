@@ -288,6 +288,6 @@ def test_analytics_summary_avoids_n_plus_one(client, db):
 
     # Beklenen: 1 (count) + 1 (since-filtreli SELECT) ≤ 3 (kompare bağı için tolerans)
     # N+1 olsaydı: 1 + 2*3 = 7 sorgu (3 farm × 2 döngü)
-    assert (
-        len(weather_data_queries) <= 3
-    ), f"N+1 olabilir: WeatherData üzerinde {len(weather_data_queries)} SELECT sorgusu yapıldı."
+    assert len(weather_data_queries) <= 3, (
+        f"N+1 olabilir: WeatherData üzerinde {len(weather_data_queries)} SELECT sorgusu yapıldı."
+    )

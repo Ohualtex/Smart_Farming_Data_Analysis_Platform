@@ -1,17 +1,32 @@
+# Pre-commit hook'ları — `pre-commit install` ile kur, her commit'te çalışır.
+# CI'da da aynı kurallar (.github/workflows/ci.yml + security.yml).
+# Cycle 8 audit'inde bandit eklendi, Ruff modern sürüme yükseltildi.
+
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-yaml
     -   id: check-added-large-files
+    -   id: check-merge-conflict
+    -   id: detect-private-key
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.0
+    rev: v0.13.0
     hooks:
-    # Run the linter.
+    # Linter — pyproject.toml'daki kural setiyle aynı (DTZ, S, TRY, vs)
     -   id: ruff
-        args: [ --fix ]
-    # Run the formatter.
+        args: [--fix]
+    # Formatter
     -   id: ruff-format
+
+-   repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+    -   id: bandit
+        # CI'daki security.yml ile aynı seviye eşik — sadece app/ taranır.
+        args: ["-r", "app/", "--severity-level", "medium", "--confidence-level", "medium"]
+        files: ^app/
+        pass_filenames: false

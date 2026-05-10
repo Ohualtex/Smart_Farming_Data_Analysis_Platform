@@ -238,7 +238,7 @@ class PlantDiseaseModel:
 
     @staticmethod
     def _error_response(message: str) -> dict:
-        all_scores = {c: 0.0 for c in DISEASE_CLASSES}
+        all_scores = dict.fromkeys(DISEASE_CLASSES, 0.0)
         all_scores["healthy"] = 0.0
         return {
             "diagnosis": "unknown",

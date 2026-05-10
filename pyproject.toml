@@ -39,6 +39,7 @@ line-length = 120
 
 [tool.ruff.lint]
 select = [
+    # Mevcut çekirdek
     "E",    # pycodestyle errors
     "W",    # pycodestyle warnings
     "F",    # pyflakes
@@ -47,15 +48,36 @@ select = [
     "UP",   # pyupgrade
     "B",    # flake8-bugbear
     "SIM",  # flake8-simplify
+    # Cycle 8 audit'inde aktif edilen ek kümler (low-noise, high-value)
+    "DTZ",  # datetime tz-awareness — naive datetime'ı yakalar
+    "ERA",  # commented-out code
+    "PT",   # pytest style
+    "RET",  # return statement anti-patterns
+    "C4",   # comprehensions
+    "PIE",  # flake8-pie misc
+    "PERF", # performance hints
+    "TRY",  # try/except patterns
+    "S",    # bandit subset — basic security
 ]
 ignore = [
-    "E501",   # satır uzunluğu (line-length ile yönetiliyor)
-    "B008",   # Depends() function call in argument defaults (FastAPI pattern)
-    "N805",   # first argument of a method should be named 'self' (Pydantic validators)
+    "E501",    # satır uzunluğu (line-length ile yönetiliyor)
+    "B008",    # Depends() function call in argument defaults (FastAPI pattern)
+    "N805",    # first argument of a method should be named 'self' (Pydantic validators)
+    "TRY003",  # raise vanilla args (HTTPException pattern projede standart)
+    "TRY300",  # try-consider-else (mevcut kod stili)
+    "S105",    # hardcoded "bearer" / token_type gibi sabitler false positive
+    "S106",    # dev/test API key argümanları
+    "S311",    # random.* — kriptografik olmayan kullanımlar OK
+    "PERF203", # try-except in loop (FastAPI per-farm akışları için OK)
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["B011", "SIM"]   # test dosyalarında assert True/False ve basit yapılar OK
+# tests/: assert True/False, hardcoded test verileri, naive datetime OK
+"tests/*"           = ["B011", "SIM", "S101", "S106", "PT003", "ARG", "DTZ", "PERF"]
+# alembic auto-generated migration dosyaları: stil iyileştirmesi gereksiz
+"alembic/versions/*" = ["UP", "I", "D"]
+# scripts/: standalone CLI script'ler — print + esneklik
+"scripts/*"         = ["T201", "S101", "S311"]
 
 [tool.ruff.format]
 quote-style = "double"

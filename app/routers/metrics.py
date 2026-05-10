@@ -51,8 +51,14 @@ def _check_db(db: Session) -> dict:
                 if callable(getattr(pool, "checkedout", None))
                 else None,
             }
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # Pool detayları opsiyonel — alınamadıysa sadece debug log,
+            # /health/deep yine ok döner.
+            # EN: Optional pool details; if introspection fails, just debug log
+            # and let /health/deep proceed with status=ok.
+            from loguru import logger as _logger
+
+            _logger.debug(f"engine_info introspection failed: {exc}")
         return {"status": "ok", "latency_ms": latency_ms, **engine_info}
     except SQLAlchemyError as e:
         return {"status": "fail", "error": str(e)[:200]}
@@ -66,16 +72,15 @@ def _check_scheduler() -> dict:
         if not scheduler.running:
             return {"status": "stopped", "running": False, "jobs": []}
 
-        jobs = []
-        for job in scheduler.get_jobs():
-            jobs.append(
-                {
-                    "id": job.id,
-                    "name": job.name,
-                    "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
-                    "trigger": str(job.trigger),
-                }
-            )
+        jobs = [
+            {
+                "id": job.id,
+                "name": job.name,
+                "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
+                "trigger": str(job.trigger),
+            }
+            for job in scheduler.get_jobs()
+        ]
         return {"status": "ok", "running": True, "job_count": len(jobs), "jobs": jobs}
     except Exception as e:  # noqa: BLE001
         return {"status": "fail", "error": str(e)[:200]}

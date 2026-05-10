@@ -7,10 +7,18 @@ pytest>=8.0.0
 pytest-cov>=4.1.0
 
 # Linting & Formatting
-ruff>=0.3.0
+# Cycle 8 audit'inde 0.3 → 0.13'e yükseltildi (modern kural setleri)
+ruff>=0.13.0
 
 # HTTP testing (FastAPI TestClient)
 httpx>=0.27.0
 
 # Pre-commit hooks
 pre-commit>=3.6.0
+
+# Cycle 8 — Security audit toolchain
+# bandit  : Python source security scanner (CWE pattern detection)
+# pip-audit: dependency CVE scanner (PyPI advisory DB)
+# CI'da .github/workflows/security.yml tarafından kullanılır.
+bandit[toml]>=1.7.5
+pip-audit>=2.7.0

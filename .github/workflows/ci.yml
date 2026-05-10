@@ -2,18 +2,25 @@
 # SFDAP — CI/CD Pipeline
 # ============================================================
 # Her push ve Pull Request'te otomatik olarak:
-#   1. Kod kalitesi kontrolü (Ruff linter)
-#   2. Testleri çalıştırma (pytest)
-#   3. Test coverage raporu oluşturma (pytest-cov)
+#   1. Kod kalitesi kontrolü (Ruff lint + format)
+#   2. Testleri çalıştırma (pytest, 301+ test)
+#   3. Test coverage raporu (HTML + XML artifact)
+#   4. Alembic migration smoke test (boş DB → upgrade head)
+#
+# Security taramaları için: bkz. .github/workflows/security.yml
 # ============================================================
 
 name: SFDAP CI Pipeline
 
 on:
   push:
-    branches: [ main, cycle_5, cycle_6, cycle_7, cycle_8 ]
+    branches: [main, cycle_8]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   lint:
@@ -30,13 +37,14 @@ jobs:
           python-version: "3.12"
 
       - name: 📦 Ruff kur
-        run: pip install ruff
+        # Pre-commit ve dev ortamı ile aynı sürüm aralığı
+        run: pip install "ruff>=0.13.0"
 
       - name: 🔍 Linting kontrolü
-        run: ruff check app/ tests/ --output-format=github
+        run: ruff check app/ tests/ alembic/ --output-format=github
 
       - name: 🎨 Format kontrolü
-        run: ruff format --check app/ tests/
+        run: ruff format --check app/ tests/ alembic/
 
   test:
     name: 🧪 Test & Coverage
@@ -65,13 +73,53 @@ jobs:
             --cov=app \
             --cov-report=term-missing \
             --cov-report=html:coverage_report \
-            --cov-fail-under=80 \
-            -v
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=80
+        # NOT: pyproject.toml addopts içinde -v zaten var; CI'da
+        # tekrar -v eklemiyoruz (gereksiz log).
 
-      - name: 📊 Coverage raporunu yükle
+      - name: 📊 HTML coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage_report/
           retention-days: 14
+
+      - name: 📈 XML coverage artifact (Codecov uyumlu)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          retention-days: 14
+
+  migrations:
+    name: 🗄️ Alembic Migration Smoke
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: 📥 Kodu indir
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: 📦 Bağımlılıkları kur
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Boş bir SQLite DB üzerinde tüm migration'ları uygula —
+      # autogenerate sonrası migration script'lerinin çalışabilirliği
+      # (örn. SoilAnalysis, sensor_reading_monthly_aggregates) garantilenir.
+      - name: 🚀 alembic upgrade head (boş DB)
+        env:
+          DATABASE_URL: "sqlite:///./_ci_migration_test.db"
+        run: |
+          alembic upgrade head
+          alembic current

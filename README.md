@@ -267,7 +267,7 @@ make format
 | Metrik | Değer |
 |:-------|:------|
 | Toplam Test | 246 |
-| Coverage | %94.67 (eşik %80, shiftFinal hedefi %95+ resmî tutuş) |
+| Coverage | %94.42 (eşik %80, shiftFinal hedefi %95+ resmî tutuş — bkz. [QUALITY_AUDIT.md](docs/QUALITY_AUDIT.md)) |
 | Linting | Ruff (All checks passed) |
 | CI/CD | GitHub Actions (Ruff + Pytest) |
 

@@ -234,4 +234,4 @@ def logout(request: Request, authorization: str = Header(default="")):
         token = authorization[7:]
         if token:
             _BLACKLISTED_TOKENS.add(token)
-    return None
+    return
