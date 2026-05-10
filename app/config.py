@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     API_KEY: str = _DEV_API_KEY
     SECRET_KEY: str = _DEV_SECRET_KEY
 
+    # JWT (Cycle 8) — kullanıcı bazlı bearer token üretimi
+    # JWT user-based bearer token settings.
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_HOURS: int = 24
+
     # ─── Dış servisler ─────────────────────────────────────────
     OPENWEATHERMAP_API_KEY: str | None = None
 
