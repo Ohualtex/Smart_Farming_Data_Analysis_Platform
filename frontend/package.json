@@ -1,0 +1,16 @@
+{
+  "name": "sfdap-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SFDAP Dashboard — Vite build scaffold (shiftFinal A3, Ecenur)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "a11y:axe": "echo 'axe-core wiring is owned by Ayse, shiftFinal observability/QA paketi'"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

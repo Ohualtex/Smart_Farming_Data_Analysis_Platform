@@ -196,9 +196,41 @@ tr:hover td { background: var(--surface-2); }
 .result-card .value { font-size: 2rem; font-weight: 700; }
 
 /* ─── LOADING / EMPTY ────────────────────────────── */
+/* shiftFinal A3 — Ecenur: skeleton loaders + a11y states.
+   EN / TR: Reduced motion respects user preference; skeleton becomes static. */
 .skeleton { background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
-    background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius-sm); }
+    background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius-sm); display: block; }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) {
+    .skeleton { animation: none; }
+}
+/* Skeleton variants — match the shape of the real content they replace */
+.skeleton-card { padding: 24px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); }
+.skeleton-card .skeleton { margin-bottom: 10px; }
+.skeleton-line { height: 14px; width: 100%; }
+.skeleton-line.sm { height: 10px; width: 60%; }
+.skeleton-line.lg { height: 28px; width: 40%; }
+.skeleton-line.xs { height: 8px; width: 30%; }
+.skeleton-row td { padding: 14px 12px; }
+.skeleton-row .skeleton { height: 14px; }
+
+/* Screen-reader only utility (a11y) */
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+/* Skip to main-content link — visible only on keyboard focus */
+.skip-link {
+    position: absolute; left: -9999px; top: 8px; z-index: 9999;
+    background: var(--primary); color: var(--bg); padding: 10px 16px;
+    border-radius: var(--radius-sm); font-weight: 600; text-decoration: none;
+}
+.skip-link:focus { left: 16px; outline: 3px solid var(--accent-cyan); outline-offset: 2px; }
+
+/* Improve focus visibility (keyboard a11y) */
+:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; border-radius: 4px; }
+button:focus-visible, .nav-item:focus-visible, a:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
+
 .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
 
@@ -1215,6 +1247,11 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
 </head>
 <body>
 <!-- ═══ ARKA PLAN YÜZEN YAPRAKLAR ═══ -->
+<!-- Skip-to-content link — appears on keyboard focus (Tab from page top).
+     EN / TR: a11y best practice; screen reader + keyboard users can jump
+     past the sidebar and theme toggle to land directly on the page body. -->
+<a class="skip-link" href="#main-content">Ana içeriğe geç</a>
+
 <div class="bg-leaves" aria-hidden="true">
     <div class="bg-leaf"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg></div>
     <div class="bg-leaf"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg></div>
@@ -1230,33 +1267,33 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             <h1>🌾 <span>SFDAP</span></h1>
             <p>Akıllı Tarım Veri Analizi</p>
         </div>
-        <nav class="sidebar-nav">
-            <a class="nav-item active" href="#dashboard" onclick="navigate('dashboard')">
-                <span class="icon">📊</span> Genel Bakış
+        <nav class="sidebar-nav" aria-label="Ana menü">
+            <a class="nav-item active" href="#dashboard" onclick="navigate('dashboard')" aria-current="page">
+                <span class="icon" aria-hidden="true">📊</span> Genel Bakış
             </a>
             <a class="nav-item" href="#weather" onclick="navigate('weather')">
-                <span class="icon">🌤️</span> Hava Durumu
+                <span class="icon" aria-hidden="true">🌤️</span> Hava Durumu
             </a>
             <a class="nav-item" href="#irrigation" onclick="navigate('irrigation')">
-                <span class="icon">💧</span> Sulama
+                <span class="icon" aria-hidden="true">💧</span> Sulama
             </a>
             <a class="nav-item" href="#fertilizer" onclick="navigate('fertilizer')">
-                <span class="icon">🌱</span> Gübreleme
+                <span class="icon" aria-hidden="true">🌱</span> Gübreleme
             </a>
             <a class="nav-item" href="#sensors" onclick="navigate('sensors')">
-                <span class="icon">📡</span> Sensörler
+                <span class="icon" aria-hidden="true">📡</span> Sensörler
             </a>
             <a class="nav-item" href="#analytics" onclick="navigate('analytics')">
-                <span class="icon">📈</span> Raporlar
+                <span class="icon" aria-hidden="true">📈</span> Raporlar
             </a>
             <a class="nav-item" href="#plants" onclick="navigate('plants')">
-                <span class="icon">🦠</span> Bitki Sağlığı
+                <span class="icon" aria-hidden="true">🦠</span> Bitki Sağlığı
             </a>
             <a class="nav-item" href="#alerts" onclick="navigate('alerts')">
-                <span class="icon">🚨</span> Uyarılar
+                <span class="icon" aria-hidden="true">🚨</span> Uyarılar
             </a>
             <a class="nav-item" href="#auth" onclick="navigate('auth')">
-                <span class="icon">👤</span> Hesabım
+                <span class="icon" aria-hidden="true">👤</span> Hesabım
             </a>
             <!-- API Rehberi sidebar'dan çıkarıldı, header'a `</>` ikonu olarak taşındı.
                  Çiftçi-dostu UI için: çiftçi sekmeleri ile geliştirici aracını ayır. -->
@@ -1272,7 +1309,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
     <div class="main">
         <header class="header">
             <div style="display:flex;align-items:center;gap:12px;">
-                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <button class="hamburger" onclick="toggleSidebar()" aria-label="Kenar menüyü aç/kapat" aria-controls="sidebar" aria-expanded="false">☰</button>
                 <div class="header-left">
                     <h2 id="pageTitle">Dashboard</h2>
                     <p id="pageSubtitle">Genel Bakış</p>
@@ -1329,7 +1366,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
             </div>
         </header>
 
-        <div class="main-content">
+        <main class="main-content" id="main-content" role="main" tabindex="-1">
             <!-- ═══ DASHBOARD PAGE ═══ -->
             <section class="page active" id="page-dashboard">
                 <div class="hero-banner">
@@ -1343,7 +1380,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                     </div>
                 </div>
                 <div class="section-header">📊 Genel Bakış</div>
-                <div class="cards-grid" id="dashboardCards"></div>
+                <div class="cards-grid" id="dashboardCards" aria-busy="true" aria-live="polite"></div>
                 <div class="section-header">📈 Trendler</div>
                 <div class="charts-row">
                     <div class="chart-box"><h3>💧 Toprak Nemi Trendi</h3><canvas id="moistureChart"></canvas></div>
@@ -1367,8 +1404,10 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                 <div class="table-box scroll-table">
                     <h3>📡 Aktif Sensörler</h3>
                     <div class="scroll-area">
-                        <table><thead><tr><th>ID</th><th>Tip</th><th>Seri No</th><th>Durum</th></tr></thead>
-                        <tbody id="sensorsTable"></tbody></table>
+                        <table>
+                            <caption class="sr-only">Aktif sensörler tablosu — satıra tıklayınca detay grafiği yüklenir.</caption>
+                            <thead><tr><th scope="col">ID</th><th scope="col">Tip</th><th scope="col">Seri No</th><th scope="col">Durum</th></tr></thead>
+                            <tbody id="sensorsTable" aria-busy="true" aria-live="polite"></tbody></table>
                     </div>
                     <div class="pagination-bar">
                         <button class="page-nav-btn" id="sensorsPrevBtn" onclick="loadSensors(sensorsPage - 1)" disabled>◀ Önceki</button>
@@ -1385,7 +1424,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                     <p>81 ildeki çiftliklerden sıcaklık, nem, yağış ve rüzgar bilgilerini görebilirsin. Hava verileri her gün otomatik güncellenir.</p>
                 </div>
                 <div class="section-header">🌡️ Şu Anki Durum</div>
-                <div class="cards-grid" id="weatherCards"></div>
+                <div class="cards-grid" id="weatherCards" aria-busy="true" aria-live="polite"></div>
                 <div class="charts-row">
                     <div class="chart-box"><h3>🌡️ Sıcaklık Trendi</h3><canvas id="weatherTempChart"></canvas></div>
                     <div class="chart-box"><h3>💨 Rüzgar Hızı</h3><canvas id="weatherWindChart"></canvas></div>
@@ -1414,8 +1453,10 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                 <div class="table-box scroll-table">
                     <h3>📋 Sulama Geçmişi</h3>
                     <div class="scroll-area">
-                        <table><thead><tr><th>Tarla</th><th>Tarih</th><th>Süre</th><th>Su (L)</th><th>Durum</th></tr></thead>
-                        <tbody id="irrigationTable"></tbody></table>
+                        <table>
+                            <caption class="sr-only">Sulama geçmişi tablosu</caption>
+                            <thead><tr><th scope="col">Tarla</th><th scope="col">Tarih</th><th scope="col">Süre</th><th scope="col">Su (L)</th><th scope="col">Durum</th></tr></thead>
+                            <tbody id="irrigationTable" aria-busy="true" aria-live="polite"></tbody></table>
                     </div>
                     <div class="pagination-bar">
                         <button class="page-nav-btn" id="irrigationPrevBtn" onclick="loadIrrigation(irrigationPage - 1)" disabled>◀ Önceki</button>
@@ -1487,7 +1528,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                     <p>Türkiye genelindeki çiftlik verilerinin bölge bazında özetini gör. İstersen PDF veya Excel olarak indir, iki farklı dönemi yan yana karşılaştır.</p>
                 </div>
                 <div class="section-header">📊 Sayısal Özet</div>
-                <div class="cards-grid" id="analyticsCards"></div>
+                <div class="cards-grid" id="analyticsCards" aria-busy="true" aria-live="polite"></div>
                 <div class="section-header">🍩 Dağılımlar</div>
                 <div class="charts-row">
                     <div class="chart-box"><h3>🍩 Sensör Türlerine Göre Dağılım</h3><canvas id="sensorTypeChart"></canvas></div>
@@ -1529,7 +1570,7 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                 </div>
                 <div id="plantsResultBox" style="display:none;margin-top:20px;"></div>
                 <div class="section-header">🗂️ Geçmiş Analizler</div>
-                <div class="table-box"><div id="plantsHistoryTable"></div></div>
+                <div class="table-box"><div id="plantsHistoryTable" aria-busy="true" aria-live="polite"></div></div>
             </section>
 
             <!-- ═══ ALERTS (UYARILAR) PAGE ═══ -->
@@ -1560,9 +1601,9 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                         </div>
                     </div>
                 </div>
-                <div class="cards-grid" id="alertsSummaryCards"></div>
+                <div class="cards-grid" id="alertsSummaryCards" aria-busy="true" aria-live="polite"></div>
                 <div class="section-header">📋 Uyarı Listesi</div>
-                <div class="table-box"><div id="alertsTable"></div></div>
+                <div class="table-box"><div id="alertsTable" aria-busy="true" aria-live="polite"></div></div>
             </section>
 
             <!-- ═══ AUTH (GİRİŞ / KAYIT) PAGE ═══ -->
@@ -1612,11 +1653,11 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                     </div>
                 </div>
             </section>
-        </div>
+        </main>
     </div>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
+<div class="toast-container" id="toastContainer" role="region" aria-label="Bildirimler" aria-live="polite"></div>
 
 <!-- ═══ FİLİZ MASKOTU ═══ -->
 <div class="filiz-bubble" id="filizBubble" role="status" aria-live="polite">
@@ -1843,6 +1884,53 @@ async function api(endpoint, options = {}) {
     }
 }
 
+// ─── SKELETON LOADERS (shiftFinal A3 — Ecenur) ────────────────
+// EN: Skeleton placeholders shown during async loads. Set aria-busy="true"
+//     on the container before fetch, swap to "false" when data is ready.
+//     Reduces perceived latency and gives screen readers a status hint.
+// ---
+// TR: Async yukleme suresince gosterilen iskelet placeholder'lar.
+//     Fetch oncesi aria-busy="true", veri hazirlandiginda "false" yapilir.
+//     Algilanan gecikme dusurulur, ekran okuyucu durum bilgisi alir.
+function _skeletonCards(count = 4) {
+    // EN/TR: cards-grid icin kart iskeleti (icon, value, label hizalanir).
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        html += '<div class="card skeleton-card">'
+            + '<div class="skeleton skeleton-line lg" style="height:32px;width:32px;border-radius:50%;"></div>'
+            + '<div class="skeleton skeleton-line lg" style="margin-top:12px;"></div>'
+            + '<div class="skeleton skeleton-line sm" style="margin-top:8px;"></div>'
+            + '</div>';
+    }
+    return html;
+}
+function _skeletonRows(rows = 6, cols = 4) {
+    // EN/TR: tablo iskeleti — <tr>'lerin sayisi rows, hucre sayisi cols.
+    let html = '';
+    for (let r = 0; r < rows; r++) {
+        html += '<tr class="skeleton-row">';
+        for (let c = 0; c < cols; c++) {
+            html += '<td><span class="skeleton skeleton-line"></span></td>';
+        }
+        html += '</tr>';
+    }
+    return html;
+}
+function _skeletonBlock(lines = 3) {
+    // EN/TR: jenerik blok iskeleti — innerHTML hedefi divler icin.
+    let html = '<div class="skeleton-card" style="margin:0;">';
+    for (let i = 0; i < lines; i++) {
+        html += `<div class="skeleton skeleton-line${i === 0 ? ' lg' : i === lines - 1 ? ' sm' : ''}"></div>`;
+    }
+    html += '</div>';
+    return html;
+}
+function _setBusy(elementId, busy) {
+    // EN/TR: aria-busy toggle helper. data render bittiginde "false" verilir.
+    const el = document.getElementById(elementId);
+    if (el) el.setAttribute('aria-busy', busy ? 'true' : 'false');
+}
+
 // ─── NAVIGATION ───────────────────────────────────────────────
 const pageTitles = {
     dashboard: ['Genel Bakış', 'Tarlanın özeti'],
@@ -1858,11 +1946,23 @@ const pageTitles = {
 
 function navigate(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => {
+        n.classList.remove('active');
+        // shiftFinal A3: aria-current'i pasif items'tan kaldir
+        n.removeAttribute('aria-current');
+    });
     document.getElementById(`page-${page}`).classList.add('active');
-    document.querySelector(`[href="#${page}"]`).classList.add('active');
+    const navItem = document.querySelector(`[href="#${page}"]`);
+    if (navItem) {
+        navItem.classList.add('active');
+        navItem.setAttribute('aria-current', 'page');
+    }
     document.getElementById('pageTitle').textContent = pageTitles[page][0];
     document.getElementById('pageSubtitle').textContent = pageTitles[page][1];
+    // shiftFinal A3: aktif sayfayi <main>'a odakla — keyboard kullanicilari
+    // sekme degisikligini fark etsin (tabindex=-1 ile programatik focus).
+    const main = document.getElementById('main-content');
+    if (main) main.focus({ preventScroll: false });
     // Load page data
     if (page === 'dashboard') loadDashboard();
     else if (page === 'sensors') loadSensors();
@@ -1872,11 +1972,20 @@ function navigate(page) {
     else if (page === 'plants') loadPlants();
     else if (page === 'alerts') loadAlerts();
     else if (page === 'auth') refreshAuthState();
-    // Close sidebar on mobile
-    document.getElementById('sidebar').classList.remove('open');
+    // Close sidebar on mobile (a11y: hamburger aria-expanded sync)
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.remove('open');
+    const hamburger = document.querySelector('.hamburger');
+    if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
 }
 
-function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const isOpen = sidebar.classList.toggle('open');
+    // shiftFinal A3: aria-expanded state'i hamburger butonu ile senkron tut
+    const hamburger = document.querySelector('.hamburger');
+    if (hamburger) hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
 
 // ─── HASH ROUTER ──────────────────────────────────────────────
 window.addEventListener('hashchange', () => {
@@ -1886,6 +1995,9 @@ window.addEventListener('hashchange', () => {
 
 // ─── DASHBOARD ────────────────────────────────────────────────
 async function loadDashboard() {
+    // shiftFinal A3: skeleton placeholder yerlestir, sonra fetch et.
+    document.getElementById('dashboardCards').innerHTML = _skeletonCards(5);
+    _setBusy('dashboardCards', true);
     const [sensors, weather, schedules] = await Promise.all([
         api('/api/sensors/'), api('/api/weather/?limit=30'), api('/api/irrigation/schedules?limit=20')
     ]);
@@ -1897,12 +2009,13 @@ async function loadDashboard() {
     const avgTemp = w.length ? (w.reduce((a,d) => a + (d.temperature_c||0), 0) / w.length).toFixed(1) : '—';
     const totalPrecip = w.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1);
     document.getElementById('dashboardCards').innerHTML = `
-        <div class="card"><div class="card-icon">📡</div><div class="card-value">${s.length}</div><div class="card-label">Aktif Sensör</div></div>
-        <div class="card"><div class="card-icon">🌡️</div><div class="card-value">${avgTemp}°C</div><div class="card-label">Ort. Sıcaklık</div></div>
-        <div class="card"><div class="card-icon">💧</div><div class="card-value">%${avgMoisture}</div><div class="card-label">Ort. Nem</div></div>
-        <div class="card"><div class="card-icon">🌧️</div><div class="card-value">${totalPrecip}mm</div><div class="card-label">Toplam Yağış</div></div>
-        <div class="card"><div class="card-icon">📋</div><div class="card-value">${sc.length}</div><div class="card-label">Sulama Kaydı</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">📡</div><div class="card-value">${s.length}</div><div class="card-label">Aktif Sensör</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">🌡️</div><div class="card-value">${avgTemp}°C</div><div class="card-label">Ort. Sıcaklık</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">💧</div><div class="card-value">%${avgMoisture}</div><div class="card-label">Ort. Nem</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">🌧️</div><div class="card-value">${totalPrecip}mm</div><div class="card-label">Toplam Yağış</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">📋</div><div class="card-value">${sc.length}</div><div class="card-label">Sulama Kaydı</div></div>
     `;
+    _setBusy('dashboardCards', false);
     // Charts
     renderMoistureChart(w); renderTempHumChart(w); renderPrecipChart(w);
 }
@@ -1957,6 +2070,9 @@ let sensorsPage = 1;
 let sensorsTotal = 0;
 
 async function loadSensors(page = 1) {
+    // shiftFinal A3: tablo iskeleti — fetch oncesinde 6 satir, 4 sutun.
+    document.getElementById('sensorsTable').innerHTML = _skeletonRows(6, 4);
+    _setBusy('sensorsTable', true);
     // Toplam sayiyi her sayfa degisikliginde tekrar cekmek pahali —
     // ilk yuklemede al, sonra cache'le. Yeni sensor eklenirse sayfa
     // degistiginde tekrar fetch edilir (bilincli trade-off).
@@ -1981,13 +2097,18 @@ async function loadSensors(page = 1) {
         `Sayfa <strong>${sensorsPage}</strong>/${totalPages} · ` +
         `Kayıt <strong>${from}–${to}</strong>/${sensorsTotal}`;
 
-    // Tabloyu render et
+    // Tabloyu render et — a11y: satira role=button + keyboard handler
+    // EN / TR: satir click + Enter/Space ile detay yuklenir; tabindex=0 ile
+    // keyboard navigation acilir.
     document.getElementById('sensorsTable').innerHTML = sensors.map(s => `
-        <tr style="cursor:pointer" onclick="loadSensorDetail(${s.id})">
+        <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${s.sensor_type}) detayını aç"
+            style="cursor:pointer" onclick="loadSensorDetail(${s.id})"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();loadSensorDetail(${s.id});}">
             <td>${s.id}</td><td>${s.sensor_type}</td><td>${s.serial_number}</td>
             <td><span class="badge active">${s.status}</span></td>
         </tr>
     `).join('');
+    _setBusy('sensorsTable', false);
 }
 
 async function loadSensorDetail(sensorId) {
@@ -2009,19 +2130,21 @@ async function loadSensorDetail(sensorId) {
 
 // ─── WEATHER ──────────────────────────────────────────────────
 async function loadWeather() {
+    document.getElementById('weatherCards').innerHTML = _skeletonCards(4);
+    _setBusy('weatherCards', true);
     const data = await api('/api/weather/?limit=30') || [];
     const sorted = [...data].reverse();
     // Cards
     if (data.length) {
         const temps = data.map(d => d.temperature_c).filter(Boolean);
-        const hums = data.map(d => d.humidity_percent).filter(Boolean);
         document.getElementById('weatherCards').innerHTML = `
-            <div class="card"><div class="card-icon">🌡️</div><div class="card-value">${data[0].temperature_c?.toFixed(1) || '—'}°C</div><div class="card-label">Güncel Sıcaklık</div></div>
-            <div class="card"><div class="card-icon">💧</div><div class="card-value">%${data[0].humidity_percent?.toFixed(1) || '—'}</div><div class="card-label">Güncel Nem</div></div>
-            <div class="card"><div class="card-icon">📊</div><div class="card-value">${Math.min(...temps).toFixed(1)}—${Math.max(...temps).toFixed(1)}°C</div><div class="card-label">Sıcaklık Aralığı</div></div>
-            <div class="card"><div class="card-icon">🌧️</div><div class="card-value">${data.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1)}mm</div><div class="card-label">Toplam Yağış</div></div>
+            <div class="card"><div class="card-icon" aria-hidden="true">🌡️</div><div class="card-value">${data[0].temperature_c?.toFixed(1) || '—'}°C</div><div class="card-label">Güncel Sıcaklık</div></div>
+            <div class="card"><div class="card-icon" aria-hidden="true">💧</div><div class="card-value">%${data[0].humidity_percent?.toFixed(1) || '—'}</div><div class="card-label">Güncel Nem</div></div>
+            <div class="card"><div class="card-icon" aria-hidden="true">📊</div><div class="card-value">${Math.min(...temps).toFixed(1)}—${Math.max(...temps).toFixed(1)}°C</div><div class="card-label">Sıcaklık Aralığı</div></div>
+            <div class="card"><div class="card-icon" aria-hidden="true">🌧️</div><div class="card-value">${data.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1)}mm</div><div class="card-label">Toplam Yağış</div></div>
         `;
     }
+    _setBusy('weatherCards', false);
     // Temperature chart
     const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
     if (charts.weatherTemp) charts.weatherTemp.destroy();
@@ -2047,6 +2170,8 @@ let irrigationPage = 1;
 let irrigationTotal = 0;
 
 async function loadIrrigation(page = 1) {
+    document.getElementById('irrigationTable').innerHTML = _skeletonRows(6, 5);
+    _setBusy('irrigationTable', true);
     if (irrigationTotal === 0) {
         const cnt = await api('/api/irrigation/schedules/count');
         irrigationTotal = cnt?.total || 0;
@@ -2075,6 +2200,7 @@ async function loadIrrigation(page = 1) {
             <td><span class="badge ${s.status}">${s.status}</span></td>
         </tr>
     `).join('');
+    _setBusy('irrigationTable', false);
 }
 
 async function predictIrrigation() {
@@ -2139,7 +2265,8 @@ async function fertilizerSchedule() {
     if (schedule && schedule.length) {
         document.getElementById('scheduleResult').innerHTML = `
             <div class="table-box" style="margin-top:20px;">
-                <table><thead><tr><th>Faz</th><th>Tarih</th><th>Gübre</th><th>kg/ha</th><th>Not</th></tr></thead>
+                <table><caption class="sr-only">Gübreleme takvimi (fazlara göre)</caption>
+                <thead><tr><th scope="col">Faz</th><th scope="col">Tarih</th><th scope="col">Gübre</th><th scope="col">kg/ha</th><th scope="col">Not</th></tr></thead>
                 <tbody>${schedule.map(s => `<tr><td>${s.phase}</td><td>${s.target_date}</td><td>${s.fertilizer_type}</td><td>${s.amount_kg_per_hectare}</td><td style="color:var(--text-muted);font-size:.8rem;">${s.notes}</td></tr>`).join('')}</tbody></table>
             </div>`;
         showToast('Gübreleme takvimi oluşturuldu', 'success');
@@ -2154,19 +2281,26 @@ const analyticsColors = {
 };
 
 async function loadAnalytics() {
+    document.getElementById('analyticsCards').innerHTML = _skeletonCards(6);
+    _setBusy('analyticsCards', true);
     const data = await api('/api/analytics/summary?days=30');
-    if (!data) { showToast('Analitik verisi yüklenemedi', 'error'); return; }
+    if (!data) {
+        _setBusy('analyticsCards', false);
+        showToast('Analitik verisi yüklenemedi', 'error');
+        return;
+    }
 
     // Özet Kartları
     const c = data.counts;
     document.getElementById('analyticsCards').innerHTML = `
-        <div class="card"><div class="card-icon">🏡</div><div class="card-value">${c.farms}</div><div class="card-label">Çiftlik</div></div>
-        <div class="card"><div class="card-icon">🌾</div><div class="card-value">${c.fields}</div><div class="card-label">Tarla</div></div>
-        <div class="card"><div class="card-icon">📡</div><div class="card-value">${c.sensors}</div><div class="card-label">Sensör</div></div>
-        <div class="card"><div class="card-icon">📊</div><div class="card-value">${c.readings}</div><div class="card-label">Sensör Okuması</div></div>
-        <div class="card"><div class="card-icon">🌤️</div><div class="card-value">${c.weather_records}</div><div class="card-label">Hava Durumu Kaydı</div></div>
-        <div class="card"><div class="card-icon">💧</div><div class="card-value">${c.irrigation_schedules}</div><div class="card-label">Sulama Programı</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">🏡</div><div class="card-value">${c.farms}</div><div class="card-label">Çiftlik</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">🌾</div><div class="card-value">${c.fields}</div><div class="card-label">Tarla</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">📡</div><div class="card-value">${c.sensors}</div><div class="card-label">Sensör</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">📊</div><div class="card-value">${c.readings}</div><div class="card-label">Sensör Okuması</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">🌤️</div><div class="card-value">${c.weather_records}</div><div class="card-label">Hava Durumu Kaydı</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">💧</div><div class="card-value">${c.irrigation_schedules}</div><div class="card-label">Sulama Programı</div></div>
     `;
+    _setBusy('analyticsCards', false);
 
     renderSensorTypeChart(data.sensor_type_distribution);
     renderFarmTempChart(data.farm_weather_comparison);
@@ -2354,18 +2488,22 @@ function renderSensorStatsChart(stats) {
 
 // ─── PLANTS (BİTKİ SAĞLIĞI) ───────────────────────────────────
 async function loadPlants() {
-    const list = await api('/api/plants/health-images?limit=20');
     const tbl = document.getElementById('plantsHistoryTable');
+    // shiftFinal A3: blok iskelet (tablo cell olmadigi icin generic block)
+    tbl.innerHTML = _skeletonBlock(4);
+    _setBusy('plantsHistoryTable', true);
+    const list = await api('/api/plants/health-images?limit=20');
     if (!list || list.length === 0) {
         tbl.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:24px;">Henüz analiz edilmiş görsel yok.</p>';
+        _setBusy('plantsHistoryTable', false);
         return;
     }
-    let html = '<table style="width:100%;border-collapse:collapse;"><thead><tr>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tarih</th>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tarla</th>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Teşhis</th>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Güven</th>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Şiddet</th>'
+    let html = '<table style="width:100%;border-collapse:collapse;"><caption class="sr-only">Bitki sağlığı analiz geçmişi</caption><thead><tr>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tarih</th>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tarla</th>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Teşhis</th>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Güven</th>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Şiddet</th>'
         + '</tr></thead><tbody>';
     for (const r of list) {
         const sev = r.severity || '—';
@@ -2382,6 +2520,7 @@ async function loadPlants() {
     }
     html += '</tbody></table>';
     tbl.innerHTML = html;
+    _setBusy('plantsHistoryTable', false);
 }
 
 async function analyzePlantImage() {
@@ -2459,41 +2598,49 @@ document.addEventListener('change', (e) => {
 
 // ─── ALERTS ───────────────────────────────────────────────────
 async function loadAlerts() {
+    const tbl = document.getElementById('alertsTable');
+    const cards = document.getElementById('alertsSummaryCards');
+    // shiftFinal A3: fetch oncesi iskelet + aria-busy
+    cards.innerHTML = _skeletonCards(3);
+    tbl.innerHTML = _skeletonBlock(5);
+    _setBusy('alertsSummaryCards', true);
+    _setBusy('alertsTable', true);
+
     const sev = document.getElementById('alertSeverity')?.value || '';
     const resolved = document.getElementById('alertResolved')?.value || '';
     let qs = 'limit=100';
     if (sev) qs += `&severity=${encodeURIComponent(sev)}`;
     if (resolved) qs += `&is_resolved=${resolved}`;
     const list = await api(`/api/alerts/?${qs}`);
-    const tbl = document.getElementById('alertsTable');
-    const cards = document.getElementById('alertsSummaryCards');
 
     // Özet kartları
     const total = list ? list.length : 0;
     const critical = list ? list.filter(a => a.severity === 'critical').length : 0;
     const open = list ? list.filter(a => !a.is_resolved).length : 0;
     cards.innerHTML = `
-        <div class="card"><div class="card-icon">📋</div><div class="card-value">${total}</div><div class="card-label">Toplam</div></div>
-        <div class="card"><div class="card-icon">⚠️</div><div class="card-value">${open}</div><div class="card-label">Açık</div></div>
-        <div class="card"><div class="card-icon">🚨</div><div class="card-value">${critical}</div><div class="card-label">Kritik</div></div>`;
+        <div class="card"><div class="card-icon" aria-hidden="true">📋</div><div class="card-value">${total}</div><div class="card-label">Toplam</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">⚠️</div><div class="card-value">${open}</div><div class="card-label">Açık</div></div>
+        <div class="card"><div class="card-icon" aria-hidden="true">🚨</div><div class="card-value">${critical}</div><div class="card-label">Kritik</div></div>`;
+    _setBusy('alertsSummaryCards', false);
 
     if (!list || list.length === 0) {
         tbl.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:24px;">Bu filtre için uyarı yok.</p>';
+        _setBusy('alertsTable', false);
         return;
     }
-    let html = '<table style="width:100%;border-collapse:collapse;"><thead><tr>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tarih</th>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Öncelik</th>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tip</th>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Mesaj</th>'
-        + '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Durum</th>'
+    let html = '<table style="width:100%;border-collapse:collapse;"><caption class="sr-only">Sistem uyarıları listesi</caption><thead><tr>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tarih</th>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Öncelik</th>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Tip</th>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Mesaj</th>'
+        + '<th scope="col" style="text-align:left;padding:8px;border-bottom:1px solid var(--border);">Durum</th>'
         + '</tr></thead><tbody>';
     for (const a of list) {
         const sevColor = a.severity === 'critical' ? '#ef4444' : a.severity === 'medium' ? '#f59e0b' : '#eab308';
         const date = a.created_at ? new Date(a.created_at).toLocaleString('tr-TR') : '—';
         const status = a.is_resolved
             ? '<span style="color:#22c55e;">✓ Çözüldü</span>'
-            : `<button class="btn-secondary" style="padding:4px 10px;" onclick="resolveAlert(${a.id})">Çöz</button>`;
+            : `<button class="btn-secondary" style="padding:4px 10px;" onclick="resolveAlert(${a.id})" aria-label="Uyarıyı çözüldü olarak işaretle">Çöz</button>`;
         html += `<tr>
             <td style="padding:8px;border-bottom:1px solid var(--border);font-size:.85rem;">${date}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${a.severity}</span></td>
@@ -2504,6 +2651,7 @@ async function loadAlerts() {
     }
     html += '</tbody></table>';
     tbl.innerHTML = html;
+    _setBusy('alertsTable', false);
 }
 
 async function resolveAlert(id) {

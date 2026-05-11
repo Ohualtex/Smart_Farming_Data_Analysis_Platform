@@ -1,0 +1,5 @@
+# SFDAP Dashboard — Vite + Node artifacts (shiftFinal A3)
+node_modules/
+dist/
+.vite/
+*.log
