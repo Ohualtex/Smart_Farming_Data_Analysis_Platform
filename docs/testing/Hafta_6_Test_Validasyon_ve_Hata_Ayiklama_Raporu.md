@@ -69,9 +69,9 @@ Testler sırasında tespit edilen ve projenin güvenilirliğini artırmak için 
 Sistemin 31 Mayıs 2026 teslim tarihi öncesi son metrikleri şöyledir:
 *   **Ortalama Yanıt Süresi:** ~12 ms (yerel TestClient + in-memory SQLite üzerinde).
 *   **Güvenlik Katmanı Gecikmesi:** < 1 ms (API Key doğrulaması sistem performansını etkilememektedir).
-*   **Toplam Test Sayısı:** **290** (22 dosya, `pytest`).
-*   **Code Coverage:** **%94.67** (eşik %80; shiftFinal hedefi %95+ resmî tutuş).
-*   **Geçen Test Oranı:** %100 (CI üzerinde tüm 290 test yeşil).
+*   **Toplam Test Sayısı:** **301** (23 dosya, `pytest`).
+*   **Code Coverage:** **%94.42** (eşik %80; shiftFinal hedefi %95+ resmî tutuş).
+*   **Geçen Test Oranı:** %100 (CI üzerinde tüm 301 test yeşil).
 *   **Linter Durumu:** Ruff — All checks passed.
 
 ## 6. 🏁 Sonuç

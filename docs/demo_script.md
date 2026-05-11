@@ -174,8 +174,9 @@ curl http://localhost:8000/api/model-performance/drift/irrigation_rf
 make test
 ```
 
-> *"220 test, %91 coverage, 19 test dosyası, GitHub Actions ile her PR'da
-> otomatik. Pre-commit hook'larıyla ruff lint + format zorunlu."*
+> *"301 test, %94 coverage, 23 test dosyası, GitHub Actions ile her PR'da
+> otomatik (lint + test + alembic migration smoke + güvenlik tarayıcıları).
+> Pre-commit hook'larıyla ruff lint + format + bandit zorunlu."*
 
 ```bash
 .venv/bin/ruff check app/

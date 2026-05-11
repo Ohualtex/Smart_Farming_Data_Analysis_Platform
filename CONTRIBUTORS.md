@@ -80,13 +80,13 @@
 
 | Metrik | Değer |
 |:---|:---:|
-| Toplam Python LOC | **7 670** (`app/`, `database/`, `tests/`) |
-| Frontend LOC | 2 888 satır (`frontend/index.html`, 9 sayfa) |
+| Toplam Python LOC | **9 176** (`app/` 4 739 + `tests/` 3 904 + `database/` 533) |
+| Frontend LOC | 2 873 satır (`frontend/index.html`, 9 sayfa) |
 | Endpoint sayısı | **41** (11 router) |
-| ORM tablo sayısı | **14** |
+| ORM tablo sayısı | **15** (Cycle 8 #4 + archiving = 14 + sensor_reading_monthly_aggregates) |
 | Pydantic schema sayısı | 25+ |
-| Toplam test | **246** (Cycle 4'te 41 → +205, 20 dosya) |
-| Test coverage | %94.67 (eşik %80, shiftFinal hedefi %95+ resmî tutuş) |
+| Toplam test | **301** (Cycle 4'te 41 → +260, 23 dosya) |
+| Test coverage | %94.42 (eşik %80, shiftFinal hedefi %95+ resmî tutuş) |
 | Cycle 6 commit sayısı | 33 (Cycle 5 sonrasından) |
 | Bitki türü | 17 (Türkiye'nin 7 coğrafi bölgesi için) |
 | Çiftlik kapsamı | 81 il × 2 tarla = 162 tarla |
@@ -94,5 +94,5 @@
 | Hava durumu seed | 1 215 kayıt (sıcaklık/nem diurnal cycle) |
 | ML modeli | RandomForest (sklearn 1.8.0, sentetik 1000 örnek) |
 | Docker support | ✅ multi-stage Dockerfile + docker-compose |
-| CI/CD | GitHub Actions: ruff + pytest |
-| Pre-commit hooks | ruff, ruff-format, trim whitespace, EOF, large files |
+| CI/CD | GitHub Actions: 2 workflow — `ci.yml` (lint + test + alembic migration smoke + XML coverage) ve `security.yml` (bandit + pip-audit + haftalık cron) |
+| Pre-commit hooks | ruff v0.13 (lint + format), bandit 1.8, trim whitespace, EOF, check-yaml, check-large-files, check-merge-conflict, detect-private-key |

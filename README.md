@@ -4,8 +4,8 @@
 
 [![CI](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue)
-![Coverage 86%](https://img.shields.io/badge/Coverage-86%25-brightgreen)
-![Tests 246](https://img.shields.io/badge/Tests-246%20passed-success)
+![Coverage 94%](https://img.shields.io/badge/Coverage-94%25-brightgreen)
+![Tests 301](https://img.shields.io/badge/Tests-301%20passed-success)
 
 ---
 
@@ -298,7 +298,7 @@ Smart_Farming_Data_Analysis_Platform/
 │   ├── config.py                #   Ayar yönetimi (pydantic-settings)
 │   ├── database.py              #   SQLAlchemy engine & session
 │   ├── core/                    #   Logger konfigürasyonu
-│   ├── models/                  #   ORM modelleri (14 tablo)
+│   ├── models/                  #   ORM modelleri (15 tablo)
 │   ├── schemas/                 #   Pydantic veri doğrulama şemaları
 │   ├── routers/                 #   API endpoint'leri (11 router, 41 endpoint)
 │   │   ├── sensors.py           #     Sensör CRUD
@@ -335,7 +335,7 @@ Smart_Farming_Data_Analysis_Platform/
 │   └── turkey_data.py           #   Türkiye il/bölge/bitki referans verisi
 │
 ├── alembic/                     # DB migration sistemi
-├── tests/                       # 246 test (20 dosya, %86 coverage)
+├── tests/                       # 301 test (23 dosya, %94 coverage)
 ├── .github/workflows/           # CI/CD pipeline (Ruff + Pytest)
 │
 ├── docs/                        # Proje dokümantasyonu

@@ -77,7 +77,7 @@ app/
 │   └── logger.py              # Loguru kurulumu (LOG_FORMAT=json opsiyonu shiftFinal)
 │
 ├── models/
-│   └── models.py              # 14 ORM tablosu (User, Farm, Field, Sensor, ...)
+│   └── models.py              # 15 ORM tablosu (+sensor_reading_monthly_aggregates — Cycle 8)
 │
 ├── schemas/
 │   └── schemas.py             # 30+ Pydantic request/response modeli
@@ -163,7 +163,7 @@ sequenceDiagram
 
 ---
 
-## 🗄️ Veri Modeli — 14 ORM Tablosu
+## 🗄️ Veri Modeli — 15 ORM Tablosu
 
 ```mermaid
 erDiagram
