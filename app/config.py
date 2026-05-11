@@ -53,6 +53,20 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_HOURS: int = 24
 
+    # ─── Observability (shiftFinal — A2) ───────────────────────
+    # Sentry: hata raporlama. Boş string ise devre dışı (dev/test default).
+    # Production'da gerçek DSN ile aktif edilir.
+    # EN: Sentry DSN; empty value disables Sentry entirely (dev/test default).
+    SENTRY_DSN: str = ""
+    # Sentry environment etiketi (boş ise ENVIRONMENT ile eşitlenir)
+    SENTRY_ENVIRONMENT: str = ""
+    # Performance transactions sample oranı (0.0 = kapalı, 1.0 = hepsi)
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+
+    # Log formatı: "text" (renkli console default) | "json" (structured,
+    # production observability stack için).
+    LOG_FORMAT: str = "text"
+
     # ─── Dış servisler ─────────────────────────────────────────
     OPENWEATHERMAP_API_KEY: str | None = None
 

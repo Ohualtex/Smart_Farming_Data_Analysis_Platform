@@ -23,8 +23,10 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.core.logger import setup_logging
+from app.core.sentry import init_sentry
 from app.database import init_db
 from app.middleware.exceptions import register_exception_handlers
+from app.middleware.prometheus import PrometheusMiddleware, metrics_response
 from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 from app.middleware.request_logger import RequestLoggerMiddleware
 from app.routers import (
@@ -49,6 +51,8 @@ from app.tasks.scheduler import shutdown_scheduler, start_scheduler
 async def lifespan(app: FastAPI):
     # Startup
     setup_logging()
+    # Sentry — SENTRY_DSN env varsa aktif, yoksa no-op (shiftFinal A2)
+    init_sentry()
     init_db()
     start_scheduler()
     if settings.MQTT_ENABLED:
@@ -171,6 +175,13 @@ Türkiye'nin tüm illerinde geçerli verilerle çalışır.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
+# Prometheus instrumentation — request counter + duration histogram
+# (shiftFinal A2). RequestLoggerMiddleware'den önce eklenir ki tüm
+# response'lar metric'e yansısın.
+# EN: Prometheus instrumentation; added before request logger so all
+# responses (including failures) get counted.
+app.add_middleware(PrometheusMiddleware)
+
 # Request Logger
 app.add_middleware(RequestLoggerMiddleware)
 
@@ -212,6 +223,15 @@ def root():
         "dashboard": "/dashboard",
         "version": settings.API_VERSION,
     }
+
+
+# Prometheus metrics endpoint — text/plain exposition format.
+# Path Prometheus konvansiyonuna uygun olarak prefix'siz `/metrics`.
+# Scrape config örneği: scrape_interval 30s, target 'sfdap_api:8000'.
+# EN: Prometheus scrape endpoint; standard `/metrics` path (no prefix).
+@app.get("/metrics", include_in_schema=False)
+def prometheus_metrics():
+    return metrics_response()
 
 
 _dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")

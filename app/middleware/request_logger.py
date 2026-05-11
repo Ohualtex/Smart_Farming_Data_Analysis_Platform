@@ -2,14 +2,26 @@
 Request Logging Middleware
 ===========================
 Her API isteğini loglar: endpoint, method, status code, süre, client IP.
-Log formatı: [2026-04-20 15:30:00] GET /api/sensors/ 200 45ms 192.168.1.1
+shiftFinal — A2 paketi: her isteğe **request_id (UUID)** atanır,
+`X-Request-ID` response header'ına yazılır ve loguru context'ine bind
+edilir (trace_id propagation).
 
-Mehmet Sait Tayşi — Cycle 5 Görevi
+Log formatı: [2026-04-20 15:30:00] GET /api/sensors/ 200 45ms 192.168.1.1 [req-id=abc]
+
+Mehmet Sait Tayşi — Cycle 5 + shiftFinal Görevi
+
+EN: Generates a UUID request_id per request, exposes it via X-Request-ID
+header, and binds to loguru context so all child log records carry it
+(trace propagation for structured logging).
 """
+
+from __future__ import annotations
 
 import logging
 import time
+import uuid
 
+from loguru import logger as loguru_logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -29,10 +41,14 @@ if not logger.handlers:
     )
     logger.addHandler(handler)
 
+# İstemci kendi request ID'sini gönderebilir (dağıtık trace için)
+INCOMING_REQUEST_ID_HEADER = "x-request-id"
+OUTGOING_REQUEST_ID_HEADER = "X-Request-ID"
+
 
 class RequestLoggerMiddleware(BaseHTTPMiddleware):
     """
-    Her gelen HTTP isteği için erişim logu oluşturur.
+    Her gelen HTTP isteği için erişim logu oluşturur ve request_id propagate eder.
 
     Log bilgileri:
     - HTTP method (GET/POST/PUT/DELETE)
@@ -40,10 +56,16 @@ class RequestLoggerMiddleware(BaseHTTPMiddleware):
     - HTTP status code
     - Response süresi (ms)
     - Client IP adresi
+    - Request ID (UUID, trace correlation için)
     """
 
     async def dispatch(self, request: Request, call_next) -> Response:
         start_time = time.perf_counter()
+
+        # İstemci kendi request_id'sini gönderdiyse onu kullan; yoksa yeni UUID üret.
+        # Dağıtık sistemlerde upstream service'in ID'sini korumak iyi pratik.
+        # EN: Honour client-provided X-Request-ID if present; otherwise generate.
+        request_id = request.headers.get(INCOMING_REQUEST_ID_HEADER) or uuid.uuid4().hex
 
         # Client IP — proxy arkasındaysa X-Forwarded-For kullan
         client_ip = request.headers.get(
@@ -51,32 +73,39 @@ class RequestLoggerMiddleware(BaseHTTPMiddleware):
             request.client.host if request.client else "unknown",
         )
 
-        try:
-            response = await call_next(request)
-        except Exception:
-            # Hata durumunda traceback ile logla (logger.exception)
-            # EN: Use logger.exception so the traceback is captured.
+        # Loguru context'ine request_id bind et — alt çağrılar otomatik propagate alır.
+        # JSON formatter'da `extra.request_id` olarak görünür.
+        with loguru_logger.contextualize(request_id=request_id, client_ip=client_ip):
+            try:
+                response = await call_next(request)
+            except Exception:
+                # Hata durumunda traceback ile logla (logger.exception)
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                logger.exception(
+                    "%s %s 500 %.0fms %s [req-id=%s] [ERROR]",
+                    request.method,
+                    request.url.path,
+                    duration_ms,
+                    client_ip,
+                    request_id,
+                )
+                raise
+
+            # Başarılı response logu
             duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.exception(
-                "%s %s 500 %.0fms %s [ERROR]",
+            log_method = logger.warning if response.status_code >= 400 else logger.info
+
+            log_method(
+                "%s %s %d %.0fms %s [req-id=%s]",
                 request.method,
                 request.url.path,
+                response.status_code,
                 duration_ms,
                 client_ip,
+                request_id,
             )
-            raise
 
-        # Başarılı response logu
-        duration_ms = (time.perf_counter() - start_time) * 1000
-        log_method = logger.warning if response.status_code >= 400 else logger.info
+            # Response header'a request_id ekle (istemci trace ile eşleştirebilsin)
+            response.headers[OUTGOING_REQUEST_ID_HEADER] = request_id
 
-        log_method(
-            "%s %s %d %.0fms %s",
-            request.method,
-            request.url.path,
-            response.status_code,
-            duration_ms,
-            client_ip,
-        )
-
-        return response
+            return response
