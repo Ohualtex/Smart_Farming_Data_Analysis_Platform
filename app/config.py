@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     # ─── Veritabanı ────────────────────────────────────────────
     DATABASE_URL: str = "sqlite:///./sfdap_dev.db"
 
+    # Connection pool tuning (sadece PostgreSQL/MySQL'de aktif; SQLite
+    # tek-connection olduğu için bu ayarlar yok sayılır).
+    # EN: Pool tuning applies only when DATABASE_URL is non-SQLite.
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_PRE_PING: bool = True  # ölü connection'ları kullanmadan önce ping
+    DB_POOL_RECYCLE: int = 3600  # 1 saatte connection recycle (MySQL/PG drop koruması)
+
     # ─── HTTP sunucu ───────────────────────────────────────────
     # Default: localhost. Container/prod için env üzerinden 0.0.0.0 verilebilir.
     API_HOST: str = "127.0.0.1"

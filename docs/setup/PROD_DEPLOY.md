@@ -119,6 +119,56 @@ Let's Encrypt cert'leri 90 gün geçerli. Otomatik yenileme için crontab'a ekle
 
 ---
 
+## 4.5. 💾 Yedekleme (Cron + Manuel) — shiftFinal A4
+
+Veritabanı yedekleri için `scripts/backup.sh` SQLite ve PostgreSQL'i otomatik tanır.
+
+### Manuel yedek
+
+```bash
+make backup
+# veya doğrudan
+DATABASE_URL=$DATABASE_URL ./scripts/backup.sh
+```
+
+Yedekler `./backups/sfdap_YYYYMMDD_HHMMSS.{db,dump}` formatında üretilir; **7 günden eski yedekler otomatik silinir** (rotation).
+
+### Otomatik yedek (cron)
+
+```cron
+# Her gece 02:30 — günlük yedek + 7 günlük rotation
+30 2 * * * cd /opt/sfdap && DATABASE_URL=$DATABASE_URL ./scripts/backup.sh >> /var/log/sfdap_backup.log 2>&1
+```
+
+Docker compose ile:
+
+```cron
+30 2 * * * cd /opt/sfdap && docker compose exec -T api ./scripts/backup.sh >> /var/log/sfdap_backup.log 2>&1
+```
+
+### Restore
+
+```bash
+# Yedekleri listele
+ls -lh ./backups/
+
+# Geri yükle (interaktif onay ister)
+make restore BACKUP=./backups/sfdap_20260520_023000.db
+# veya
+./scripts/restore.sh ./backups/sfdap_20260520_023000.dump
+```
+
+Restore öncesi mevcut DB için **güvenlik yedeği** otomatik alınır (`*.before-restore-*`).
+
+### Ayar değişkenleri
+
+| Env | Default | Açıklama |
+|:--|:--:|:--|
+| `BACKUP_DIR` | `./backups` | Yedek dizini |
+| `RETENTION_DAYS` | `7` | Rotation eşiği (gün) |
+
+---
+
 ## 5. ✅ Doğrulama Checklist
 
 | Test | Komut / URL | Beklenen |

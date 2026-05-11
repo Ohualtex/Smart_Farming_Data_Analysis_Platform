@@ -140,5 +140,7 @@ alembic/versions/__pycache__/
 *_old.html
 *_backup.*
 *.backup-*
+backups/
+*.dump
 sfdap_dev.db
 sfdap_dev.db.backup-*

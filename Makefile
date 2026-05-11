@@ -1,4 +1,4 @@
-.PHONY: help install run test lint format migrate docker-up docker-down clean
+.PHONY: help install run test lint format migrate backup restore docker-up docker-down clean
 
 help: ## Show this help
 	@egrep -h '\s##\s' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -21,6 +21,17 @@ format: ## Run ruff formatter
 
 migrate: ## Run database migrations
 	alembic upgrade head
+
+backup: ## Veritabanını yedekle (SQLite/PostgreSQL; ./backups/ altına)
+	@./scripts/backup.sh
+
+restore: ## Veritabanını geri yükle (BACKUP=path/to/file kullan)
+	@if [ -z "$(BACKUP)" ]; then \
+		echo "Kullanım: make restore BACKUP=./backups/sfdap_YYYYMMDD.db"; \
+		ls -lh ./backups/sfdap_* 2>/dev/null | tail -5 || echo "(yedek yok)"; \
+		exit 1; \
+	fi
+	@./scripts/restore.sh "$(BACKUP)"
 
 docker-up: ## Start the application using Docker
 	docker-compose up -d
