@@ -122,49 +122,22 @@ input, select { font-family: var(--font); }
     margin-left: 6px;
 }
 
-/* Pagination bar — slider tabanli sayfa secici (sensors + irrigation) */
+/* Pagination bar — tablo altinda, ortada status + iki yanda buton */
 .pagination-bar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 16px;
-    padding: 12px 16px;
+    padding: 10px 14px;
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 14px;
+    border-radius: 8px;
+    margin-top: 14px;
     flex-wrap: wrap;
 }
-.page-slider {
-    flex: 1;
-    min-width: 200px;
-    -webkit-appearance: none;
-    appearance: none;
-    height: 6px;
-    background: var(--border);
-    border-radius: 3px;
-    outline: none;
-    cursor: pointer;
-    transition: background .2s;
-}
-.page-slider:hover { background: var(--border-light); }
-.page-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--primary);
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(16,185,129,.45);
-    transition: transform .15s;
-}
-.page-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
-.page-slider::-moz-range-thumb {
-    width: 18px; height: 18px; border-radius: 50%;
-    background: var(--primary); cursor: pointer; border: 0;
-    box-shadow: 0 2px 6px rgba(16,185,129,.45);
-}
 .page-status {
+    flex: 1;
+    text-align: center;
     font-size: .82rem;
     color: var(--text-muted);
     white-space: nowrap;
@@ -175,11 +148,12 @@ input, select { font-family: var(--font); }
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 6px 12px;
+    padding: 6px 14px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: .8rem;
+    font-size: .85rem;
     transition: all .15s;
+    min-width: 90px;
 }
 .page-nav-btn:hover:not(:disabled) { background: var(--primary); color: white; border-color: var(--primary); }
 .page-nav-btn:disabled { opacity: .4; cursor: not-allowed; }
@@ -1391,16 +1365,15 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                 </div>
                 <div class="section-header">📋 Sensör Listesi</div>
                 <div class="table-box scroll-table">
-                    <h3>📡 Aktif Sensörler <span class="muted-hint">(sayfa başı 50 — slider ile gezin)</span></h3>
-                    <div class="pagination-bar">
-                        <button class="page-nav-btn" id="sensorsPrevBtn" onclick="loadSensors(sensorsPage - 1)" disabled>◀ Önceki</button>
-                        <input type="range" id="sensorsPageSlider" class="page-slider" min="1" max="1" value="1" oninput="loadSensors(parseInt(this.value))">
-                        <button class="page-nav-btn" id="sensorsNextBtn" onclick="loadSensors(sensorsPage + 1)" disabled>Sonraki ▶</button>
-                        <div class="page-status" id="sensorsPageStatus">Yükleniyor…</div>
-                    </div>
+                    <h3>📡 Aktif Sensörler</h3>
                     <div class="scroll-area">
                         <table><thead><tr><th>ID</th><th>Tip</th><th>Seri No</th><th>Durum</th></tr></thead>
                         <tbody id="sensorsTable"></tbody></table>
+                    </div>
+                    <div class="pagination-bar">
+                        <button class="page-nav-btn" id="sensorsPrevBtn" onclick="loadSensors(sensorsPage - 1)" disabled>◀ Önceki</button>
+                        <div class="page-status" id="sensorsPageStatus">Yükleniyor…</div>
+                        <button class="page-nav-btn" id="sensorsNextBtn" onclick="loadSensors(sensorsPage + 1)" disabled>Sonraki ▶</button>
                     </div>
                 </div>
             </section>
@@ -1439,16 +1412,15 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                     <div id="irrigationResult"></div>
                 </div>
                 <div class="table-box scroll-table">
-                    <h3>📋 Sulama Geçmişi <span class="muted-hint">(sayfa başı 50 — slider ile gezin)</span></h3>
-                    <div class="pagination-bar">
-                        <button class="page-nav-btn" id="irrigationPrevBtn" onclick="loadIrrigation(irrigationPage - 1)" disabled>◀ Önceki</button>
-                        <input type="range" id="irrigationPageSlider" class="page-slider" min="1" max="1" value="1" oninput="loadIrrigation(parseInt(this.value))">
-                        <button class="page-nav-btn" id="irrigationNextBtn" onclick="loadIrrigation(irrigationPage + 1)" disabled>Sonraki ▶</button>
-                        <div class="page-status" id="irrigationPageStatus">Yükleniyor…</div>
-                    </div>
+                    <h3>📋 Sulama Geçmişi</h3>
                     <div class="scroll-area">
                         <table><thead><tr><th>Tarla</th><th>Tarih</th><th>Süre</th><th>Su (L)</th><th>Durum</th></tr></thead>
                         <tbody id="irrigationTable"></tbody></table>
+                    </div>
+                    <div class="pagination-bar">
+                        <button class="page-nav-btn" id="irrigationPrevBtn" onclick="loadIrrigation(irrigationPage - 1)" disabled>◀ Önceki</button>
+                        <div class="page-status" id="irrigationPageStatus">Yükleniyor…</div>
+                        <button class="page-nav-btn" id="irrigationNextBtn" onclick="loadIrrigation(irrigationPage + 1)" disabled>Sonraki ▶</button>
                     </div>
                 </div>
             </section>
@@ -1998,10 +1970,7 @@ async function loadSensors(page = 1) {
 
     const sensors = await api(`/api/sensors/?skip=${skip}&limit=${PAGE_SIZE}`) || [];
 
-    // Slider + nav buton'larini guncelle
-    const slider = document.getElementById('sensorsPageSlider');
-    slider.max = totalPages;
-    slider.value = sensorsPage;
+    // Nav buton'larini guncelle
     document.getElementById('sensorsPrevBtn').disabled = sensorsPage <= 1;
     document.getElementById('sensorsNextBtn').disabled = sensorsPage >= totalPages;
 
@@ -2088,10 +2057,7 @@ async function loadIrrigation(page = 1) {
 
     const schedules = await api(`/api/irrigation/schedules?skip=${skip}&limit=${PAGE_SIZE}`) || [];
 
-    // Slider + nav buton'larini guncelle
-    const slider = document.getElementById('irrigationPageSlider');
-    slider.max = totalPages;
-    slider.value = irrigationPage;
+    // Nav buton'larini guncelle
     document.getElementById('irrigationPrevBtn').disabled = irrigationPage <= 1;
     document.getElementById('irrigationNextBtn').disabled = irrigationPage >= totalPages;
 
