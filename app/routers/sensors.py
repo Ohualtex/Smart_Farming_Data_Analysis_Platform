@@ -9,7 +9,8 @@ Emirhan Günay & Mehmet Sait Tayşi — Cycle 4 Görevi
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -20,14 +21,31 @@ from app.schemas.schemas import SensorCreate, SensorReadingCreate, SensorReading
 
 router = APIRouter(prefix="/api/sensors", tags=["Sensör Verileri"])
 
+# Pagination defaults — frontend slider 50'lik sayfalarla çalışıyor
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 500
+
 
 @router.get(
     "/",
     response_model=list[SensorResponse],
-    summary="Tüm sensörleri listele",
+    summary="Tüm sensörleri listele (skip + limit pagination)",
 )
-def get_all_sensors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return db.query(Sensor).offset(skip).limit(limit).all()
+def get_all_sensors(
+    skip: int = Query(default=0, ge=0, description="Atlanacak kayıt sayısı (pagination offset)"),
+    limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Sayfa boyutu (max 500)"),
+    db: Session = Depends(get_db),
+):
+    return db.query(Sensor).order_by(Sensor.id).offset(skip).limit(limit).all()
+
+
+@router.get(
+    "/count",
+    summary="Toplam sensör sayısı (pagination için)",
+    description="Frontend slider'ının sayfa sayısını hesaplaması için kullanılır.",
+)
+def count_sensors(db: Session = Depends(get_db)) -> dict:
+    return {"total": db.query(func.count(Sensor.id)).scalar() or 0}
 
 
 @router.get(

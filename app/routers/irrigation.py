@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from loguru import logger
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -25,6 +26,10 @@ from app.schemas.schemas import (
     IrrigationPredictionResponse,
     IrrigationResponse,
 )
+
+# Pagination defaults — frontend slider 50'lik sayfalarla çalışıyor
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 500
 
 router = APIRouter(prefix="/api/irrigation", tags=["Sulama Optimizasyonu"])
 
@@ -73,13 +78,34 @@ def predict_irrigation(request: Request, data: IrrigationPredictionRequest, db: 
 @router.get(
     "/schedules",
     response_model=list[IrrigationResponse],
-    summary="Sulama takvimini listele",
+    summary="Sulama takvimini listele (skip + limit pagination)",
 )
-def get_schedules(field_id: int | None = None, limit: int = 20, db: Session = Depends(get_db)):
+def get_schedules(
+    field_id: int | None = Query(default=None, description="Belirli tarla için filtre"),
+    skip: int = Query(default=0, ge=0, description="Atlanacak kayıt sayısı (pagination offset)"),
+    limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Sayfa boyutu (max 500)"),
+    db: Session = Depends(get_db),
+):
     query = db.query(IrrigationSchedule)
     if field_id:
         query = query.filter(IrrigationSchedule.field_id == field_id)
-    return query.order_by(IrrigationSchedule.scheduled_date.desc()).limit(limit).all()
+    return query.order_by(IrrigationSchedule.scheduled_date.desc()).offset(skip).limit(limit).all()
+
+
+@router.get(
+    "/schedules/count",
+    summary="Toplam sulama programı sayısı (pagination için)",
+    description="Frontend slider'ının sayfa sayısını hesaplaması için kullanılır. "
+    "Opsiyonel `field_id` filtresi ile sayım yapılabilir.",
+)
+def count_schedules(
+    field_id: int | None = Query(default=None, description="Belirli tarla için filtre"),
+    db: Session = Depends(get_db),
+) -> dict:
+    query = db.query(func.count(IrrigationSchedule.id))
+    if field_id:
+        query = query.filter(IrrigationSchedule.field_id == field_id)
+    return {"total": query.scalar() or 0}
 
 
 @router.post(
