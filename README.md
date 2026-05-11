@@ -4,8 +4,8 @@
 
 [![CI](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue)
-![Coverage 94%](https://img.shields.io/badge/Coverage-94%25-brightgreen)
-![Tests 301](https://img.shields.io/badge/Tests-301%20passed-success)
+![Coverage 95%](https://img.shields.io/badge/Coverage-95%25-brightgreen)
+![Tests 350](https://img.shields.io/badge/Tests-350%20passed-success)
 
 ---
 
@@ -170,7 +170,8 @@ curl -X POST http://localhost:8000/api/sensors/ \
 ### Sensör Verileri
 | Method | Endpoint | Açıklama | Auth |
 |:-------|:---------|:---------|:----:|
-| GET | `/api/sensors/` | Tüm sensörleri listele | ❌ |
+| GET | `/api/sensors/` | Sensörleri listele (skip + limit pagination, default 50/sayfa) | ❌ |
+| GET | `/api/sensors/count` | Toplam sensör sayısı (pagination için) | ❌ |
 | POST | `/api/sensors/` | Yeni sensör ekle | ✅ |
 | GET | `/api/sensors/{id}` | Sensör detayı | ❌ |
 | DELETE | `/api/sensors/{id}` | Sensör sil | ✅ |
@@ -191,7 +192,8 @@ curl -X POST http://localhost:8000/api/sensors/ \
 | Method | Endpoint | Açıklama | Auth |
 |:-------|:---------|:---------|:----:|
 | POST | `/api/irrigation/predict` | ML sulama tahmini | ❌ |
-| GET | `/api/irrigation/schedules` | Sulama takvimi | ❌ |
+| GET | `/api/irrigation/schedules` | Sulama takvimi (skip + limit pagination, default 50/sayfa) | ❌ |
+| GET | `/api/irrigation/schedules/count` | Toplam sulama programı sayısı (pagination için) | ❌ |
 | POST | `/api/irrigation/schedules` | Sulama planı oluştur | ✅ |
 
 ### Gübreleme
@@ -267,7 +269,7 @@ make format
 | Metrik | Değer |
 |:-------|:------|
 | Toplam Test | 246 |
-| Coverage | %94.42 (eşik %80, shiftFinal hedefi %95+ resmî tutuş — bkz. [QUALITY_AUDIT.md](docs/QUALITY_AUDIT.md)) |
+| Coverage | **%95.04** (eşik %80, shiftFinal hedefi %95+ resmen geçildi — bkz. [QUALITY_AUDIT.md](docs/QUALITY_AUDIT.md)) |
 | Linting | Ruff (All checks passed) |
 | CI/CD | GitHub Actions (Ruff + Pytest) |
 
@@ -300,7 +302,7 @@ Smart_Farming_Data_Analysis_Platform/
 │   ├── core/                    #   Logger konfigürasyonu
 │   ├── models/                  #   ORM modelleri (15 tablo)
 │   ├── schemas/                 #   Pydantic veri doğrulama şemaları
-│   ├── routers/                 #   API endpoint'leri (11 router, 41 endpoint)
+│   ├── routers/                 #   API endpoint'leri (11 router, 43 endpoint)
 │   │   ├── sensors.py           #     Sensör CRUD
 │   │   ├── weather.py           #     Hava durumu + dış API
 │   │   ├── irrigation.py        #     ML sulama tahmini + auto-log
@@ -335,7 +337,7 @@ Smart_Farming_Data_Analysis_Platform/
 │   └── turkey_data.py           #   Türkiye il/bölge/bitki referans verisi
 │
 ├── alembic/                     # DB migration sistemi
-├── tests/                       # 301 test (23 dosya, %94 coverage)
+├── tests/                       # 350 test (25 dosya, %95.04 coverage)
 ├── .github/workflows/           # CI/CD pipeline (Ruff + Pytest)
 │
 ├── docs/                        # Proje dokümantasyonu

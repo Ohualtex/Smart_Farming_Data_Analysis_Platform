@@ -78,7 +78,7 @@
 
 **Üst düzey:**
 - **Frontend katmanı:** Tek dosyalı SPA (`frontend/index.html` ≈ 2 873 satır) → Vite ile shiftFinal'da modülerleşecek
-- **API katmanı:** FastAPI Gateway → 11 router × 41 endpoint
+- **API katmanı:** FastAPI Gateway → 11 router × 43 endpoint (pagination count endpoint'leri dahil)
 - **İş katmanı:** Servisler (`weather_service`, `fertilizer_service`, `mqtt_listener`, `sensor_archiver`, `report_service`, `data_quality`)
 - **ML katmanı:** RandomForest (sulama) + heuristic+ONNX (bitki hastalığı) + APScheduler periyodik görevler
 - **Veri katmanı:** SQLAlchemy 2.0 ORM, SQLite (dev) / PostgreSQL (prod), Alembic migration
@@ -100,14 +100,14 @@
 
 ## 6. API Endpoint'leri
 
-**41 endpoint × 11 router:**
+**43 endpoint × 11 router:**
 
 | Router | Endpoint | Anahtar Yetenek |
 |:--|:--:|:--|
 | `auth` | 4 | JWT bearer + bcrypt (Cycle 8 #3) |
-| `sensors` | 6 | CRUD + readings |
+| `sensors` | 7 | CRUD + readings + **count (pagination)** |
 | `weather` | 6 | CRUD + OpenWeatherMap fetch + clean |
-| `irrigation` | 3 | ML predict + schedule CRUD |
+| `irrigation` | 4 | ML predict + schedule CRUD + **count (pagination)** |
 | `fertilizer` | 3 | NPK recommend (17 bitki) |
 | `plants` | 3 | Health image URL + CNN multipart |
 | `analytics` | 3 | Summary + compare + export (PDF/Excel) |
@@ -115,6 +115,8 @@
 | `model_performance` | 7 | Log + summary + timeseries + drift detection |
 | `metrics` | 3 | /health, /health/deep |
 | `health` | 1 | Sığ load balancer probe |
+
+**Pagination pattern (sensors + irrigation):** `?skip=0&limit=50` formatında sayfa-temelli erişim. Frontend `/count` endpoint'inden toplam kayıt sayısını alır, `◀ Önceki / Sonraki ▶` butonlarıyla sayfaları gezdirir (50 kayıt/sayfa).
 
 **Detay:** [`docs/api/API_Kullanim_Kilavuzu.md`](api/API_Kullanim_Kilavuzu.md), Swagger UI: `http://localhost:8000/docs`
 

@@ -111,3 +111,46 @@ class TestDeleteSensor:
         """Olmayan sensörü silmeye çalışmak 404 döndürmeli."""
         response = client.delete("/api/sensors/99999")
         assert response.status_code == 404
+
+
+class TestSensorsPagination:
+    """`/api/sensors/?skip=&limit=` + `/api/sensors/count` — slider pagination."""
+
+    def test_count_empty_db(self, client):
+        """Boş DB → count 0."""
+        response = client.get("/api/sensors/count")
+        assert response.status_code == 200
+        assert response.json() == {"total": 0}
+
+    def test_count_reflects_created_sensors(self, client):
+        """3 sensör eklenince count 3 olmalı."""
+        for i in range(3):
+            payload = {"field_id": 1, "sensor_type": "soil_moisture", "serial_number": f"CNT-{i}"}
+            client.post("/api/sensors/", json=payload)
+        response = client.get("/api/sensors/count")
+        assert response.json()["total"] == 3
+
+    def test_skip_limit_returns_correct_slice(self, client):
+        """`skip=2&limit=2` → 5 kayıttan 3. ve 4. dönmeli (ORDER BY id)."""
+        ids = []
+        for i in range(5):
+            payload = {"field_id": 1, "sensor_type": "soil_moisture", "serial_number": f"SLICE-{i}"}
+            created = client.post("/api/sensors/", json=payload).json()
+            ids.append(created["id"])
+
+        response = client.get("/api/sensors/?skip=2&limit=2")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["id"] == ids[2]
+        assert data[1]["id"] == ids[3]
+
+    def test_limit_over_max_rejected(self, client):
+        """`limit=501` Query validation tarafından reddedilmeli (max 500)."""
+        response = client.get("/api/sensors/?limit=501")
+        assert response.status_code == 422
+
+    def test_negative_skip_rejected(self, client):
+        """`skip=-1` Query validation tarafından reddedilmeli (ge=0)."""
+        response = client.get("/api/sensors/?skip=-1&limit=10")
+        assert response.status_code == 422

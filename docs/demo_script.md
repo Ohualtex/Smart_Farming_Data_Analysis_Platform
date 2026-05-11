@@ -134,7 +134,7 @@ Form değerlerini gir:
 
 **Tarayıcıda:** http://localhost:8000/docs
 
-> *"Geliştirici tarafı: 41 endpoint, hepsi Swagger'da Türkçe açıklamalı.
+> *"Geliştirici tarafı: 43 endpoint, hepsi Swagger'da Türkçe açıklamalı.
 > Sağ üstten Authorize → API key ver, herhangi bir endpoint'i canlı
 > test et."*
 

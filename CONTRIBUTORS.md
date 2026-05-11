@@ -80,13 +80,13 @@
 
 | Metrik | Değer |
 |:---|:---:|
-| Toplam Python LOC | **9 176** (`app/` 4 739 + `tests/` 3 904 + `database/` 533) |
-| Frontend LOC | 2 873 satır (`frontend/index.html`, 9 sayfa) |
-| Endpoint sayısı | **41** (11 router) |
+| Toplam Python LOC | **~9 500** (`app/` 4 803 + `tests/` ~4 200 + `database/` 533) |
+| Frontend LOC | 2 972 satır (`frontend/index.html`, 9 sayfa, slider pagination) |
+| Endpoint sayısı | **43** (11 router; pagination count endpoint'leri dahil) |
 | ORM tablo sayısı | **15** (Cycle 8 #4 + archiving = 14 + sensor_reading_monthly_aggregates) |
 | Pydantic schema sayısı | 25+ |
-| Toplam test | **301** (Cycle 4'te 41 → +260, 23 dosya) |
-| Test coverage | %94.42 (eşik %80, shiftFinal hedefi %95+ resmî tutuş) |
+| Toplam test | **350** (Cycle 4'te 41 → +309, 25 dosya) |
+| Test coverage | **%95.04** (eşik %80, shiftFinal %95+ hedefi geçildi) |
 | Cycle 6 commit sayısı | 33 (Cycle 5 sonrasından) |
 | Bitki türü | 17 (Türkiye'nin 7 coğrafi bölgesi için) |
 | Çiftlik kapsamı | 81 il × 2 tarla = 162 tarla |

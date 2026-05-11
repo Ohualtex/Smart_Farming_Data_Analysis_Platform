@@ -82,7 +82,7 @@ app/
 ├── schemas/
 │   └── schemas.py             # 30+ Pydantic request/response modeli
 │
-├── routers/                   # 11 router, 41 endpoint
+├── routers/                   # 11 router, 43 endpoint (sensors/count + schedules/count dahil)
 │   ├── health.py              # Sığ sağlık (load balancer için)
 │   ├── metrics.py             # Derin sağlık (DB+scheduler+ML+freshness+alerts)
 │   ├── sensors.py             # Sensör CRUD + readings
