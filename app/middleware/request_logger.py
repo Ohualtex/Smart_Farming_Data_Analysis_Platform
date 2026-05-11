@@ -54,9 +54,10 @@ class RequestLoggerMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
         except Exception:
-            # Hata durumunda da logla
+            # Hata durumunda traceback ile logla (logger.exception)
+            # EN: Use logger.exception so the traceback is captured.
             duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
+            logger.exception(
                 "%s %s 500 %.0fms %s [ERROR]",
                 request.method,
                 request.url.path,

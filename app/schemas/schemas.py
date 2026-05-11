@@ -1,14 +1,25 @@
+"""
+SFDAP Pydantic Şemaları
+========================
+Sensör, hava durumu, sulama, gübreleme, bitki sağlığı, analitik ve
+sistem uyarıları için Pydantic v2 model'leri.
+
+Kapsam dışı (henüz endpoint'lerce tüketilmediği için bu modülde tanımlı değil):
+- User / Farm / Field / SoilAnalysis / CropPlanting / FertilizerRecommendationLog
+
+Auth schema'ları `app/routers/auth.py` içinde tanımlıdır
+(UserRegisterRequest, UserLoginRequest, TokenResponse, CurrentUserResponse).
+CRUD endpoint'leri eklendiğinde schema'lar burada yeniden tanımlanmalı.
+
+EN: Pydantic v2 schemas for sensor, weather, irrigation, fertilizer, plant
+health, analytics and system alerts. Auth schemas live in app/routers/auth.py.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
-
-# NOT: User/Farm/Field/SoilAnalysis/CropPlanting/FertilizerRecommendationLog
-# için Pydantic schema'ları henüz endpoint tarafından tüketilmediği için
-# silindi. Auth schema'ları `app/routers/auth.py` içinde tanımlıdır
-# (UserRegisterRequest, UserLoginRequest, TokenResponse, CurrentUserResponse).
-# CRUD endpoint'leri eklendiğinde schema'lar burada yeniden tanımlanmalı.
 
 
 # ========== SENSOR ==========

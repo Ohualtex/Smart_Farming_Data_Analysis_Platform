@@ -1,0 +1,91 @@
+# ============================================================
+# SFDAP — Security & Dependency Audit
+# ============================================================
+# Cycle 8 audit'inde eklendi (Miraç).
+# - bandit         : Python source code güvenlik tarayıcısı (CWE/CVE pattern)
+# - pip-audit      : requirements.txt CVE/güvenlik tarayıcısı (PyPI advisory DB)
+# Tetikleyiciler:
+# - Pull request (main'e)
+# - Her push (main, cycle_8)
+# - Haftalık cron — Pazartesi 06:00 UTC (yeni CVE'leri yakalamak için)
+# - Manuel (workflow_dispatch)
+# ============================================================
+
+name: SFDAP Security Audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, cycle_8]
+  schedule:
+    - cron: "0 6 * * 1"  # Mon 06:00 UTC
+  workflow_dispatch:  # manuel tetikleme
+
+permissions:
+  contents: read
+
+jobs:
+  bandit:
+    name: 🛡️ Bandit (Python Source Security)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Kodu indir
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: 📦 Bandit kur
+        run: pip install "bandit[toml]>=1.7.5"
+
+      # Bandit `app/` üzerinde tarar; tests/ ve scripts/ çıkarılır.
+      # `--severity-level medium` LOW spam'ini eler, gerçek issue'lara odaklanır.
+      # Çıktı GitHub Actions log'una + JSON artifact olarak yüklenir.
+      - name: 🔍 Bandit taraması
+        run: |
+          bandit -r app/ -f screen --severity-level medium --confidence-level medium
+          bandit -r app/ -f json -o bandit-report.json --severity-level medium --confidence-level medium || true
+
+      - name: 📊 Bandit JSON artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          retention-days: 30
+
+  pip-audit:
+    name: 🔒 pip-audit (Dependency CVE)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Kodu indir
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: 📦 pip-audit kur
+        run: pip install "pip-audit>=2.7.0"
+
+      # `--strict` exit-1 dönmezse PR/branch korunur (sadece info-level
+      # ihlaller ignore edilebilir). Şimdilik ihlal varsa fail.
+      - name: 🔍 Dependency audit
+        run: pip-audit --requirement requirements.txt --strict --format=json --output=pip-audit-report.json
+        continue-on-error: false
+
+      - name: 📊 pip-audit JSON artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit-report.json
+          retention-days: 30

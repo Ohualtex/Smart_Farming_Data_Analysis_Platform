@@ -134,7 +134,7 @@ Form değerlerini gir:
 
 **Tarayıcıda:** http://localhost:8000/docs
 
-> *"Geliştirici tarafı: 41 endpoint, hepsi Swagger'da Türkçe açıklamalı.
+> *"Geliştirici tarafı: 43 endpoint, hepsi Swagger'da Türkçe açıklamalı.
 > Sağ üstten Authorize → API key ver, herhangi bir endpoint'i canlı
 > test et."*
 
@@ -174,8 +174,9 @@ curl http://localhost:8000/api/model-performance/drift/irrigation_rf
 make test
 ```
 
-> *"220 test, %91 coverage, 19 test dosyası, GitHub Actions ile her PR'da
-> otomatik. Pre-commit hook'larıyla ruff lint + format zorunlu."*
+> *"301 test, %94 coverage, 23 test dosyası, GitHub Actions ile her PR'da
+> otomatik (lint + test + alembic migration smoke + güvenlik tarayıcıları).
+> Pre-commit hook'larıyla ruff lint + format + bandit zorunlu."*
 
 ```bash
 .venv/bin/ruff check app/
@@ -186,9 +187,11 @@ make test
 
 ### Adım 10 — Yol Haritası ve Kapanış (1 dk)
 
-> *"Cycle 7'de CNN bitki sağlığı modeli, Auth UI, IoT/MQTT entegrasyonu
-> gelecek. Cycle 8'de production hardening (JWT auth, Sentry, Prometheus,
-> rate limit). Cycle 9 final rapor + akademik teslim."*
+> *"Cycle 7'de CNN bitki sağlığı modeli, Auth UI ve IoT/MQTT entegrasyonu
+> tamamlandı. Cycle 8'de üretim çekirdeği geldi (JWT auth, Alembic migration,
+> rate limit, N+1 fix, nginx+Let's Encrypt). `shiftFinal` bridge sprint'inde
+> cila ve gözlemlenebilirlik (Sentry, Prometheus, frontend a11y, backup).
+> Cycle 9 final rapor + akademik teslim."*
 
 **README "Yol Haritası" tablosunu göster.**
 
@@ -207,7 +210,7 @@ make test
 
 | Soru | Cevap |
 |:--|:--|
-| Gerçek çiftçiler nasıl kullanır? | "Pilot için sensör donanım kiti + mobil app gerek. Cycle 8'de auth UI ile 1-2 pilot çiftliğe deploy edebiliriz." |
+| Gerçek çiftçiler nasıl kullanır? | "Pilot için sensör donanım kiti + mobil app gerek. Cycle 8'de auth UI + JWT backend tamamlandığı için 1-2 pilot çiftliğe deploy edilebilir." |
 | Hangi veriyi kullandınız? | "Eğitim setimiz 1000 sentetik örnek (RandomForest). Cycle 7'de gerçek IoT verisi entegre olacak." |
 | Filiz neden var? | "Çiftçilerin teknolojiyle bağ kurması için sevimli bir asistan. Tarımsal ipuçları + sistem durumu görselleştirme." |
 | Maliyet modeli? | "Akademik proje. Üretim için kooperatif/Bakanlık destekli SaaS modeli düşünülebilir." |

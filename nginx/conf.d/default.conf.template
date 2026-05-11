@@ -1,0 +1,112 @@
+# SFDAP Production Reverse Proxy
+# ====================================
+# nginx:1.27-alpine bu dosyayi /etc/nginx/templates altinda gorduyse
+# envsubst ile ${DOMAIN} ve diger env variable'lari runtime'da yerlestirir
+# (auto-processing: https://hub.docker.com/_/nginx → "Using environment variables")
+#
+# - HTTP (80): ACME challenge + HTTPS redirect
+# - HTTPS (443): TLS termination, FastAPI'ye proxy_pass
+#
+# DOMAIN env variable docker-compose.yml uzerinden gelir; .env'den okunur.
+#
+# EN: Production reverse proxy template processed by nginx:1.27-alpine.
+# HTTP→HTTPS redirect, ACME challenge passthrough, and TLS-terminated
+# proxying to the FastAPI upstream.
+
+# Upstream FastAPI service (Docker DNS uzerinden 'api' hostname'i)
+upstream sfdap_api {
+    server api:8000;
+}
+
+# WebSocket icin Connection header haritalama (server'da kullaniliyor)
+# EN: Connection upgrade map for WebSocket support; referenced inside server.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# ─── HTTP (80) — Redirect + ACME challenge ─────────────────────────
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+
+    # Let's Encrypt ACME http-01 challenge — HTTPS'e redirect EDILMEMELI.
+    # certbot --webroot bu path'e dosya yazar; nginx HTTP uzerinden serve eder.
+    # EN: ACME http-01 challenge files; must NOT redirect to HTTPS.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # Diger her sey HTTPS'e redirect
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ─── HTTPS (443) — TLS termination + reverse proxy ─────────────────
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+
+    # Let's Encrypt sertifikalari (certbot volume mount)
+    # EN: Let's Encrypt certs mounted from the certbot service volume.
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/${DOMAIN}/chain.pem;
+
+    # Mozilla Intermediate TLS profili (2026)
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    # OCSP stapling
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 1.1.1.1 8.8.8.8 valid=300s;
+    resolver_timeout 5s;
+
+    # ─── Guvenlik header'lari ─────────────────────────────────────
+    # 6 ay HSTS (preload listesine eklemek icin >1y onerilir)
+    add_header Strict-Transport-Security "max-age=15552000; includeSubDomains" always;
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # ─── Yuk sinirlari ───────────────────────────────────────────
+    # CNN endpoint multipart upload'i icin 5MB; nginx tarafinda 10m guvenli toleransla
+    client_max_body_size 10m;
+    client_body_timeout 60s;
+
+    # Gzip
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml application/json application/javascript application/xml+rss image/svg+xml;
+
+    # ─── Reverse proxy ───────────────────────────────────────────
+    # Tum trafik FastAPI'ye gider — / dashboard, /api/*, /docs, /redoc, /openapi.json
+    location / {
+        proxy_pass http://sfdap_api;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $host;
+
+        # WebSocket / SSE icin (ileride canli sensor stream)
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+
+        # Timeout'lar — ML inference (CNN) bazen 5s+ surebilir
+        proxy_connect_timeout 10s;
+        proxy_send_timeout    60s;
+        proxy_read_timeout    60s;
+    }
+}

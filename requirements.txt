@@ -30,6 +30,13 @@ python-dotenv>=1.0.0
 python-multipart>=0.0.6
 slowapi>=0.1.9
 
+# Auth (Cycle 8 — JWT backend)
+# Miraç: bcrypt password hashing + JWT token üretimi
+# bcrypt<5.0 — passlib 1.7.4 yeni bcrypt 5.x ile uyumsuz (`__about__` kaldırıldı)
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0,<5.0
+
 # HTTP Client (for weather API)
 httpx>=0.27.0
 

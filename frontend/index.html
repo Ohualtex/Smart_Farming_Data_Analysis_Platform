@@ -121,6 +121,43 @@ input, select { font-family: var(--font); }
     color: var(--text-dim);
     margin-left: 6px;
 }
+
+/* Pagination bar — tablo altinda, ortada status + iki yanda buton */
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+.page-status {
+    flex: 1;
+    text-align: center;
+    font-size: .82rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.page-status strong { color: var(--text); font-weight: 600; }
+.page-nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .85rem;
+    transition: all .15s;
+    min-width: 90px;
+}
+.page-nav-btn:hover:not(:disabled) { background: var(--primary); color: white; border-color: var(--primary); }
+.page-nav-btn:disabled { opacity: .4; cursor: not-allowed; }
+
 .table-box h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
 table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 th { text-align: left; padding: 10px 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: 500; }
@@ -1328,10 +1365,15 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                 </div>
                 <div class="section-header">📋 Sensör Listesi</div>
                 <div class="table-box scroll-table">
-                    <h3>📡 Aktif Sensörler <span class="muted-hint">(ilk 20)</span></h3>
+                    <h3>📡 Aktif Sensörler</h3>
                     <div class="scroll-area">
                         <table><thead><tr><th>ID</th><th>Tip</th><th>Seri No</th><th>Durum</th></tr></thead>
                         <tbody id="sensorsTable"></tbody></table>
+                    </div>
+                    <div class="pagination-bar">
+                        <button class="page-nav-btn" id="sensorsPrevBtn" onclick="loadSensors(sensorsPage - 1)" disabled>◀ Önceki</button>
+                        <div class="page-status" id="sensorsPageStatus">Yükleniyor…</div>
+                        <button class="page-nav-btn" id="sensorsNextBtn" onclick="loadSensors(sensorsPage + 1)" disabled>Sonraki ▶</button>
                     </div>
                 </div>
             </section>
@@ -1370,10 +1412,15 @@ body, .sidebar, .header, .card, .chart-box, .table-box, .form-box, .hero-banner,
                     <div id="irrigationResult"></div>
                 </div>
                 <div class="table-box scroll-table">
-                    <h3>📋 Sulama Geçmişi <span class="muted-hint">(son 20)</span></h3>
+                    <h3>📋 Sulama Geçmişi</h3>
                     <div class="scroll-area">
                         <table><thead><tr><th>Tarla</th><th>Tarih</th><th>Süre</th><th>Su (L)</th><th>Durum</th></tr></thead>
                         <tbody id="irrigationTable"></tbody></table>
+                    </div>
+                    <div class="pagination-bar">
+                        <button class="page-nav-btn" id="irrigationPrevBtn" onclick="loadIrrigation(irrigationPage - 1)" disabled>◀ Önceki</button>
+                        <div class="page-status" id="irrigationPageStatus">Yükleniyor…</div>
+                        <button class="page-nav-btn" id="irrigationNextBtn" onclick="loadIrrigation(irrigationPage + 1)" disabled>Sonraki ▶</button>
                     </div>
                 </div>
             </section>
@@ -1904,10 +1951,38 @@ function renderPrecipChart(data) {
 }
 
 // ─── SENSORS ──────────────────────────────────────────────────
-async function loadSensors() {
-    const sensors = await api('/api/sensors/?limit=20') || [];
-    const tbody = document.getElementById('sensorsTable');
-    tbody.innerHTML = sensors.map(s => `
+// Pagination: sayfa basi 50 kayit, slider ile sayfalari gez.
+const PAGE_SIZE = 50;
+let sensorsPage = 1;
+let sensorsTotal = 0;
+
+async function loadSensors(page = 1) {
+    // Toplam sayiyi her sayfa degisikliginde tekrar cekmek pahali —
+    // ilk yuklemede al, sonra cache'le. Yeni sensor eklenirse sayfa
+    // degistiginde tekrar fetch edilir (bilincli trade-off).
+    if (sensorsTotal === 0) {
+        const cnt = await api('/api/sensors/count');
+        sensorsTotal = cnt?.total || 0;
+    }
+    const totalPages = Math.max(1, Math.ceil(sensorsTotal / PAGE_SIZE));
+    sensorsPage = Math.min(Math.max(1, page), totalPages);
+    const skip = (sensorsPage - 1) * PAGE_SIZE;
+
+    const sensors = await api(`/api/sensors/?skip=${skip}&limit=${PAGE_SIZE}`) || [];
+
+    // Nav buton'larini guncelle
+    document.getElementById('sensorsPrevBtn').disabled = sensorsPage <= 1;
+    document.getElementById('sensorsNextBtn').disabled = sensorsPage >= totalPages;
+
+    // Status bar
+    const from = sensors.length ? skip + 1 : 0;
+    const to = skip + sensors.length;
+    document.getElementById('sensorsPageStatus').innerHTML =
+        `Sayfa <strong>${sensorsPage}</strong>/${totalPages} · ` +
+        `Kayıt <strong>${from}–${to}</strong>/${sensorsTotal}`;
+
+    // Tabloyu render et
+    document.getElementById('sensorsTable').innerHTML = sensors.map(s => `
         <tr style="cursor:pointer" onclick="loadSensorDetail(${s.id})">
             <td>${s.id}</td><td>${s.sensor_type}</td><td>${s.serial_number}</td>
             <td><span class="badge active">${s.status}</span></td>
@@ -1967,8 +2042,32 @@ async function loadWeather() {
 }
 
 // ─── IRRIGATION ───────────────────────────────────────────────
-async function loadIrrigation() {
-    const schedules = await api('/api/irrigation/schedules?limit=20') || [];
+// Pagination: sayfa basi 50 kayit, slider ile sayfalari gez.
+let irrigationPage = 1;
+let irrigationTotal = 0;
+
+async function loadIrrigation(page = 1) {
+    if (irrigationTotal === 0) {
+        const cnt = await api('/api/irrigation/schedules/count');
+        irrigationTotal = cnt?.total || 0;
+    }
+    const totalPages = Math.max(1, Math.ceil(irrigationTotal / PAGE_SIZE));
+    irrigationPage = Math.min(Math.max(1, page), totalPages);
+    const skip = (irrigationPage - 1) * PAGE_SIZE;
+
+    const schedules = await api(`/api/irrigation/schedules?skip=${skip}&limit=${PAGE_SIZE}`) || [];
+
+    // Nav buton'larini guncelle
+    document.getElementById('irrigationPrevBtn').disabled = irrigationPage <= 1;
+    document.getElementById('irrigationNextBtn').disabled = irrigationPage >= totalPages;
+
+    // Status bar
+    const from = schedules.length ? skip + 1 : 0;
+    const to = skip + schedules.length;
+    document.getElementById('irrigationPageStatus').innerHTML =
+        `Sayfa <strong>${irrigationPage}</strong>/${totalPages} · ` +
+        `Kayıt <strong>${from}–${to}</strong>/${irrigationTotal}`;
+
     document.getElementById('irrigationTable').innerHTML = schedules.map(s => `
         <tr>
             <td>Tarla #${s.field_id}</td><td>${new Date(s.scheduled_date).toLocaleDateString('tr')}</td>

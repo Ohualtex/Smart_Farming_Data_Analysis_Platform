@@ -74,15 +74,15 @@ app/
 ├── database.py                # SQLAlchemy engine + session + naming convention
 │
 ├── core/
-│   └── logger.py              # Loguru kurulumu (LOG_FORMAT=json opsiyonu Cycle 8)
+│   └── logger.py              # Loguru kurulumu (LOG_FORMAT=json opsiyonu shiftFinal)
 │
 ├── models/
-│   └── models.py              # 14 ORM tablosu (User, Farm, Field, Sensor, ...)
+│   └── models.py              # 15 ORM tablosu (+sensor_reading_monthly_aggregates — Cycle 8)
 │
 ├── schemas/
 │   └── schemas.py             # 30+ Pydantic request/response modeli
 │
-├── routers/                   # 11 router, 41 endpoint
+├── routers/                   # 11 router, 43 endpoint (sensors/count + schedules/count dahil)
 │   ├── health.py              # Sığ sağlık (load balancer için)
 │   ├── metrics.py             # Derin sağlık (DB+scheduler+ML+freshness+alerts)
 │   ├── sensors.py             # Sensör CRUD + readings
@@ -163,7 +163,7 @@ sequenceDiagram
 
 ---
 
-## 🗄️ Veri Modeli — 14 ORM Tablosu
+## 🗄️ Veri Modeli — 15 ORM Tablosu
 
 ```mermaid
 erDiagram
@@ -299,18 +299,25 @@ graph LR
         B4[MQTT IoT Stream]
     end
 
-    subgraph "Cycle 8"
+    subgraph "Cycle 8 (Üretim Core)"
         C1[JWT + bcrypt Auth Backend]
         C2[Alembic Migration]
-        C3[Sentry + Prometheus]
-        C4[Rate Limit Decorator]
-        C5[Frontend Bundling]
+        C3[Rate Limit Decorator]
+        C4[N+1 Fix]
+        C5[nginx + Let's Encrypt]
     end
 
-    subgraph "Cycle 9"
-        D1[Final Rapor]
-        D2[Sunum]
-        D3[Test Validasyon]
+    subgraph "shiftFinal (Cila & Gözlemlenebilirlik bridge)"
+        D1[Sentry + Prometheus]
+        D2[Frontend Bundling + a11y]
+        D3[Backup + DB Pool]
+        D4[Edge Tests + Coverage 95%+]
+    end
+
+    subgraph "Cycle 9 (Final Teslim)"
+        E1[Final Rapor]
+        E2[Sunum]
+        E3[Test Validasyon]
     end
 
     A1 --> B1

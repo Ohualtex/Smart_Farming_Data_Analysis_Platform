@@ -132,7 +132,11 @@ app/ml/models/
 # SFDAP Specific
 # ========================
 .ruff_cache/
-alembic/versions/*.py
+# Alembic migration dosyalari TRACK EDILMELI (deployment icin sart);
+# sadece __pycache__ ignore et.
+# EN: Alembic migration files MUST be tracked (required for deployments);
+# only ignore the __pycache__ directory.
+alembic/versions/__pycache__/
 *_old.html
 *_backup.*
 *.backup-*

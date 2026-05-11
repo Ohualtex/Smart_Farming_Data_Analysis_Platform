@@ -2,19 +2,51 @@
 MQTT Listener Unit Tests
 ==========================
 `MQTTListener._save_reading` ve `_extract_sensor_id` saf fonksiyonlarını
-broker olmadan test eder. Gerçek paho-mqtt bağlantısı için entegrasyon
-testi yok — broker gerektirir.
+broker olmadan test eder. Lifecycle (start/stop) ve paho callback'leri
+mock'larla test edilir; gerçek broker gerektirmez.
 """
 
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
+import sys
+from types import ModuleType, SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
 from app.models.models import Farm, Field, Sensor, SoilMoistureReading, User
-from app.services.mqtt_listener import MQTTListener, mqtt_listener
+from app.services.mqtt_listener import MQTTListener, _safe_float, mqtt_listener
+
+
+@pytest.fixture
+def fake_paho(monkeypatch):
+    """sys.modules'a fake `paho.mqtt.client` hierarchy enjekte eder.
+
+    Test ortamında paho-mqtt yüklü değil (optional dep). Bu fixture
+    `import paho.mqtt.client as mqtt` ifadesinin başarılı dönmesini
+    sağlar ve mock'lanmış Client class'ı döndürür.
+
+    EN: Injects a fake paho.mqtt.client module hierarchy so the import
+    in MQTTListener.start() succeeds; returns the mocked Client class.
+    """
+    fake_paho_pkg = ModuleType("paho")
+    fake_paho_mqtt_pkg = ModuleType("paho.mqtt")
+    fake_paho_mqtt_client_mod = ModuleType("paho.mqtt.client")
+
+    mock_client_factory = MagicMock()
+    fake_paho_mqtt_client_mod.Client = mock_client_factory
+    # paho-mqtt 2.x API uyumluluğu için CallbackAPIVersion sahte enum
+    fake_paho_mqtt_client_mod.CallbackAPIVersion = MagicMock(VERSION2="v2")
+
+    fake_paho_pkg.mqtt = fake_paho_mqtt_pkg
+    fake_paho_mqtt_pkg.client = fake_paho_mqtt_client_mod
+
+    monkeypatch.setitem(sys.modules, "paho", fake_paho_pkg)
+    monkeypatch.setitem(sys.modules, "paho.mqtt", fake_paho_mqtt_pkg)
+    monkeypatch.setitem(sys.modules, "paho.mqtt.client", fake_paho_mqtt_client_mod)
+
+    return mock_client_factory
 
 
 @pytest.fixture
@@ -142,3 +174,118 @@ class TestOnMessage:
         listener = MQTTListener()
         listener._on_message(None, None, msg)
         assert db.query(SoilMoistureReading).count() == 0
+
+
+# ─── start() / stop() lifecycle ──────────────────────────────────────
+
+
+class TestStartStop:
+    """`start()` ve `stop()` paho-mqtt mock'lanmış senaryolar."""
+
+    def test_start_returns_false_when_paho_not_installed(self, monkeypatch):
+        """paho.mqtt.client import edilemezse start() False döner."""
+        # sys.modules'tan paho'yu ve alt modulleri kaldır + None set'le
+        for key in ("paho", "paho.mqtt", "paho.mqtt.client"):
+            monkeypatch.setitem(sys.modules, key, None)
+        listener = MQTTListener()
+        assert listener.start() is False
+        assert listener.running is False
+
+    def test_start_returns_false_when_broker_unreachable(self, fake_paho):
+        """Broker'a connect başarısız olursa False, running False kalmalı."""
+        fake_client = MagicMock()
+        fake_client.connect.side_effect = OSError("connection refused")
+        fake_paho.return_value = fake_client
+
+        listener = MQTTListener(broker_host="unreachable", broker_port=1883)
+        assert listener.start() is False
+        assert listener.running is False
+
+    def test_start_succeeds_and_double_start_idempotent(self, fake_paho):
+        """Başarılı start sonrası ikinci start True döner ama tekrar connect etmez."""
+        fake_client = MagicMock()
+        fake_paho.return_value = fake_client
+
+        listener = MQTTListener()
+        assert listener.start() is True
+        assert listener.running is True
+        # Connect ve loop_start çağrıları yapılmış olmalı
+        fake_client.connect.assert_called_once_with("localhost", 1883, keepalive=60)
+        fake_client.loop_start.assert_called_once()
+        # Callback'ler atandı — direkt çağırarak doğrula (subscribe tetiklenmeli)
+        fake_client.on_connect(fake_client, None, None, rc=0)
+        fake_client.subscribe.assert_called_once()
+        # İkinci start çağrısı no-op (zaten running)
+        connect_call_count = fake_client.connect.call_count
+        assert listener.start() is True
+        assert fake_client.connect.call_count == connect_call_count
+
+        # Cleanup
+        listener.stop()
+
+    def test_stop_closes_running_listener(self, fake_paho):
+        """Çalışan listener stop() çağrısında loop_stop + disconnect yapmalı."""
+        fake_client = MagicMock()
+        fake_paho.return_value = fake_client
+
+        listener = MQTTListener()
+        listener.start()
+        listener.connected = True
+        listener.stop()
+
+        fake_client.loop_stop.assert_called_once()
+        fake_client.disconnect.assert_called_once()
+        assert listener.running is False
+        assert listener.connected is False
+
+    def test_stop_noop_when_not_running(self):
+        """Hiç başlatılmamış listener'da stop() exception atmamalı."""
+        listener = MQTTListener()
+        # client None, running False
+        listener.stop()  # silently no-op
+        assert listener.running is False
+
+
+# ─── paho callback'leri ──────────────────────────────────────────────
+
+
+class TestPahoCallbacks:
+    """`_on_connect` ve `_on_disconnect` davranışları."""
+
+    def test_on_connect_success_subscribes(self):
+        """rc=0 (başarılı) → connected True, subscribe çağrılmalı."""
+        listener = MQTTListener()
+        fake_client = MagicMock()
+        listener._on_connect(fake_client, None, None, rc=0)
+        assert listener.connected is True
+        fake_client.subscribe.assert_called_once()
+
+    def test_on_connect_failure_sets_connected_false(self):
+        """rc!=0 → connected False, subscribe çağrılmamalı."""
+        listener = MQTTListener()
+        fake_client = MagicMock()
+        listener._on_connect(fake_client, None, None, rc=4)
+        assert listener.connected is False
+        fake_client.subscribe.assert_not_called()
+
+    def test_on_disconnect_clears_connected_flag(self):
+        """Disconnect callback'i connected=False yapmalı."""
+        listener = MQTTListener()
+        listener.connected = True
+        listener._on_disconnect(MagicMock(), None, rc=0)
+        assert listener.connected is False
+
+
+# ─── _safe_float helper ───────────────────────────────────────────────
+
+
+class TestSafeFloat:
+    def test_none_returns_none(self):
+        assert _safe_float(None) is None
+
+    def test_invalid_string_returns_none(self):
+        assert _safe_float("not-a-number") is None
+
+    def test_valid_number_returns_float(self):
+        assert _safe_float("42.5") == 42.5
+        assert _safe_float(7) == 7.0

@@ -116,3 +116,53 @@ class TestCreateSchedule:
         # IrrigationResponse'da duration_min yok (water_amount_liters var)
         data = response.json()
         assert data["water_amount_liters"] == SAMPLE_SCHEDULE["water_amount_liters"]
+
+
+# ───── /schedules/count + skip pagination ───────────────────────────────────
+class TestIrrigationPagination:
+    """`/api/irrigation/schedules?skip=&limit=` + `/schedules/count` — slider pagination."""
+
+    def test_count_empty_db(self, client):
+        """Boş DB → count 0."""
+        response = client.get("/api/irrigation/schedules/count")
+        assert response.status_code == 200
+        assert response.json() == {"total": 0}
+
+    def test_count_reflects_created_schedules(self, client):
+        """3 program eklenince count 3 olmalı."""
+        for _ in range(3):
+            client.post("/api/irrigation/schedules", json=SAMPLE_SCHEDULE)
+        response = client.get("/api/irrigation/schedules/count")
+        assert response.json()["total"] == 3
+
+    def test_count_with_field_id_filter(self, client):
+        """`field_id` filtresi count'a uygulanmalı."""
+        client.post("/api/irrigation/schedules", json={**SAMPLE_SCHEDULE, "field_id": 1})
+        client.post("/api/irrigation/schedules", json={**SAMPLE_SCHEDULE, "field_id": 1})
+        client.post("/api/irrigation/schedules", json={**SAMPLE_SCHEDULE, "field_id": 99})
+
+        total = client.get("/api/irrigation/schedules/count").json()["total"]
+        filtered = client.get("/api/irrigation/schedules/count?field_id=1").json()["total"]
+        assert total == 3
+        assert filtered == 2
+
+    def test_skip_limit_returns_correct_slice(self, client):
+        """`skip=2&limit=2` → 5 programdan 3. ve 4. dönmeli (DESC date order)."""
+        for i in range(5):
+            payload = {**SAMPLE_SCHEDULE, "scheduled_date": f"2026-04-{10 + i:02d}T08:00:00"}
+            client.post("/api/irrigation/schedules", json=payload)
+
+        response = client.get("/api/irrigation/schedules?skip=2&limit=2")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+
+    def test_negative_skip_rejected(self, client):
+        """`skip=-1` Query validation tarafından reddedilmeli (ge=0)."""
+        response = client.get("/api/irrigation/schedules?skip=-1&limit=10")
+        assert response.status_code == 422
+
+    def test_limit_over_max_rejected(self, client):
+        """`limit=501` Query validation tarafından reddedilmeli (max 500)."""
+        response = client.get("/api/irrigation/schedules?limit=501")
+        assert response.status_code == 422

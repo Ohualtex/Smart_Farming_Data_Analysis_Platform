@@ -18,11 +18,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import verify_api_key
+from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.ml.plant_disease_model import plant_disease_model
 from app.models.models import PlantHealthImage
 
@@ -70,7 +71,8 @@ def get_health_images(field_id: int | None = None, limit: int = 20, db: Session 
     description="`field_id` ve `image_url` ile kayıt oluşturur (CDN/external URL için). "
     "Multipart upload için `/health-images/analyze` kullanın.",
 )
-def upload_health_image(field_id: int, image_url: str, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def upload_health_image(request: Request, field_id: int, image_url: str, db: Session = Depends(get_db)):
     image = PlantHealthImage(field_id=field_id, image_url=image_url)
     db.add(image)
     db.commit()
@@ -86,7 +88,9 @@ def upload_health_image(field_id: int, image_url: str, db: Session = Depends(get
     description="Multipart form ile yaprak görseli yüklenir, `plant_disease_model` üzerinden "
     "tahmin yapılır ve sonuç hem response'da döner hem `PlantHealthImage` tablosuna kaydedilir.",
 )
+@limiter.limit(AUTH_RATE)
 async def analyze_plant_image(
+    request: Request,
     field_id: int = Form(..., description="Tarla ID"),
     image: UploadFile = File(..., description="Yaprak görseli (JPG/PNG/WebP, max 5 MB)"),
     db: Session = Depends(get_db),

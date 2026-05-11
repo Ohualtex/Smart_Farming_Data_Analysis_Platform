@@ -20,12 +20,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import verify_api_key
+from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import ModelPerformanceLog, SystemAlert
 from app.schemas.schemas import (
     ModelPerformanceCompareItem,
@@ -38,6 +39,20 @@ from app.schemas.schemas import (
 )
 
 router = APIRouter(prefix="/api/model-performance", tags=["Model Performansı"])
+
+# ─── Modül-seviyesi sabitler (magic number temizliği) ──────────────────
+# Query/listeleme limitleri
+DEFAULT_PAGE_LIMIT = 100  # /list ve /timeseries default `limit`
+MAX_PAGE_LIMIT = 500
+
+# Drift detection penceresi default'ları
+DEFAULT_RECENT_WINDOW_DAYS = 7
+DEFAULT_BASELINE_WINDOW_DAYS = 30
+DEFAULT_DRIFT_THRESHOLD_PERCENT = 10.0
+
+# Alert dedup penceresi — son N saat içinde aynı model için alert varsa
+# tekrar yaratma (spam koruması). 24 saat: günlük drift check cron'una uygun.
+ALERT_DEDUP_WINDOW_HOURS = 24
 
 
 @router.get(
@@ -63,7 +78,8 @@ def list_logs(
     dependencies=[Depends(verify_api_key)],
     summary="Yeni performans logu kaydet",
 )
-def create_log(payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def create_log(request: Request, payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)):
     log = ModelPerformanceLog(**payload.model_dump())
     db.add(log)
     db.commit()
@@ -80,7 +96,8 @@ def create_log(payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)
     "günceller. Tipik akış: önce POST ile log yaratılır, gerçek sonuç bilindiğinde bu PATCH "
     "ile doldurulur.",
 )
-def update_log(log_id: int, payload: ModelPerformanceLogUpdate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def update_log(request: Request, log_id: int, payload: ModelPerformanceLogUpdate, db: Session = Depends(get_db)):
     log = db.query(ModelPerformanceLog).filter(ModelPerformanceLog.id == log_id).first()
     if log is None:
         raise HTTPException(status_code=404, detail=f"Log {log_id} bulunamadi")
@@ -244,13 +261,13 @@ def detect_drift(
         drift_percent = ((recent_avg - baseline_avg) / baseline_avg) * 100
         if drift_percent < -threshold_percent:
             drift_detected = True
-            # Aynı tip alert son 24 saat içinde varsa tekrar yaratma (spam önleme)
+            # Aynı tip alert son N saat içinde varsa tekrar yaratma (spam önleme)
             existing = (
                 db.query(SystemAlert)
                 .filter(
                     SystemAlert.alert_type == "model_drift",
                     SystemAlert.message.like(f"%{model_name}%"),
-                    SystemAlert.created_at >= now - timedelta(hours=24),
+                    SystemAlert.created_at >= now - timedelta(hours=ALERT_DEDUP_WINDOW_HOURS),
                 )
                 .first()
             )

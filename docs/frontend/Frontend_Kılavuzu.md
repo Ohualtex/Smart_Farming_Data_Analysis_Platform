@@ -4,9 +4,9 @@ Bu doküman, Ecenur Üner tarafından geliştirilen ve kullanıcıların sisteml
 
 ## 📁 Dizin Yapısı
 Frontend kodları projenin kök dizinindeki `frontend/` klasörü altında bulunur ve şu an **tek dosyalı SPA** mimarisindedir:
-- `index.html` (≈3700 satır): Tüm uygulama — HTML iskelet, CSS (inline `<style>`, dark/light tema, glassmorphism), JavaScript (vanilla, asenkron `fetch`, Chart.js render, Filiz mascot logic).
+- `index.html` (≈2 873 satır): Tüm uygulama — HTML iskelet, CSS (inline `<style>`, dark/light tema, glassmorphism), JavaScript (vanilla, asenkron `fetch`, Chart.js render, Filiz mascot logic).
 
-> **Cycle 8 planı:** Bu tek dosya Vite/esbuild ile `css/`, `js/` çıktılarına ayrılacak (HMR + minify + cache busting). Bkz. `projeakisi.md` → Cycle 8 → Ecenur "Frontend Build Pipeline".
+> **shiftFinal planı:** Bu tek dosya Vite/esbuild ile `css/`, `js/` çıktılarına ayrılacak (HMR + minify + cache busting). Bkz. `projeakisi.md` → shiftFinal → Ecenur "Frontend Build Pipeline".
 
 ## 🚀 Çalıştırma ve Test
 Frontend dosyaları doğrudan tarayıcıda açılabilir veya FastAPI üzerinden sunulur:

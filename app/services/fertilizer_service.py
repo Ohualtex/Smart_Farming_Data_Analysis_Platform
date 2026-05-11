@@ -11,7 +11,7 @@ Ayşe Eslem Çekici — Cycle 5 Görevi
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 
 class FertilizerService:
@@ -198,7 +198,10 @@ class FertilizerService:
             return []
 
         requirements = self.CROP_NPK_REQUIREMENTS[crop_type_lower]
-        base_date = datetime.strptime(planting_date, "%Y-%m-%d")
+        # `planting_date` kullanıcı girdisi (YYYY-MM-DD); UTC olarak yorumla
+        # ki naive datetime aritmetiği tz-aware kalsın (DTZ007).
+        # EN: Treat user-supplied date as UTC midnight for tz-aware arithmetic.
+        base_date = datetime.strptime(planting_date, "%Y-%m-%d").replace(tzinfo=UTC)
 
         # Eksik miktarları hesapla
         n_deficit = max(0.0, requirements["N"] - soil_nitrogen)

@@ -114,6 +114,73 @@ class TestErrorResponseFormat:
             assert response.status_code == 401
 
 
+# ─── RATE LIMIT TESTLERİ ─────────────────────────────────────────
+
+
+class TestRateLimit:
+    """SlowAPI rate limit decorator'larının doğru bağlandığını doğrular.
+
+    Burst denemesi yaparak 429 cevabı ve cevabın format tutarlılığını test eder.
+    EN: Verifies SlowAPI rate-limit decorators are wired; bursts requests
+    to assert 429 emission and response shape.
+    """
+
+    def test_strict_rate_limit_post_sensors_returns_429(self, rate_limited_client):
+        """POST /api/sensors/ → STRICT_RATE (30/min); burst 429 üretmeli."""
+        statuses: list[int] = []
+        for i in range(35):
+            response = rate_limited_client.post(
+                "/api/sensors/",
+                json={
+                    "field_id": 1,
+                    "sensor_type": "soil_moisture",
+                    "serial_number": f"S-rate-{i}",
+                },
+            )
+            statuses.append(response.status_code)
+        assert 429 in statuses, f"Beklenen 429 yok; statuses={statuses[:35]}"
+        # 30/min limiti aşılmamalı: en fazla 30 başarılı 201 olabilir
+        assert statuses.count(201) <= 30
+
+    def test_auth_rate_limit_register_returns_429(self, rate_limited_client):
+        """POST /api/auth/register → AUTH_RATE (10/min); burst 429 üretmeli."""
+        statuses: list[int] = []
+        for i in range(15):
+            response = rate_limited_client.post(
+                "/api/auth/register",
+                json={
+                    "name": f"Test User {i}",
+                    "email": f"ratelimit{i}@ornek.com",
+                    "password": "Sifre1234",
+                },
+            )
+            statuses.append(response.status_code)
+        assert 429 in statuses, f"Beklenen 429 yok; statuses={statuses[:15]}"
+        # 10/min limiti aşılmamalı
+        assert statuses.count(201) <= 10
+
+    def test_rate_limit_response_uses_standard_error_format(self, rate_limited_client):
+        """429 cevabı `{error_code, message, detail}` formatında olmalı."""
+        last_response = None
+        for i in range(35):
+            last_response = rate_limited_client.post(
+                "/api/sensors/",
+                json={
+                    "field_id": 1,
+                    "sensor_type": "soil_moisture",
+                    "serial_number": f"S-fmt-{i}",
+                },
+            )
+            if last_response.status_code == 429:
+                break
+        assert last_response is not None
+        assert last_response.status_code == 429
+        body = last_response.json()
+        assert body.get("error_code") == "RATE_LIMIT_EXCEEDED"
+        assert "message" in body
+        assert "detail" in body
+
+
 # ─── ENDPOINT ERİŞİLEBİLİRLİK TESTLERİ ─────────────────────────
 
 

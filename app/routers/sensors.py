@@ -9,24 +9,43 @@ Emirhan Günay & Mehmet Sait Tayşi — Cycle 4 Görevi
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import verify_api_key
+from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import Sensor, SoilMoistureReading
 from app.schemas.schemas import SensorCreate, SensorReadingCreate, SensorReadingResponse, SensorResponse
 
 router = APIRouter(prefix="/api/sensors", tags=["Sensör Verileri"])
 
+# Pagination defaults — frontend slider 50'lik sayfalarla çalışıyor
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 500
+
 
 @router.get(
     "/",
     response_model=list[SensorResponse],
-    summary="Tüm sensörleri listele",
+    summary="Tüm sensörleri listele (skip + limit pagination)",
 )
-def get_all_sensors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return db.query(Sensor).offset(skip).limit(limit).all()
+def get_all_sensors(
+    skip: int = Query(default=0, ge=0, description="Atlanacak kayıt sayısı (pagination offset)"),
+    limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Sayfa boyutu (max 500)"),
+    db: Session = Depends(get_db),
+):
+    return db.query(Sensor).order_by(Sensor.id).offset(skip).limit(limit).all()
+
+
+@router.get(
+    "/count",
+    summary="Toplam sensör sayısı (pagination için)",
+    description="Frontend slider'ının sayfa sayısını hesaplaması için kullanılır.",
+)
+def count_sensors(db: Session = Depends(get_db)) -> dict:
+    return {"total": db.query(func.count(Sensor.id)).scalar() or 0}
 
 
 @router.get(
@@ -48,7 +67,8 @@ def get_sensor(sensor_id: int, db: Session = Depends(get_db)):
     dependencies=[Depends(verify_api_key)],
     summary="Yeni sensör ekle",
 )
-def create_sensor(sensor: SensorCreate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def create_sensor(request: Request, sensor: SensorCreate, db: Session = Depends(get_db)):
     db_sensor = Sensor(**sensor.model_dump())
     db.add(db_sensor)
     db.commit()
@@ -61,7 +81,8 @@ def create_sensor(sensor: SensorCreate, db: Session = Depends(get_db)):
     dependencies=[Depends(verify_api_key)],
     summary="Sensör sil",
 )
-def delete_sensor(sensor_id: int, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def delete_sensor(request: Request, sensor_id: int, db: Session = Depends(get_db)):
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
         raise HTTPException(status_code=404, detail="Sensor bulunamadi")
@@ -78,7 +99,8 @@ def delete_sensor(sensor_id: int, db: Session = Depends(get_db)):
     dependencies=[Depends(verify_api_key)],
     summary="Yeni sensör okuması kaydet",
 )
-def create_reading(reading: SensorReadingCreate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def create_reading(request: Request, reading: SensorReadingCreate, db: Session = Depends(get_db)):
     db_reading = SoilMoistureReading(**reading.model_dump())
     db.add(db_reading)
     db.commit()

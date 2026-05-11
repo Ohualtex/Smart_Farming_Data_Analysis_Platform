@@ -4,17 +4,16 @@ Miraç Duran tarafindan Cycle 6 kapsaminda eklendi.
 """
 
 import io
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pandas as pd
 from fpdf import FPDF
 
-
-def _clean_tr(text: str) -> str:
-    """FPDF temel fontlari icin Turkce karakterleri temizler."""
-    if not isinstance(text, str):
-        return str(text)
-    replacements = {
+# Türkçe → Latin-1 karakter dönüşüm tablosu (FPDF helvetica fontu sınırlaması).
+# Tek bir `str.maketrans` ile O(n) yerine for-loop O(n*m) yapmaktan kaçınırız.
+# EN: Translation map for FPDF Latin-1 fallback; one-pass O(n) via str.translate.
+_TR_ASCII_MAP = str.maketrans(
+    {
         "ı": "i",
         "İ": "I",
         "ş": "s",
@@ -28,9 +27,14 @@ def _clean_tr(text: str) -> str:
         "ç": "c",
         "Ç": "C",
     }
-    for tr, en in replacements.items():
-        text = text.replace(tr, en)
-    return text
+)
+
+
+def _clean_tr(text: str) -> str:
+    """FPDF temel fontları için Türkçe karakterleri ASCII karşılıklarına çevirir."""
+    if not isinstance(text, str):
+        return str(text)
+    return text.translate(_TR_ASCII_MAP)
 
 
 class ReportService:
@@ -47,21 +51,19 @@ class ReportService:
             counts_df.to_excel(writer, sheet_name="Genel Ozet", index=False)
 
             # 2. Ciftlik Hava Durumu
-            weather_data = data.get("farm_weather_comparison", [])
-            # Icerideki dict'leri flatten etmek icin
-            flat_weather = []
-            for w in weather_data:
-                flat_weather.append(
-                    {
-                        "Farm ID": w.get("farm_id"),
-                        "Farm Name": w.get("farm_name"),
-                        "City": w.get("city"),
-                        "Temp Avg (C)": w.get("temperature", {}).get("avg"),
-                        "Humidity Avg (%)": w.get("humidity", {}).get("avg"),
-                        "Precipitation (mm)": w.get("precipitation_total_mm"),
-                        "Records": w.get("record_count"),
-                    }
-                )
+            # Icerideki dict'leri flatten etmek icin (list comprehension)
+            flat_weather = [
+                {
+                    "Farm ID": w.get("farm_id"),
+                    "Farm Name": w.get("farm_name"),
+                    "City": w.get("city"),
+                    "Temp Avg (C)": w.get("temperature", {}).get("avg"),
+                    "Humidity Avg (%)": w.get("humidity", {}).get("avg"),
+                    "Precipitation (mm)": w.get("precipitation_total_mm"),
+                    "Records": w.get("record_count"),
+                }
+                for w in data.get("farm_weather_comparison", [])
+            ]
             pd.DataFrame(flat_weather).to_excel(writer, sheet_name="Hava Durumu", index=False)
 
             # 3. Sensor Dagilimi
@@ -91,7 +93,7 @@ class ReportService:
         pdf.cell(
             0,
             10,
-            f"Olusturulma Tarihi: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            f"Olusturulma Tarihi: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M')}",
             new_x="LMARGIN",
             new_y="NEXT",
             align="C",

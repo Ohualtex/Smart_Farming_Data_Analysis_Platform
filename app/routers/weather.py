@@ -10,11 +10,12 @@ Ayşe Eslem Çekici & Mehmet Sait Tayşi — Cycle 4/5 Görevi
 from __future__ import annotations
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import verify_api_key
+from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.models.models import WeatherData
 from app.schemas.schemas import WeatherDataCreate, WeatherDataResponse
 from app.services.weather_service import weather_service
@@ -31,7 +32,8 @@ def get_weather_data(farm_id: int = None, limit: int = 50, db: Session = Depends
 
 
 @router.post("/", response_model=WeatherDataResponse, status_code=201, dependencies=[Depends(verify_api_key)])
-def create_weather_data(data: WeatherDataCreate, db: Session = Depends(get_db)):
+@limiter.limit(STRICT_RATE)
+def create_weather_data(request: Request, data: WeatherDataCreate, db: Session = Depends(get_db)):
     db_weather = WeatherData(**data.model_dump())
     db.add(db_weather)
     db.commit()
@@ -50,7 +52,9 @@ def get_latest_weather(farm_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/fetch/{farm_id}")
+@limiter.limit(AUTH_RATE)
 async def fetch_weather_from_api(
+    request: Request,
     farm_id: int,
     lat: float = Query(..., description="Enlem"),
     lon: float = Query(..., description="Boylam"),
@@ -93,7 +97,8 @@ def get_weather_stats(
 
 
 @router.post("/clean")
-def clean_weather_record(data: dict):
+@limiter.limit(STRICT_RATE)
+def clean_weather_record(request: Request, data: dict):
     """
     Gönderilen hava durumu verisini temizler ve eksik alanları doldurur.
     Veri pipeline'ı test etmek için kullanılır.

@@ -68,7 +68,9 @@ class TestCrossValidate:
         x = rng.uniform(0, 10, (100, 1))
         y = (3 * x + 2 + rng.normal(0, 0.1, (100, 1))).ravel()
         result = cross_validate(LinearRegression(), x, y, cv=5)
-        assert "mean" in result and "std" in result and "scores" in result
+        assert "mean" in result
+        assert "std" in result
+        assert "scores" in result
         assert len(result["scores"]) == 5
         # Linear regression neredeyse mükemmel olmalı → MAE küçük → -MAE 0'a yakın
         assert result["mean"] > -0.5
