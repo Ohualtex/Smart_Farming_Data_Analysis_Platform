@@ -40,6 +40,20 @@ from app.schemas.schemas import (
 
 router = APIRouter(prefix="/api/model-performance", tags=["Model Performansı"])
 
+# ─── Modül-seviyesi sabitler (magic number temizliği) ──────────────────
+# Query/listeleme limitleri
+DEFAULT_PAGE_LIMIT = 100  # /list ve /timeseries default `limit`
+MAX_PAGE_LIMIT = 500
+
+# Drift detection penceresi default'ları
+DEFAULT_RECENT_WINDOW_DAYS = 7
+DEFAULT_BASELINE_WINDOW_DAYS = 30
+DEFAULT_DRIFT_THRESHOLD_PERCENT = 10.0
+
+# Alert dedup penceresi — son N saat içinde aynı model için alert varsa
+# tekrar yaratma (spam koruması). 24 saat: günlük drift check cron'una uygun.
+ALERT_DEDUP_WINDOW_HOURS = 24
+
 
 @router.get(
     "/",
@@ -247,13 +261,13 @@ def detect_drift(
         drift_percent = ((recent_avg - baseline_avg) / baseline_avg) * 100
         if drift_percent < -threshold_percent:
             drift_detected = True
-            # Aynı tip alert son 24 saat içinde varsa tekrar yaratma (spam önleme)
+            # Aynı tip alert son N saat içinde varsa tekrar yaratma (spam önleme)
             existing = (
                 db.query(SystemAlert)
                 .filter(
                     SystemAlert.alert_type == "model_drift",
                     SystemAlert.message.like(f"%{model_name}%"),
-                    SystemAlert.created_at >= now - timedelta(hours=24),
+                    SystemAlert.created_at >= now - timedelta(hours=ALERT_DEDUP_WINDOW_HOURS),
                 )
                 .first()
             )
