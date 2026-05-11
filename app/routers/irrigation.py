@@ -30,6 +30,10 @@ from app.schemas.schemas import (
 # Pagination defaults — frontend slider 50'lik sayfalarla çalışıyor
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 500
+# shiftFinal Ayşe — Schemathesis fuzz tarafından yakalanan int64 overflow
+# fix'i; sensors.py'deki MAX_SKIP ile aynı sebep (SQLite INTEGER).
+# EN: Same int64 overflow fix as sensors.py — cap skip at 1M offset.
+MAX_SKIP = 1_000_000
 
 router = APIRouter(prefix="/api/irrigation", tags=["Sulama Optimizasyonu"])
 
@@ -82,7 +86,7 @@ def predict_irrigation(request: Request, data: IrrigationPredictionRequest, db: 
 )
 def get_schedules(
     field_id: int | None = Query(default=None, description="Belirli tarla için filtre"),
-    skip: int = Query(default=0, ge=0, description="Atlanacak kayıt sayısı (pagination offset)"),
+    skip: int = Query(default=0, ge=0, le=MAX_SKIP, description="Atlanacak kayıt sayısı (pagination offset, max 1M)"),
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Sayfa boyutu (max 500)"),
     db: Session = Depends(get_db),
 ):

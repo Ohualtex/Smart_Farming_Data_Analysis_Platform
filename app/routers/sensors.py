@@ -24,6 +24,12 @@ router = APIRouter(prefix="/api/sensors", tags=["Sensör Verileri"])
 # Pagination defaults — frontend slider 50'lik sayfalarla çalışıyor
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 500
+# shiftFinal Ayşe — Schemathesis fuzz, unbounded `skip` ile int64 overflow
+# yakaladi (SQLite INTEGER taşıyor). 1M offset gerçekçi her kullanım için
+# fazlasıyla yeterli (PAGE_SIZE=500 ile 2000 sayfa = 1M kayıt).
+# EN: Schemathesis fuzz caught int64 overflow on unbounded skip. Cap at 1M
+#     — far beyond any realistic pagination scenario.
+MAX_SKIP = 1_000_000
 
 
 @router.get(
@@ -32,7 +38,7 @@ MAX_PAGE_SIZE = 500
     summary="Tüm sensörleri listele (skip + limit pagination)",
 )
 def get_all_sensors(
-    skip: int = Query(default=0, ge=0, description="Atlanacak kayıt sayısı (pagination offset)"),
+    skip: int = Query(default=0, ge=0, le=MAX_SKIP, description="Atlanacak kayıt sayısı (pagination offset, max 1M)"),
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Sayfa boyutu (max 500)"),
     db: Session = Depends(get_db),
 ):

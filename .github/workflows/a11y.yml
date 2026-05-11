@@ -1,0 +1,111 @@
+# ============================================================
+# SFDAP — Accessibility (axe-core) Audit
+# ============================================================
+# shiftFinal — Ayşe paketi.
+# Statik dashboard SPA'sına axe-core WCAG 2.1 AA tarama uygular.
+#
+# Akış:
+#   1) Python + Node kurulumu
+#   2) FastAPI'yi arka planda başlat (port 8000)
+#   3) /dashboard/ erişilebilir olduğunu doğrula
+#   4) axe-core CLI ile WCAG 2.1 AA + WCAG 2.0 AA + WCAG 2.1 A tara
+#   5) Rapor artifact olarak yükle
+#
+# Tetikleyiciler:
+#   - Pull request (main)
+#   - Push (main, cycle_8, shiftFinal)
+#   - Haftalık cron (yeni WCAG kuralları + dependency güncellemesi yakalamak için)
+#   - Manuel
+# ============================================================
+
+name: SFDAP A11y Audit (axe-core)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, cycle_8, shiftFinal]
+  schedule:
+    - cron: "0 7 * * 1"  # Mon 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  axe:
+    name: ♿ axe-core WCAG 2.1 AA Tarama
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Kodu indir
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: 📦 Python bağımlılıklarını kur
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🟩 Node kur (axe-core/cli için)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package.json
+
+      - name: 📦 axe-core CLI kur
+        working-directory: frontend
+        # NOT: package-lock.json yok (statik scaffold); `npm install`
+        # bagimlilik agacini olusturur.
+        # EN: lockfile not committed — `npm install` builds tree fresh.
+        run: npm install --no-save
+
+      - name: 🚀 FastAPI sunucusunu arka planda başlat
+        env:
+          # Test API key — axe taraması auth-required değil (sadece /dashboard/
+          # statik route'unu tarıyor) ama config validation için set ederiz.
+          API_KEY: "ci-test-key-not-real"
+          SECRET_KEY: "ci-test-secret-not-real"
+          ENVIRONMENT: "development"
+          # MQTT broker yok — listener no-op
+          MQTT_ENABLED: "false"
+        run: |
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          echo "FastAPI PID: $!"
+
+      - name: ⏳ Sunucu hazır olana kadar bekle
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://127.0.0.1:8000/api/health > /dev/null; then
+              echo "Server ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+          # Dashboard erişilebilir mi?
+          curl -sfI http://127.0.0.1:8000/dashboard/ | head -3
+
+      - name: ♿ axe-core taraması
+        working-directory: frontend
+        # `--exit` exit-code 1 dondurursa job fail eder (a11y kural ihlali);
+        # `--timeout 60` saniye headless Chrome timeout'u
+        # WCAG tags: 2.0 A/AA + 2.1 A/AA — endustri standardi gereksinim.
+        run: npx --yes @axe-core/cli http://127.0.0.1:8000/dashboard/ --exit --timeout 60 --tags wcag2a,wcag2aa,wcag21a,wcag21aa --save ../axe-report.json
+        # NOT: ilk run'da ihlal cikabilir; shiftFinal A3'te major a11y
+        # eklemeleri yapildi ama remaining warnings olabilir.
+        # `continue-on-error: true` -> sadece bilgi amacli, fail etmez.
+        continue-on-error: true
+
+      - name: 📊 axe-core rapor artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: axe-report
+          path: axe-report.json
+          retention-days: 30

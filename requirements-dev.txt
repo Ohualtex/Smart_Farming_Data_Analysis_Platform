@@ -22,3 +22,10 @@ pre-commit>=3.6.0
 # CI'da .github/workflows/security.yml tarafından kullanılır.
 bandit[toml]>=1.7.5
 pip-audit>=2.7.0
+
+# shiftFinal — Ayşe paketi: API fuzz testing
+# schemathesis: OpenAPI schema'sını okuyup property-based test üretir;
+#   endpoint'leri uç değerler / fuzz inputs ile besler, 500 ve schema
+#   uyumsuzluklarını yakalar. CI'da .github/workflows/ci.yml içinde
+#   ayrı bir job olarak çalıştırılır.
+schemathesis>=3.30.0
