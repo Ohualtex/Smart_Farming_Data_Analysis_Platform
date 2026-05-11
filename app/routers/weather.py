@@ -10,10 +10,10 @@ Ayşe Eslem Çekici & Mehmet Sait Tayşi — Cycle 4/5 Görevi
 from __future__ import annotations
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.models.models import WeatherData
@@ -24,7 +24,11 @@ router = APIRouter(prefix="/api/weather", tags=["Hava Durumu"])
 
 
 @router.get("/", response_model=list[WeatherDataResponse])
-def get_weather_data(farm_id: int = None, limit: int = 50, db: Session = Depends(get_db)):
+def get_weather_data(
+    farm_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Farm ID filtresi"),
+    limit: int = Query(default=50, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
     query = db.query(WeatherData)
     if farm_id:
         query = query.filter(WeatherData.farm_id == farm_id)
@@ -42,7 +46,10 @@ def create_weather_data(request: Request, data: WeatherDataCreate, db: Session =
 
 
 @router.get("/latest/{farm_id}", response_model=WeatherDataResponse)
-def get_latest_weather(farm_id: int, db: Session = Depends(get_db)):
+def get_latest_weather(
+    farm_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Farm ID (max int64)"),
+    db: Session = Depends(get_db),
+):
     weather = (
         db.query(WeatherData).filter(WeatherData.farm_id == farm_id).order_by(WeatherData.recorded_at.desc()).first()
     )
@@ -55,7 +62,7 @@ def get_latest_weather(farm_id: int, db: Session = Depends(get_db)):
 @limiter.limit(AUTH_RATE)
 async def fetch_weather_from_api(
     request: Request,
-    farm_id: int,
+    farm_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Farm ID (max int64)"),
     lat: float = Query(..., description="Enlem"),
     lon: float = Query(..., description="Boylam"),
     db: Session = Depends(get_db),
@@ -85,7 +92,7 @@ async def fetch_weather_from_api(
 
 @router.get("/stats/{farm_id}")
 def get_weather_stats(
-    farm_id: int,
+    farm_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Farm ID (max int64)"),
     days: int = Query(default=7, ge=1, le=90, description="Son kac gun"),
     db: Session = Depends(get_db),
 ):

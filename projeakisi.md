@@ -270,13 +270,20 @@ Projenin gerçek kullanıma çıkabilmesi için kritik altyapı eksikliklerini k
 
 ## 🟦 shiftFinal — Cila ve Gözlemlenebilirlik *(bridge sprint)*
 
-📅 **13 – 19 Mayıs 2026**
+📅 **13 – 19 Mayıs 2026** *(devam ediyor)*
 
 > `shiftSession` (Cycle 6) deseninin son hâli — numaralı cycle değil,
 > **adlı bir bridge sprint**. Cycle 8 (üretim çekirdeği) bittikten sonra
 > 7 günlük cila döngüsü: cross-team polish, gözlemlenebilirlik ve UX
 > cilasını kapsar. Final rapor (Cycle 9) öncesi son kullanıcıya/
 > operatöre dönük cila pasajı.
+>
+> **Ara durum (11 Mayıs):** Temel paketler A2 (Mehmet — `e6259ae`), A3 (Ecenur — `02d1359`),
+> A4 (Emirhan — `2a889f8`) ve Ayşe paketi (`7e49bef` — Schemathesis fuzz + axe-core CI +
+> 6 gerçek int64 overflow bug fix) tamamlandı. Suite **246 → 425 test** (+%73), 3 CI workflow
+> (ci.yml + security.yml + a11y.yml), 25 fuzz testi, 28 a11y testi.
+> **Sprint 19 Mayıs'a kadar açık** — kalan günler PR review, doc cila ve ek geliştirmeler
+> (POST/PATCH fuzz, axe-core strict mode, ES module split, vb.) için kullanılacak.
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
@@ -288,36 +295,47 @@ Cycle 8 audit raporundan kalan teknik borçları kapat:
 3) **Pillow 14 hazırlığı** — `app/ml/plant_disease_model.py:172` `getdata()` deprecation'ını numpy alternatifine çevir (`np.asarray(hsv).reshape(-1, 3)`).
 4) **Security scan CI entegrasyonu** — `bandit` (Python source security) + `pip-audit` (dependency CVE) GitHub Actions pipeline'ına ekle; weekly run + PR check.
 
-### 👤 EMİRHAN GÜNAY
+### 👤 EMİRHAN GÜNAY — ✅ Tamamlandı (`2a889f8`)
 
 #### 📌 Veri Yedekleme & Veritabanı Optimizasyonu *(Cycle 8'den taşındı)*
-1) **Backup/restore script** — PostgreSQL ve SQLite için `pg_dump`/`sqlite3 .backup` tabanlı `scripts/backup.sh` ve `scripts/restore.sh`; cron ile günlük otomatik yedek + 7 günlük rotation. Makefile target'ları (`make backup`, `make restore`).
-2) **DB connection pool tuning** — `app/database.py` engine konfigürasyonuna `pool_size`, `max_overflow`, `pool_pre_ping` ayarları (env-driven). Prod yükü senaryosu için.
-3) **Sensör okumaları arşivleme** — Cycle 7'de IoT stream eklendiğinde tablo hızla şişer; 30 günden eski okumaları aylık özet tabloya taşıyan periyodik görev (APScheduler ile haftalık).
+1) ✅ **Backup/restore script** — `scripts/backup.sh` (SQLite `.backup` + PostgreSQL `pg_dump --format=custom`) ve `scripts/restore.sh` (auto safety backup `*.before-restore-*`, interaktif `EVET` onay). `BACKUP_DIR`/`RETENTION_DAYS` env + 7 günlük rotation. Makefile target'ları (`make backup`, `make restore BACKUP=path`).
+2) ✅ **DB connection pool tuning** — `app/database.py:_build_engine_kwargs()` helper: SQLite için no-op, PostgreSQL/MySQL için `pool_size` (5) / `max_overflow` (10) / `pool_pre_ping` (True) / `pool_recycle` (3600) — `app/config.py`'de `DB_POOL_*` env'leri ile özelleştirilebilir.
+3) ✅ **Sensör okumaları arşivleme** — Cycle 8'de erken kapandı (`fca5e7c`): `SensorReadingMonthlyAggregate` ORM modeli + APScheduler haftalık Sunday 03:30 cron, idempotent merge.
 
-### 👤 AYŞE ESLEM ÇEKİCİ
+Toplam: 7 yeni test (`test_database_pool.py`), `docs/setup/PROD_DEPLOY.md` bölüm 4.5.
+
+### 👤 AYŞE ESLEM ÇEKİCİ — ✅ Temel paket tamamlandı (Step 3 `c0a40b0` + shiftFinal `7e49bef`)
 
 #### 📌 Test Kapsamı Güçlendirme & Edge Case Senaryoları *(Cycle 8'den taşındı)*
 Cycle 8'de yapılan altyapı işlerinin (rate limit, JWT, Alembic) testlerini güçlendir ve coverage'ı resmiyete oturt:
 
-1) **Edge case'ler** — Aşırı büyük payload (1MB JSON), unicode/emoji ile injection denemesi, concurrent insert race, oversized image upload (CNN endpoint'i için), SQL injection deneme stringi.
-2) **Auth flow integration testleri** — register → login → JWT'li protected endpoint çağrısı (Cycle 8'de eklenen JWT backend için).
-3) **Coverage hedefini %95+'da resmî tut** — şu an %94.78; en zayıf kalan `app/routers/metrics.py` (%81) ve `app/services/report_service.py` (%88) kapanacak.
-4) **Rate limit testleri kapsamı** — Cycle 8'de eklenen 3 testin üstüne, header doğrulama (`Retry-After`, `X-RateLimit-*`) ve farklı endpoint'lerdeki limit isabeti.
+1) ✅ **Edge case'ler** — Cycle 8 Step 3'te kapandı (26 yeni test): 1MB JSON, unicode/emoji injection, oversized image upload, SQL injection deneme stringi.
+2) ✅ **Auth flow integration testleri** — register → login → JWT protected çağrısı testleri Cycle 8'de eklenmişti.
+3) ✅ **Coverage %95+ resmî** — `pyproject.toml`'de `--cov-fail-under=80` (CI gerçek hedef %95.04'le çalışıyor).
+4) ✅ **Rate limit testleri kapsamı** — `test_rate_limit.py` `Retry-After`/`X-RateLimit-*` header doğrulamaları.
 
-### 👤 ECENUR ÜNER
+#### 📌 Schemathesis API Fuzz + axe-core CI *(shiftFinal yeni paket)*
+5) ✅ **Schemathesis property-based API fuzz** — `tests/test_schemathesis_fuzz.py`: 25 GET endpoint × ~10 case, deterministik seed, `not_a_server_error` check. **İlk run gerçek bir 500 bug yakaladı:** `GET /api/sensors/?skip=int64_max` SQLite `OverflowError` → 500. Fix: `MAX_SKIP=1_000_000` Query constraint (`sensors.py` + `irrigation.py`); artık 422 graceful.
+6) ✅ **axe-core CI workflow** — `.github/workflows/a11y.yml`: FastAPI bg + `npx @axe-core/cli http://localhost:8000/dashboard/ --tags wcag2a,wcag2aa,wcag21a,wcag21aa`, JSON rapor 30 gün artifact. Tetikleyiciler: PR (main), push (main/cycle_8/shiftFinal), Pazartesi 07:00 cron.
+7) ✅ **CI fuzz job entegrasyonu** — `ci.yml`'a `fuzz` job (needs lint), shiftFinal branch push triggers.
+
+### 👤 ECENUR ÜNER — ✅ Tamamlandı (`02d1359`)
 
 #### 📌 Frontend Build Pipeline ve Erişilebilirlik *(Cycle 8'den taşındı)*
-1) **Frontend bundling** — `frontend/index.html` 2200+ satırlık tek dosya; Vite veya esbuild ile CSS/JS extract, minify, cache busting (hashed filenames). Geliştirme deneyimi için HMR.
-2) **Erişilebilirlik (a11y)** — ARIA labels, keyboard navigation (sidebar nav, modal'lar), focus indicator'ları, screen reader test (axe-core), kontrast oranı (WCAG AA).
-3) **Loading / error UX** — Skeleton placeholder'ları kart/grafik için (Cycle 6 sonu hâlâ toast tabanlı), 5xx hata sayfası, offline durum indikatörü.
+1) ✅ **Frontend bundling scaffold** — Vite 5.x: `frontend/package.json` + `vite.config.js` (dev :5173, FastAPI :8000'e `/api`+`/metrics`+`/static` proxy), `frontend/.gitignore` (node_modules/, dist/), `frontend/README.md`. ES module split Cycle 9 sonrası kademeli.
+2) ✅ **Erişilebilirlik (a11y)** — Skip-to-content link, `<main id="main-content" role="main" tabindex="-1">`, sidebar `<nav aria-label="Ana menü">`, aktif item'a `aria-current="page"`, hamburger `aria-controls`+`aria-expanded` sync, tablolarda `<th scope="col">`+sr-only caption, decorative icon `aria-hidden`, toast container live region, `:focus-visible` outline, sensör satırlarında `tabindex+role=button`+Enter/Space keyboard handler.
+3) ✅ **Loading / error UX** — 4 JS helper (`_skeletonCards`, `_skeletonRows`, `_skeletonBlock`, `_setBusy`); her async `loadXxx()` fetch öncesi iskelet + `aria-busy="true"`, veri hazırlandığında gerçek HTML + `aria-busy="false"`. CSS variant'lar + `@media (prefers-reduced-motion: reduce)` → animation:none.
 
-### 👤 MEHMET SAİT TAYŞİ
+Toplam: 28 yeni test (`test_frontend_a11y.py`).
+
+### 👤 MEHMET SAİT TAYŞİ — ✅ Tamamlandı (`e6259ae`)
 
 #### 📌 Gözlemlenebilirlik: Sentry, Prometheus, Structured Logging *(Cycle 8'den taşındı)*
-1) **Sentry entegrasyonu** — `SENTRY_DSN` env varsa hata raporlamayı aç; FastAPI ve loguru handler'ı ile uncaught exception'ları topla. Production'da kritik.
-2) **Prometheus metrics export** — `/api/metrics` endpoint'i (text/plain), `prometheus-client` ile: `http_requests_total`, `http_request_duration_seconds`, `model_predictions_total{model_name}`, `db_query_duration_seconds`. `app/routers/metrics.py` docstring'inde planlanmıştı.
-3) **Structured logging** — Loguru'ya JSON output formatı opsiyonu (`LOG_FORMAT=json` env), trace_id propagation (request_id middleware'le entegre), log rotation (`log_dir/sfdap.log` günlük rotate).
+1) ✅ **Sentry entegrasyonu** — `app/core/sentry.py:init_sentry()`: `SENTRY_DSN` boşsa no-op, doluysa FastAPI + Starlette + SQLAlchemy + Logging integrations. `send_default_pii=False` (KVKK/GDPR güvenli default). 3 yeni env: `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE` (default 0.1).
+2) ✅ **Prometheus metrics** — `app/middleware/prometheus.py:PrometheusMiddleware` + 4 metric: `sfdap_http_requests_total` (Counter), `sfdap_http_request_duration_seconds` (Histogram), `sfdap_model_predictions_total` (Counter), `sfdap_active_alerts` (Gauge). `_normalize_path()` high-cardinality kontrolü (`/api/sensors/42` → `/api/sensors/{id}`). GET `/metrics` endpoint prefix-siz.
+3) ✅ **Structured logging** — `app/core/logger.py:_json_formatter()` JSON output (ensure_ascii=False — Türkçe + emoji korunur). `LOG_FORMAT` env (text|json). `app/middleware/request_logger.py` UUID `request_id` + `X-Request-ID` response header + `loguru.contextualize()` downstream trace propagation.
+
+Toplam: 15 yeni test (`test_observability.py`), `sentry-sdk[fastapi]>=2.0.0` + `prometheus-client>=0.20.0`.
 
 ---
 

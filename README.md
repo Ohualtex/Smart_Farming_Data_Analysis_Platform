@@ -3,9 +3,13 @@
 Çiftçilerin tarımsal verimliliğini en üst düzeye çıkarmak amacıyla toprak sensörleri, hava durumu verileri ve bitki sağlığı görüntülerini entegre bir şekilde analiz eden kapsamlı bir veri analizi ve karar destek platformudur.
 
 [![CI](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions)
+[![Security](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/security.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/security.yml)
+[![A11y](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue)
 ![Coverage 95%](https://img.shields.io/badge/Coverage-95%25-brightgreen)
-![Tests 350](https://img.shields.io/badge/Tests-350%20passed-success)
+![Tests 425](https://img.shields.io/badge/Tests-425%20passed-success)
+![Fuzz Schemathesis](https://img.shields.io/badge/Fuzz-Schemathesis%20CI-blue)
+![A11y axe-core](https://img.shields.io/badge/A11y-axe--core%20WCAG%202.1%20AA-blueviolet)
 
 ---
 
@@ -268,10 +272,13 @@ make format
 
 | Metrik | Değer |
 |:-------|:------|
-| Toplam Test | 246 |
+| Toplam Test | **425** (shiftFinal — 350 → 365 [A2] → 372 [A4] → 400 [A3] → 425 [Ayşe]; sprint devam ediyor) |
 | Coverage | **%95.04** (eşik %80, shiftFinal hedefi %95+ resmen geçildi — bkz. [QUALITY_AUDIT.md](docs/QUALITY_AUDIT.md)) |
-| Linting | Ruff (All checks passed) |
-| CI/CD | GitHub Actions (Ruff + Pytest) |
+| Linting | Ruff (17 kural seti, All checks passed) |
+| Security | bandit (medium+) + pip-audit (CVE DB) — CI haftalık |
+| Fuzz | Schemathesis property-based API fuzz (25 GET endpoint, deterministik seed) |
+| A11y | axe-core WCAG 2.0 + WCAG 2.1 A/AA — CI haftalık tarama |
+| CI/CD | GitHub Actions (3 workflow: ci.yml + security.yml + a11y.yml) |
 
 ---
 
@@ -329,7 +336,10 @@ Smart_Farming_Data_Analysis_Platform/
 │       └── scheduler.py         #   APScheduler periyodik görevler
 │
 ├── frontend/                    # Web arayüzü (SPA Dashboard)
-│   └── index.html               #   Dark mode, responsive, Chart.js (9 sayfa)
+│   ├── index.html               #   Dark mode, responsive, Chart.js (9 sayfa) + a11y/ARIA + skeleton loaders
+│   ├── package.json             #   Vite + axe-core CLI (shiftFinal scaffold)
+│   ├── vite.config.js           #   Vite build/dev scaffold (FastAPI proxy)
+│   └── README.md                #   Frontend dev kılavuzu
 │
 ├── database/                    # Veritabanı yönetimi
 │   ├── sfdap_schema.sql         #   SQL şeması
@@ -337,8 +347,12 @@ Smart_Farming_Data_Analysis_Platform/
 │   └── turkey_data.py           #   Türkiye il/bölge/bitki referans verisi
 │
 ├── alembic/                     # DB migration sistemi
-├── tests/                       # 350 test (25 dosya, %95.04 coverage)
-├── .github/workflows/           # CI/CD pipeline (Ruff + Pytest)
+├── tests/                       # 425 test (27 dosya, %95.04 coverage + Schemathesis fuzz)
+├── scripts/backup.sh + restore.sh # SQLite/PostgreSQL yedek+restore (shiftFinal A4)
+├── .github/workflows/           # CI/CD pipeline:
+│   ├── ci.yml                   #   lint → test → migrations → fuzz (Schemathesis)
+│   ├── security.yml             #   bandit + pip-audit (haftalık cron)
+│   └── a11y.yml                 #   axe-core WCAG 2.1 AA (haftalık cron)
 │
 ├── docs/                        # Proje dokümantasyonu
 │   ├── wireframes/              #   UI/UX wireframe tasarımları (6 ekran)

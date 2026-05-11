@@ -269,7 +269,10 @@ def compare_analytics(
 @router.get("/export")
 def export_analytics(
     format: str = Query("pdf", description="Export formati (pdf veya xlsx)"),
-    days: int = Query(30, description="Son kac gunluk veri"),
+    # shiftFinal Ayşe — Schemathesis days=BIG ile timedelta OverflowError
+    # yakaladi; le=365 ile sinirlandi (1 yil max — pratik kullanim).
+    # EN: bound days to 1 year — fuzz caught timedelta OverflowError.
+    days: int = Query(30, ge=1, le=365, description="Son kac gunluk veri (max 365)"),
     db: Session = Depends(get_db),
 ):
     """

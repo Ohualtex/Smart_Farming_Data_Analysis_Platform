@@ -18,10 +18,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.ml.plant_disease_model import plant_disease_model
@@ -44,7 +44,11 @@ MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
     summary="Bitki sağlığı görsellerini listele",
     description="Belirli bir tarla (`field_id`) için kayıtlı görüntüleri en yeniden eskiye sıralar.",
 )
-def get_health_images(field_id: int | None = None, limit: int = 20, db: Session = Depends(get_db)):
+def get_health_images(
+    field_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Belirli tarla filtresi"),
+    limit: int = Query(default=20, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
     query = db.query(PlantHealthImage)
     if field_id:
         query = query.filter(PlantHealthImage.field_id == field_id)

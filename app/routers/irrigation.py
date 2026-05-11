@@ -15,7 +15,7 @@ from loguru import logger
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.ml.irrigation_model import irrigation_optimizer
@@ -85,7 +85,7 @@ def predict_irrigation(request: Request, data: IrrigationPredictionRequest, db: 
     summary="Sulama takvimini listele (skip + limit pagination)",
 )
 def get_schedules(
-    field_id: int | None = Query(default=None, description="Belirli tarla için filtre"),
+    field_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Belirli tarla için filtre"),
     skip: int = Query(default=0, ge=0, le=MAX_SKIP, description="Atlanacak kayıt sayısı (pagination offset, max 1M)"),
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Sayfa boyutu (max 500)"),
     db: Session = Depends(get_db),
@@ -103,7 +103,7 @@ def get_schedules(
     "Opsiyonel `field_id` filtresi ile sayım yapılabilir.",
 )
 def count_schedules(
-    field_id: int | None = Query(default=None, description="Belirli tarla için filtre"),
+    field_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Belirli tarla için filtre"),
     db: Session = Depends(get_db),
 ) -> dict:
     query = db.query(func.count(IrrigationSchedule.id))

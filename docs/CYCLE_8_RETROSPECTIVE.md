@@ -100,30 +100,39 @@ Bandit issue    —                  0 (medium+)        —
 - **Bridge sprint pattern (shiftSession/shiftFinal)** — cycle yapısını bozmadan ara işleri konteinerlemek için kalıcı pattern.
 - **Plan dışı bulguları tier'lara çekmek** — ad-hoc "şuna da bakayım" yerine `QUALITY_AUDIT.md` Tier B/C'ye düşürüp shiftFinal'a aktarmak.
 
-## 6. 📦 shiftFinal'a Devredilen Borç
+## 6. 📦 shiftFinal'a Devredilen Borç — temel paketler tamamlandı, sprint devam ediyor
 
-Cycle 8 başı planlanan ancak Cycle 8'de yapılmayan (kasıtlı olarak `shiftFinal` bridge sprint'ine taşınan) işler:
+Cycle 8 başı planlanan ancak Cycle 8'de yapılmayan (kasıtlı olarak `shiftFinal` bridge sprint'ine taşınan) işler. **A2 + A3 + A4 + Ayşe temel paketleri 11 Mayıs'ta tamamlandı; sprint 19 Mayıs'a kadar açık** — kalan günler PR review, doc cila ve ek iyileştirmeler için kullanılacak.
 
-| Sahibi | Görev | Status |
-|:--|:--|:--:|
-| Mehmet | Sentry + Prometheus + structured logging | ⏳ shiftFinal A2 |
-| Ecenur | Vite bundling + a11y (ARIA, WCAG AA) + skeleton loaders | ⏳ shiftFinal A3 |
-| Emirhan | Backup/restore script + DB pool tuning + (archiving ✅ yapıldı) | ⏳ shiftFinal A4 |
-| Ayşe | Edge case test paketi (1MB, unicode, race) + auth integration | ⏳ shiftFinal B5 |
-| Miraç | (Tier A5/A6/B1 ✅ erken kapatıldı) | — |
+| Sahibi | Görev | Status | Commit |
+|:--|:--|:--:|:--:|
+| Mehmet | Sentry + Prometheus + structured logging | ✅ shiftFinal A2 | `e6259ae` |
+| Ecenur | Vite bundling + a11y (ARIA, WCAG AA) + skeleton loaders | ✅ shiftFinal A3 | `02d1359` |
+| Emirhan | Backup/restore script + DB pool tuning + (archiving ✅ yapıldı) | ✅ shiftFinal A4 | `2a889f8` |
+| Ayşe | Edge case test paketi (1MB, unicode, race) + auth integration | ✅ Step 3'te kapandı (Cycle 8 bonus push) | `c0a40b0` |
+| **Ayşe (shiftFinal)** | Schemathesis API fuzz + axe-core CI + 6 gerçek int64 overflow fix | ✅ shiftFinal Ayşe paketi | `7e49bef` |
+| Miraç | (Tier A5/A6/B1 ✅ erken kapatıldı) | — | — |
 
-> **Not:** Coverage %95+ resmî tutuş hedefi (Ayşe A1) Cycle 8'deki bonus push ile **bugün** karşılandı; Ayşe shiftFinal'da edge case paketine odaklanabilir.
+> **Not:** Coverage %95+ resmî tutuş hedefi (Ayşe A1) Cycle 8'deki bonus push ile karşılandı; Ayşe shiftFinal'da edge case paketine + Schemathesis fuzz + axe-core CI'a odaklandı.
+>
+> **Schemathesis bonus:** İlk run `GET /api/sensors/?skip=int64_max` 500 bug'ı, takip eden run'lar 5 ek int64 overflow bug'ı yakaladı (path param'lar + `/analytics/export?days`). Hepsi `MAX_SQLITE_INT = 2**63 - 1` paylaşılan sabit + `Path/Query(..., le=...)` constraint'leriyle fix'lendi; bu noktalar artık 422 graceful response döner.
+>
+> **shiftFinal kapanışı 19 Mayıs:** A2/A3/A4/Ayşe paketleri tamamlandığı için sprint hedefi karşılandı. Kalan kapasite QUALITY_AUDIT.md'deki "Açık alanlar" listesinden fırsat çıktıkça değerlendirilecek (POST/PATCH fuzz, axe-core strict mode, ES module split, vb.).
 
-## 7. 🏆 Cycle 8 İçin Skor Kartı
+## 7. 🏆 Cycle 8 + shiftFinal Ara Skor Kartı (sprint devam ediyor)
 
 | Boyut | Skor | Not |
 |:--|:--:|:--|
 | Planlı görevleri tamamlama | ✅ 5/5 | Tüm Miraç görevleri commit edildi |
-| Zamanlama | 🌟 | 3 günlük plan tek günde bitti (10 May) |
-| Bonus iş paketleri | 🌟 | 9 ek paket (audit, archiving, renumbering, ...) |
-| Kalite metrikleri | ✅ | Coverage %86→%95, +67 test, Ruff genişletme |
-| Güvenlik | ✅ | Bandit medium+ 0 issue, pip-audit CI'a entegre |
-| Doküman tutarlılığı | ✅ | 16 stale referans tek commit'te hizalandı |
+| Zamanlama (Cycle 8) | 🌟 | 3 günlük plan tek günde bitti (10 May) |
+| shiftFinal temel paketleri | 🌟 | A2 + A3 + A4 + Ayşe paketleri 11 May'da kapandı (planlı 13–19 May); sprint açık kalmaya devam ediyor |
+| Bonus iş paketleri | 🌟 | 9 ek paket (audit, archiving, renumbering, ...) + Schemathesis fuzz + axe-core CI |
+| Kalite metrikleri | ✅ | Coverage %86→%95, **246 → 425 test (+179, +73%)**, Ruff genişletme |
+| Güvenlik | ✅ | Bandit medium+ 0 issue, pip-audit CI'a entegre, Schemathesis fuzz 25 endpoint |
+| A11y | ✅ | axe-core WCAG 2.1 AA CI workflow, 28 a11y testi, skip-link + landmarks + aria-busy |
+| Observability | ✅ | Sentry + Prometheus (4 metric) + structured logging (JSON + request_id) |
+| Operations | ✅ | Backup/restore script (SQLite + PostgreSQL), DB pool tuning, cron rotation |
+| Doküman tutarlılığı | ✅ | 16+ stale referans birden fazla turda hizalandı |
 | Ekip iletişimi | 🟡 | Mehmet/Ecenur/Emirhan/Ayşe henüz bilgilendirilmedi (shiftFinal başlangıcında olacak) |
 
 ## 8. 🔮 Cycle 9 (Final Rapor) Etkisi

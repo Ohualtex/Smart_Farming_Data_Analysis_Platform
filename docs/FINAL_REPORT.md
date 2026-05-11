@@ -77,7 +77,7 @@
 > 🚧 **TODO Cycle 9 — Miraç:** `docs/architecture.md`'den Mermaid diyagramları + açıklama paragrafları aktar.
 
 **Üst düzey:**
-- **Frontend katmanı:** Tek dosyalı SPA (`frontend/index.html` ≈ 2 873 satır) → Vite ile shiftFinal'da modülerleşecek
+- **Frontend katmanı:** Tek dosyalı SPA (`frontend/index.html` ≈ 3 100 satır + Vite scaffold) — shiftFinal A3'te a11y/skeleton refactor + Vite build pipeline iskeleti eklendi; ES module split Cycle 9 sonrası kademeli
 - **API katmanı:** FastAPI Gateway → 11 router × 43 endpoint (pagination count endpoint'leri dahil)
 - **İş katmanı:** Servisler (`weather_service`, `fertilizer_service`, `mqtt_listener`, `sensor_archiver`, `report_service`, `data_quality`)
 - **ML katmanı:** RandomForest (sulama) + heuristic+ONNX (bitki hastalığı) + APScheduler periyodik görevler
@@ -144,7 +144,7 @@
 
 > 🚧 **TODO Cycle 9 — Ecenur:** Ekran görüntüleri + sayfa-sayfa anlatım.
 
-**Mevcut yapı:** Tek dosya SPA, 2 873 satır, 9 sayfa, dark/light tema, Chart.js, vanilla JS.
+**Mevcut yapı:** Tek dosya SPA, ~3 100 satır, 9 sayfa, dark/light tema, Chart.js, vanilla JS.
 
 **Filiz maskotu** (Cycle 7 — Miraç):
 - Inline SVG, idle/blink/mood animasyonları
@@ -152,7 +152,13 @@
 - Gündüz happy / gece sleepy mood
 - Tıklama tepkileri (kalp + sinirli)
 
-**shiftFinal'da gelecek:** Vite bundling + a11y (ARIA, WCAG AA) + skeleton loaders.
+**shiftFinal A3 (Ecenur — `02d1359`):**
+- **Vite scaffold:** `package.json` + `vite.config.js` (dev :5173, FastAPI :8000 proxy); ES module split Cycle 9 sonrası
+- **A11y:** skip-to-content link, `<main id="main-content" role="main" tabindex="-1">`, sidebar `<nav aria-label="Ana menü">`, `aria-current="page"`, hamburger `aria-controls`+`aria-expanded`, `<th scope="col">`+sr-only caption, decorative icon `aria-hidden`, toast container live region, `:focus-visible` outline
+- **Skeleton loaders:** 4 JS helper (`_skeletonCards`, `_skeletonRows`, `_skeletonBlock`, `_setBusy`); 8 hedef element için fetch öncesi iskelet + `aria-busy`. `@media (prefers-reduced-motion: reduce)` → animation:none
+- **Tests:** 28 yeni a11y testi (`test_frontend_a11y.py`)
+
+**axe-core CI (Ayşe — shiftFinal `7e49bef`):** `.github/workflows/a11y.yml`, WCAG 2.0 + 2.1 A/AA tarama, haftalık cron.
 
 ## 9. Güvenlik
 
@@ -172,23 +178,30 @@
 ## 10. Test, Coverage ve CI/CD
 
 ```
-Test sayısı:        313 (23 dosya)
-Coverage:           %95
+Test sayısı:        425 (27 dosya) — shiftFinal ara durum (sprint açık)
+                    246 → 313 → 350 → 365 (A2) → 372 (A4) → 400 (A3) → 425 (Ayşe)
+Coverage:           %95.04
 Linter:             Ruff (17 kural grubu) — All checks passed
-Source security:    Bandit medium+ — 0 issue (3,783 LOC)
-CI workflows:       2 (.github/workflows/ci.yml + security.yml)
+Source security:    Bandit medium+ — 0 issue
+API fuzz:           Schemathesis property-based — 25 GET endpoint × ~10 case
+A11y:               axe-core CLI WCAG 2.0 + 2.1 A/AA — CI haftalık tarama
+CI workflows:       3 (.github/workflows/ci.yml + security.yml + a11y.yml)
 Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
                     merge-conflict, detect-private-key
 ```
 
-**CI pipeline:**
+**CI pipeline (`ci.yml`):**
 1. **Lint** (Ruff check + format)
 2. **Test** (pytest + HTML + XML coverage)
 3. **Migrations** (alembic upgrade head smoke)
+4. **Fuzz** (Schemathesis property-based API fuzz, shiftFinal Ayşe)
 
-**Security pipeline (haftalık + PR):**
+**Security pipeline (`security.yml`, haftalık + PR):**
 1. **Bandit** (Python source security)
 2. **pip-audit** (dependency CVE)
+
+**A11y pipeline (`a11y.yml`, haftalık + PR — shiftFinal Ayşe):**
+1. **axe** — FastAPI bg + `@axe-core/cli` WCAG 2.0 + 2.1 A/AA tarama; JSON rapor 30 gün artifact
 
 **Detay:** [`docs/QUALITY_AUDIT.md`](QUALITY_AUDIT.md)
 
@@ -232,10 +245,11 @@ Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
 
 **Bilinen teknik borçlar (shiftFinal sonrası):**
 - `bcrypt 5.0` geçişi (passlib yeni sürümünü bekliyoruz)
-- Frontend monolit modülerleştirme (Vite bundling Cycle 9 sonu)
+- Frontend ES module split — `frontend/index.html`'in inline CSS/JS'inin `src/styles/*.css` + `src/main.js`'e bölünmesi (Vite scaffold hazır)
 - RBAC (role-based access control) — kullanıcı bazlı izolasyon
 - Refresh token + JWT blacklist Redis'e taşıma
-- OpenAPI shape contract test (Schemathesis)
+- axe-core CI'ın `continue-on-error: false`'a alınması (ilk run kalan WCAG warning'ları temizlendikten sonra)
+- Schemathesis fuzz kapsamının POST/PATCH/DELETE write operasyonlarına genişletilmesi (auth-aware fuzz)
 
 **Olası ileri özellikler:**
 - Gerçek CNN dataset eğitimi (PlantVillage)

@@ -26,6 +26,17 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.config import settings
 
+# shiftFinal — Ayşe: Schemathesis fuzz, path/query int param'lara
+# unbounded integer overflow ile 500 attigini yakaladi. SQLite INTEGER
+# kolonlari 64-bit signed → max 2**63 - 1.
+# EN: SQLite INTEGER is 64-bit signed; any value beyond this overflows
+#     binding. Routers should constrain int path/query params with
+#     `Path(..., le=MAX_SQLITE_INT)` / `Query(..., le=MAX_SQLITE_INT)`.
+# TR: SQLite INTEGER 64-bit signed; bu sinir asilirsa binding overflow
+#     verir. Router'larda int path/query parametreleri MAX_SQLITE_INT
+#     ile sinirlanmali.
+MAX_SQLITE_INT = 9_223_372_036_854_775_807  # 2**63 - 1
+
 
 def _build_engine_kwargs() -> dict:
     """`DATABASE_URL`'e bakarak uygun engine argümanlarını üretir.

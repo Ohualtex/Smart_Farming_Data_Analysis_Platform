@@ -14,10 +14,10 @@ genişletilebilir (filtreleme, severity bazlı query, batch resolve, vb.).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import SystemAlert
@@ -52,7 +52,10 @@ def list_alerts(
     response_model=SystemAlertResponse,
     summary="Tek bir uyarı getir",
 )
-def get_alert(alert_id: int, db: Session = Depends(get_db)):
+def get_alert(
+    alert_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Alert ID (max int64)"),
+    db: Session = Depends(get_db),
+):
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if alert is None:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} bulunamadi")
@@ -82,7 +85,12 @@ def create_alert(request: Request, payload: SystemAlertCreate, db: Session = Dep
     summary="Uyarıyı güncelle (resolve / severity / mesaj)",
 )
 @limiter.limit(STRICT_RATE)
-def update_alert(request: Request, alert_id: int, payload: SystemAlertUpdate, db: Session = Depends(get_db)):
+def update_alert(
+    request: Request,
+    payload: SystemAlertUpdate,
+    alert_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Alert ID (max int64)"),
+    db: Session = Depends(get_db),
+):
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if alert is None:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} bulunamadi")

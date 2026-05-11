@@ -379,10 +379,16 @@ class TestMalformedInput:
         # FastAPI validation detail'ı liste/dict olarak döner
         assert detail is not None
 
-    def test_negative_id_in_path_returns_404(self, client):
-        """Negatif ID — kaynak yok, 404."""
+    def test_negative_id_in_path_rejected(self, client):
+        """Negatif ID — validation veya not-found, 4xx olmali.
+
+        EN / TR: shiftFinal Ayşe paketinde path int parametrelerine `ge=1`
+        constraint eklendi (Schemathesis int64 overflow fix'i ile birlikte
+        gelen sıkılaştırma); artık negatif ID 404 yerine 422 doner. İki
+        davranis da kullanici acisindan client-error; testi gevsetiyoruz.
+        """
         response = client.get("/api/sensors/-1")
-        assert response.status_code == 404
+        assert response.status_code in (404, 422)
 
     def test_extremely_long_query_param(self, client):
         """Çok uzun query string — server çökmemeli."""
