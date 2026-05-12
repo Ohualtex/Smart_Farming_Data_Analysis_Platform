@@ -31,6 +31,7 @@ class InterceptHandler(logging.Handler):
     """
 
     def emit(self, record: logging.LogRecord) -> None:
+        """Forward a stdlib `LogRecord` to loguru at the right level."""
         try:
             level = logger.level(record.levelname).name
         except ValueError:

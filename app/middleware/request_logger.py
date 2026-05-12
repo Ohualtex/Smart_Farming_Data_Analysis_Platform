@@ -61,6 +61,7 @@ class RequestLoggerMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        """Attach a request_id, log the result, and emit `X-Request-ID`."""
         start_time = time.perf_counter()
 
         # İstemci kendi request_id'sini gönderdiyse onu kullan; yoksa yeni UUID üret.

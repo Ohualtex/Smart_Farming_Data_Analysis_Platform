@@ -94,6 +94,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        """Record request count and duration; skip `/metrics` to avoid recursion."""
         # /metrics endpoint'inin kendi metriklerini ölçmüyoruz (recursive olur)
         if request.url.path == "/metrics":
             return await call_next(request)

@@ -54,6 +54,8 @@ _BLACKLISTED_TOKENS: set[str] = set()
 
 # ─── Pydantic schemas ────────────────────────────────────────────────
 class UserRegisterRequest(BaseModel):
+    """Registration payload — name, email, password (min 8 chars), optional phone."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -72,6 +74,8 @@ class UserRegisterRequest(BaseModel):
 
 
 class UserLoginRequest(BaseModel):
+    """Login payload — email + password."""
+
     model_config = ConfigDict(
         json_schema_extra={"example": {"email": "ahmet@ornek.com", "password": "GuvenliSifre2026"}}
     )
@@ -81,12 +85,16 @@ class UserLoginRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
+    """JWT bearer token + expiry in seconds."""
+
     access_token: str
     token_type: str = "bearer"
     expires_in: int  # saniye
 
 
 class CurrentUserResponse(BaseModel):
+    """Authenticated user profile — emitted by `/api/auth/me`."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int

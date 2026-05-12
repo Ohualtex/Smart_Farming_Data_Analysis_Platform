@@ -50,6 +50,8 @@ UtcDateTime = Annotated[
 
 # ========== SENSOR ==========
 class SensorCreate(BaseModel):
+    """Create payload for Sensor."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -72,6 +74,8 @@ class SensorCreate(BaseModel):
 
 
 class SensorResponse(BaseModel):
+    """Sensor serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -83,6 +87,8 @@ class SensorResponse(BaseModel):
 
 # ========== SENSOR READING ==========
 class SensorReadingCreate(BaseModel):
+    """Create payload for SensorReading."""
+
     sensor_id: int
     moisture_percent: float
     depth_cm: float | None = None
@@ -91,6 +97,8 @@ class SensorReadingCreate(BaseModel):
 
 
 class SensorReadingResponse(BaseModel):
+    """SensorReading serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -102,6 +110,8 @@ class SensorReadingResponse(BaseModel):
 
 # ========== WEATHER ==========
 class WeatherDataCreate(BaseModel):
+    """Create payload for WeatherData."""
+
     farm_id: int
     temperature_c: float | None = None
     humidity_percent: float | None = None
@@ -110,6 +120,8 @@ class WeatherDataCreate(BaseModel):
 
 
 class WeatherDataResponse(BaseModel):
+    """WeatherData serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -122,6 +134,8 @@ class WeatherDataResponse(BaseModel):
 
 # ========== IRRIGATION ==========
 class IrrigationCreate(BaseModel):
+    """Create payload for Irrigation."""
+
     field_id: int
     scheduled_date: datetime
     duration_min: int | None = None
@@ -129,6 +143,8 @@ class IrrigationCreate(BaseModel):
 
 
 class IrrigationResponse(BaseModel):
+    """Irrigation serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -139,6 +155,8 @@ class IrrigationResponse(BaseModel):
 
 
 class IrrigationPredictionRequest(BaseModel):
+    """IrrigationPrediction endpoint request body."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -164,6 +182,8 @@ class IrrigationPredictionRequest(BaseModel):
 
 
 class IrrigationPredictionResponse(BaseModel):
+    """IrrigationPrediction serializer (response shape)."""
+
     recommended_water_liters: float
     irrigation_needed: bool
     confidence: float
@@ -172,6 +192,8 @@ class IrrigationPredictionResponse(BaseModel):
 
 # ========== FERTILIZER (Gübreleme) ==========
 class FertilizerRecommendRequest(BaseModel):
+    """FertilizerRecommend endpoint request body."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -194,6 +216,8 @@ class FertilizerRecommendRequest(BaseModel):
 
 
 class FertilizerRecommendResponse(BaseModel):
+    """FertilizerRecommend serializer (response shape)."""
+
     crop_type: str
     crop_name_tr: str
     area_hectares: float
@@ -207,6 +231,8 @@ class FertilizerRecommendResponse(BaseModel):
 
 
 class FertilizerScheduleRequest(BaseModel):
+    """FertilizerSchedule endpoint request body."""
+
     crop_type: str
     planting_date: str  # YYYY-MM-DD
     area_hectares: float
@@ -216,6 +242,8 @@ class FertilizerScheduleRequest(BaseModel):
 
 
 class FertilizerScheduleResponse(BaseModel):
+    """FertilizerSchedule serializer (response shape)."""
+
     phase: str
     timing: str
     target_date: str
@@ -227,6 +255,8 @@ class FertilizerScheduleResponse(BaseModel):
 
 # ========== SYSTEM ALERT (data pipeline monitoring + alerts) ==========
 class SystemAlertCreate(BaseModel):
+    """Create payload for SystemAlert."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -247,6 +277,8 @@ class SystemAlertCreate(BaseModel):
 
 
 class SystemAlertResponse(BaseModel):
+    """SystemAlert serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -269,6 +301,8 @@ class SystemAlertUpdate(BaseModel):
 
 # ========== MODEL PERFORMANCE LOG (ML model performance tracking) ==========
 class ModelPerformanceLogCreate(BaseModel):
+    """Create payload for ModelPerformanceLog."""
+
     model_name: str  # 'irrigation_rf' | 'plant_disease_cnn' | ...
     prediction_data: str  # JSON serialized
     actual_data: str | None = None
@@ -276,6 +310,8 @@ class ModelPerformanceLogCreate(BaseModel):
 
 
 class ModelPerformanceLogResponse(BaseModel):
+    """ModelPerformanceLog serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int

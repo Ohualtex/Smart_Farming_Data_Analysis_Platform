@@ -103,6 +103,7 @@ class IrrigationOptimizer:
         temperature: float,
         precipitation: float,
     ) -> dict:
+        """Predict required irrigation volume + urgency from current readings."""
         features = np.array([[soil_moisture, soil_temperature, humidity, temperature, precipitation]])
         features_scaled = self.scaler.transform(features)
         predicted_water = float(self.model.predict(features_scaled)[0])

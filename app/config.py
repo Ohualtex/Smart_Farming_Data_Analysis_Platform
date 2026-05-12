@@ -27,6 +27,8 @@ _DEV_SECRET_KEY = "dev-secret-key"  # noqa: S105 — sentinel, gerçek secret de
 
 
 class Settings(BaseSettings):
+    """Pydantic-settings driven application configuration (12-factor)."""
+
     model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # ─── Ortam ─────────────────────────────────────────────────

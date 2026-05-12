@@ -7,6 +7,8 @@ from app.database import Base
 
 
 class User(Base):
+    """ORM model for `users` table."""
+
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -19,6 +21,8 @@ class User(Base):
 
 
 class Farm(Base):
+    """ORM model for `farms` table."""
+
     __tablename__ = "farms"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -33,6 +37,8 @@ class Farm(Base):
 
 
 class Field(Base):
+    """ORM model for `fields` table."""
+
     __tablename__ = "fields"
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
@@ -47,6 +53,8 @@ class Field(Base):
 
 
 class CropType(Base):
+    """ORM model for `crop_types` table."""
+
     __tablename__ = "crop_types"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -61,6 +69,8 @@ class CropType(Base):
 
 
 class Sensor(Base):
+    """ORM model for `sensors` table."""
+
     __tablename__ = "sensors"
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
@@ -76,6 +86,8 @@ class Sensor(Base):
 
 
 class SoilMoistureReading(Base):
+    """ORM model for `soil_moisture_readings` table."""
+
     __tablename__ = "soil_moisture_readings"
     id = Column(Integer, primary_key=True, index=True)
     sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False)
@@ -128,6 +140,8 @@ class SensorReadingMonthlyAggregate(Base):
 
 
 class WeatherData(Base):
+    """ORM model for `weather_data` table."""
+
     __tablename__ = "weather_data"
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"))
@@ -143,6 +157,8 @@ class WeatherData(Base):
 
 
 class IrrigationSchedule(Base):
+    """ORM model for `irrigation_schedules` table."""
+
     __tablename__ = "irrigation_schedules"
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
@@ -154,6 +170,8 @@ class IrrigationSchedule(Base):
 
 
 class PlantHealthImage(Base):
+    """ORM model for `plant_health_images` table."""
+
     __tablename__ = "plant_health_images"
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"))
@@ -165,6 +183,8 @@ class PlantHealthImage(Base):
 
 
 class SystemAlert(Base):
+    """ORM model for `system_alerts` table."""
+
     __tablename__ = "system_alerts"
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"), index=True)
@@ -177,6 +197,8 @@ class SystemAlert(Base):
 
 
 class ModelPerformanceLog(Base):
+    """ORM model for `model_performance_logs` table."""
+
     __tablename__ = "model_performance_logs"
     id = Column(Integer, primary_key=True, index=True)
     model_name = Column(String(100), nullable=False, index=True)  # e.g., 'irrigation_rf', 'plant_disease_cnn'
@@ -187,6 +209,8 @@ class ModelPerformanceLog(Base):
 
 
 class SoilAnalysis(Base):
+    """ORM model for `soil_analyses` table."""
+
     __tablename__ = "soil_analyses"
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
@@ -203,6 +227,8 @@ class SoilAnalysis(Base):
 
 
 class CropPlanting(Base):
+    """ORM model for `crop_plantings` table."""
+
     __tablename__ = "crop_plantings"
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
@@ -216,6 +242,8 @@ class CropPlanting(Base):
 
 
 class FertilizerRecommendationLog(Base):
+    """ORM model for `fertilizer_recommendations` table."""
+
     __tablename__ = "fertilizer_recommendations"
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
