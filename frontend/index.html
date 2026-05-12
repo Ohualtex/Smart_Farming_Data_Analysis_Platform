@@ -15,7 +15,9 @@
     --primary: #10b981; --primary-hover: #059669; --primary-glow: rgba(16,185,129,.15);
     --bg: #0a0f1a; --surface: #111827; --surface-2: #1f2937; --surface-3: #374151;
     --border: #1f2937; --border-light: #374151;
-    --text: #f9fafb; --text-muted: #9ca3af; --text-dim: #6b7280;
+    /* WCAG AA contrast: --text-dim #6b7280 (3.96 on --bg) yetersizdi;
+       #94a3b8 = 7.47 on --bg, 6.92 on --surface (AA hem normal hem büyük metin için). */
+    --text: #f9fafb; --text-muted: #9ca3af; --text-dim: #94a3b8;
     --accent-blue: #3b82f6; --accent-amber: #f59e0b; --accent-red: #ef4444;
     --accent-violet: #8b5cf6; --accent-cyan: #06b6d4;
     --radius: 12px; --radius-sm: 8px;
@@ -983,9 +985,11 @@ tr:hover td { background: linear-gradient(90deg, var(--primary-glow) 0%, transpa
 
 /* ─── ☀️ LIGHT MODE ─────────────────────────────────── */
 [data-theme="light"] {
-    --primary: #059669;
-    --primary-hover: #047857;
-    --primary-glow: rgba(5,150,105,.12);
+    /* WCAG AA contrast: önceki --primary #059669 light bg üzerinde 3.50 idi (FAIL);
+       #047857 light bg'de 5.10, white surface üzerinde 5.48 (AA). */
+    --primary: #047857;
+    --primary-hover: #065f46;
+    --primary-glow: rgba(4,120,87,.12);
     --bg: #f4f7fa;
     --surface: #ffffff;
     --surface-2: #f1f5f9;

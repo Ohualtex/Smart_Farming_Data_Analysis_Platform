@@ -1,15 +1,16 @@
 # ============================================================
 # SFDAP — Accessibility (axe-core) Audit
 # ============================================================
-# shiftFinal — Ayşe paketi.
-# Statik dashboard SPA'sına axe-core WCAG 2.1 AA tarama uygular.
+# Static dashboard SPA'sına axe-core WCAG 2.0 + 2.1 A/AA tarama uygular.
+# Strict mode: violation varsa job fail eder, gating görevi görür.
 #
 # Akış:
 #   1) Python + Node kurulumu
 #   2) FastAPI'yi arka planda başlat (port 8000)
 #   3) /dashboard/ erişilebilir olduğunu doğrula
 #   4) axe-core CLI ile WCAG 2.1 AA + WCAG 2.0 AA + WCAG 2.1 A tara
-#   5) Rapor artifact olarak yükle
+#   5) İhlal özetini CI log'una bas
+#   6) Rapor artifact olarak yükle (30 gün retention)
 #
 # Tetikleyiciler:
 #   - Pull request (main)
@@ -93,14 +94,63 @@ jobs:
 
       - name: ♿ axe-core taraması
         working-directory: frontend
-        # `--exit` exit-code 1 dondurursa job fail eder (a11y kural ihlali);
-        # `--timeout 60` saniye headless Chrome timeout'u
-        # WCAG tags: 2.0 A/AA + 2.1 A/AA — endustri standardi gereksinim.
-        run: npx --yes @axe-core/cli http://127.0.0.1:8000/dashboard/ --exit --timeout 60 --tags wcag2a,wcag2aa,wcag21a,wcag21aa --save ../axe-report.json
-        # NOT: ilk run'da ihlal cikabilir; shiftFinal A3'te major a11y
-        # eklemeleri yapildi ama remaining warnings olabilir.
-        # `continue-on-error: true` -> sadece bilgi amacli, fail etmez.
-        continue-on-error: true
+        # `--exit` violation varsa exit 1 döner ve job fail eder.
+        # `--timeout 60` saniye headless Chrome timeout'u.
+        # WCAG tags: 2.0 A/AA + 2.1 A/AA — endüstri standardı gereksinim.
+        # Çıktı: ../axe-report.json (artifact'a yüklenir).
+        # ---
+        # `--exit` returns 1 on violations; the job fails accordingly.
+        # WCAG tags target both 2.0 and 2.1 A/AA — industry baseline.
+        run: |
+          npx --yes @axe-core/cli http://127.0.0.1:8000/dashboard/ \
+            --exit \
+            --timeout 60 \
+            --tags wcag2a,wcag2aa,wcag21a,wcag21aa \
+            --save ../axe-report.json
+
+      - name: 📋 İhlal özetini logla
+        # Strict mode'a geçtikten sonra başarısız run'larda hangi
+        # kuralın patladığını CI log'unda doğrudan görmek için.
+        # axe-report.json yüklendi mi diye `always()` ile koşar.
+        # ---
+        # Prints the violation summary directly into CI logs so a
+        # failing strict run is debuggable without downloading the
+        # JSON artifact.
+        if: always()
+        run: |
+          if [ ! -f axe-report.json ]; then
+            echo "axe-report.json yok — taramayı çalıştırma adımı başarısız olmuş olabilir."
+            exit 0
+          fi
+          python <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          data = json.loads(Path("axe-report.json").read_text())
+          # axe-cli sometimes emits a list (multi-URL) or a single dict.
+          pages = data if isinstance(data, list) else [data]
+
+          total = 0
+          for page in pages:
+              violations = page.get("violations", [])
+              if not violations:
+                  continue
+              url = page.get("url", "(?)")
+              print(f"❌ {url} — {len(violations)} ihlal kuralı")
+              for v in violations:
+                  total += 1
+                  nodes = len(v.get("nodes", []))
+                  print(f"   [{v.get('impact','?')}] {v['id']} — {v.get('help','')} ({nodes} düğüm)")
+                  for node in v.get("nodes", [])[:2]:
+                      target = node.get("target", ["?"])
+                      print(f"      target: {target}")
+          if total == 0:
+              print("✅ axe-core: WCAG 2.0/2.1 A+AA için sıfır ihlal.")
+          else:
+              print(f"\nToplam {total} ihlal kuralı (strict mode → job fail).")
+              sys.exit(0)  # actual fail comes from the previous axe step
+          PY
 
       - name: 📊 axe-core rapor artifact
         if: always()
