@@ -29,6 +29,11 @@ import pytest
 import schemathesis
 from hypothesis import HealthCheck, settings
 from schemathesis.checks import not_a_server_error
+from schemathesis.specs.openapi.checks import (
+    content_type_conformance,
+    response_schema_conformance,
+    status_code_conformance,
+)
 
 from app.main import app
 
@@ -75,19 +80,29 @@ read_only_schema = schema.include(method="GET")
 )
 @read_only_schema.parametrize()
 def test_read_only_endpoints_do_not_crash(case):
-    """Her read-only endpoint random query/path param'la 500 dondurmuyor.
+    """Every GET endpoint stays within its OpenAPI contract under fuzz.
 
-    EN: `call_and_validate` runs the request via ASGI TestClient and
-        checks: (a) status code is documented in OpenAPI, (b) no 500
-        server errors. Other client errors (400/404/422) are allowed —
-        the contract just says "documented".
-    TR: `call_and_validate` istegi ASGI TestClient ile yapar, sonra:
-        (a) donen status code OpenAPI'de dokumante mi, (b) 500 server
-        hatasi var mi diye kontrol eder. Diger client hatalari
-        (400/404/422) izinli — kontrat sadece "dokumante" diyor.
+    Each generated request is validated against four checks:
+    - `not_a_server_error` — no 5xx escape (was the original target)
+    - `status_code_conformance` — status is one declared in OpenAPI
+    - `content_type_conformance` — Content-Type matches declared media
+    - `response_schema_conformance` — response body matches the schema
+
+    Together these catch silent drift where the implementation evolves
+    but the schema doesn't, or vice versa.
+
+    ---
+
+    Her üretilen istek dört kontrolden geçer: 5xx olmamalı, status code
+    OpenAPI'de dokümante olmalı, Content-Type doğru olmalı ve response
+    body schema'ya uymalı. Implementasyon ile şema arasındaki sessiz
+    drift'i yakalar.
     """
-    # EN: `not_a_server_error` covers the most critical contract — no 500.
-    #     Schemathesis 4.x ayrica default checks (status_code_conformance vb.)
-    #     uygular; biz burada server-error odakli minimal kontrolu garantiliyoruz.
-    # TR: `not_a_server_error` en kritik kontrati saglar — 500 olmamali.
-    case.call_and_validate(checks=(not_a_server_error,))
+    case.call_and_validate(
+        checks=(
+            not_a_server_error,
+            status_code_conformance,
+            content_type_conformance,
+            response_schema_conformance,
+        ),
+    )

@@ -61,6 +61,7 @@ def count_sensors(db: Session = Depends(get_db)) -> dict:
     "/{sensor_id}",
     response_model=SensorResponse,
     summary="Tek bir sensörün detayı",
+    responses={404: {"description": "Sensor bulunamadı"}},
 )
 def get_sensor(
     sensor_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Sensor ID (max int64)"),

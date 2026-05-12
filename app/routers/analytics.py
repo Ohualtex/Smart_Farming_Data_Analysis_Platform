@@ -268,7 +268,19 @@ def compare_analytics(
     }
 
 
-@router.get("/export")
+@router.get(
+    "/export",
+    responses={
+        200: {
+            "content": {
+                "application/pdf": {},
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+            },
+            "description": "Üretilen rapor (`format` query'sine göre PDF veya XLSX).",
+        },
+        400: {"description": "Geçersiz format değeri"},
+    },
+)
 def export_analytics(
     format: str = Query("pdf", description="Export formati (pdf veya xlsx)"),
     # Bound days to 1 year — unbounded values overflow `timedelta`.

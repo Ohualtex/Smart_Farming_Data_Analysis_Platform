@@ -215,6 +215,9 @@ def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get
     response_model=CurrentUserResponse,
     summary="Aktif kullanıcı bilgisi",
     description="`Authorization: Bearer <jwt>` header'ı ile çağrılır. JWT signature + exp + blacklist kontrol edilir.",
+    responses={
+        401: {"description": "Token eksik, süresi dolmuş ya da blacklist'te"},
+    },
 )
 def me(user: User = Depends(_get_current_user)):
     return user

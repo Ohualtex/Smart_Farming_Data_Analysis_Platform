@@ -47,7 +47,11 @@ def create_weather_data(request: Request, data: WeatherDataCreate, db: Session =
     return db_weather
 
 
-@router.get("/latest/{farm_id}", response_model=WeatherDataResponse)
+@router.get(
+    "/latest/{farm_id}",
+    response_model=WeatherDataResponse,
+    responses={404: {"description": "Hava durumu verisi bulunamadı"}},
+)
 def get_latest_weather(
     farm_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Farm ID (max int64)"),
     db: Session = Depends(get_db),

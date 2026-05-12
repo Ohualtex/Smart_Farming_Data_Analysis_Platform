@@ -50,6 +50,7 @@ def list_alerts(
     "/{alert_id}",
     response_model=SystemAlertResponse,
     summary="Tek bir uyarı getir",
+    responses={404: {"description": "Alert bulunamadı"}},
 )
 def get_alert(
     alert_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Alert ID (max int64)"),

@@ -17,9 +17,35 @@ health, analytics and system alerts. Auth schemas live in app/routers/auth.py.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, PlainSerializer
+
+
+def _serialize_utc(value: datetime) -> str:
+    """Always emit RFC 3339 `date-time` with a UTC suffix.
+
+    SQLAlchemy returns naive datetimes from SQLite; without this
+    serializer the JSON output ("2026-05-02T22:48:07.191981") fails
+    OpenAPI `format: date-time` validation (no timezone offset).
+    Naive values are interpreted as UTC.
+
+    ---
+
+    SQLAlchemy SQLite'tan tz'siz datetime döndürür; bu serializer hep
+    UTC suffix'li ISO 8601 üretip OpenAPI `date-time` kontratıyla uyumlu
+    JSON çıkarır.
+    """
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.isoformat()
+
+
+UtcDateTime = Annotated[
+    datetime,
+    PlainSerializer(_serialize_utc, return_type=str, when_used="json"),
+]
 
 
 # ========== SENSOR ==========
@@ -69,7 +95,7 @@ class SensorReadingResponse(BaseModel):
 
     id: int
     sensor_id: int
-    reading_timestamp: datetime
+    reading_timestamp: UtcDateTime
     moisture_percent: float
     soil_temperature_c: float | None
 
@@ -88,7 +114,7 @@ class WeatherDataResponse(BaseModel):
 
     id: int
     farm_id: int | None
-    recorded_at: datetime
+    recorded_at: UtcDateTime
     temperature_c: float | None
     humidity_percent: float | None
     precipitation_mm: float | None
@@ -107,7 +133,7 @@ class IrrigationResponse(BaseModel):
 
     id: int
     field_id: int
-    scheduled_date: datetime
+    scheduled_date: UtcDateTime
     water_amount_liters: float | None
     status: str
 
@@ -225,7 +251,7 @@ class SystemAlertResponse(BaseModel):
     severity: str
     message: str
     is_resolved: bool
-    created_at: datetime
+    created_at: UtcDateTime
 
 
 class SystemAlertUpdate(BaseModel):
@@ -252,7 +278,7 @@ class ModelPerformanceLogResponse(BaseModel):
     prediction_data: str
     actual_data: str | None
     accuracy_score: float | None
-    logged_at: datetime
+    logged_at: UtcDateTime
 
 
 class ModelPerformanceSummary(BaseModel):
@@ -261,7 +287,7 @@ class ModelPerformanceSummary(BaseModel):
     model_name: str
     total_predictions: int
     avg_accuracy: float | None
-    last_logged: datetime | None
+    last_logged: UtcDateTime | None
 
 
 class ModelPerformanceLogUpdate(BaseModel):
@@ -310,7 +336,7 @@ class ModelPerformanceCompareItem(BaseModel):
     avg_accuracy: float | None
     min_accuracy: float | None
     max_accuracy: float | None
-    last_logged: datetime | None
+    last_logged: UtcDateTime | None
 
 
 # ========== HEALTH (deep health check) ==========
@@ -321,4 +347,4 @@ class HealthCheckResponse(BaseModel):
     service: str
     version: str
     components: dict  # {db: ok, scheduler: ok, ml_model: ok, ...}
-    timestamp: datetime
+    timestamp: UtcDateTime
