@@ -178,7 +178,7 @@ def _get_current_user(authorization: str = Header(default=""), db: Session = Dep
     },
 )
 @limiter.limit(AUTH_RATE)
-def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)):
+def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)) -> User:
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta zaten kayitli")
     if len(payload.password) < 8:
@@ -215,7 +215,7 @@ def register(request: Request, payload: UserRegisterRequest, db: Session = Depen
     },
 )
 @limiter.limit(AUTH_RATE)
-def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)):
+def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     user = db.query(User).filter(User.email == payload.email).first()
     if user is None or not _verify_password(payload.password, user.password_hash or ""):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="E-posta veya sifre hatali")
@@ -232,7 +232,7 @@ def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get
         401: {"description": "Token eksik, süresi dolmuş ya da blacklist'te"},
     },
 )
-def me(user: User = Depends(_get_current_user)):
+def me(user: User = Depends(_get_current_user)) -> User:
     return user
 
 
@@ -246,7 +246,7 @@ def me(user: User = Depends(_get_current_user)):
     ),
 )
 @limiter.limit(STRICT_RATE)
-def logout(request: Request, authorization: str = Header(default="")):
+def logout(request: Request, authorization: str = Header(default="")) -> None:
     if authorization.startswith("Bearer "):
         token = authorization[7:]
         if token:

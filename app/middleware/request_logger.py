@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 
 from loguru import logger as loguru_logger
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -59,7 +60,7 @@ class RequestLoggerMiddleware(BaseHTTPMiddleware):
     - Request ID (UUID, trace correlation için)
     """
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         start_time = time.perf_counter()
 
         # İstemci kendi request_id'sini gönderdiyse onu kullan; yoksa yeni UUID üret.

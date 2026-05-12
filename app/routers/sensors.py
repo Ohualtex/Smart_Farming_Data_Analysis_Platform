@@ -44,7 +44,7 @@ def get_all_sensors(
     skip: int = Query(default=0, ge=0, le=MAX_SKIP, description="Atlanacak kayıt sayısı (pagination offset, max 1M)"),
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Sayfa boyutu (max 500)"),
     db: Session = Depends(get_db),
-):
+) -> list[Sensor]:
     return db.query(Sensor).order_by(Sensor.id).offset(skip).limit(limit).all()
 
 
@@ -66,7 +66,7 @@ def count_sensors(db: Session = Depends(get_db)) -> dict:
 def get_sensor(
     sensor_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Sensor ID (max int64)"),
     db: Session = Depends(get_db),
-):
+) -> Sensor:
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
         raise HTTPException(status_code=404, detail="Sensor bulunamadi")
@@ -85,7 +85,7 @@ def get_sensor(
     },
 )
 @limiter.limit(STRICT_RATE)
-def create_sensor(request: Request, sensor: SensorCreate, db: Session = Depends(get_db)):
+def create_sensor(request: Request, sensor: SensorCreate, db: Session = Depends(get_db)) -> Sensor:
     db_sensor = Sensor(**sensor.model_dump())
     db.add(db_sensor)
     db.commit()
@@ -104,7 +104,7 @@ def delete_sensor(
     request: Request,
     sensor_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Sensor ID (max int64)"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
         raise HTTPException(status_code=404, detail="Sensor bulunamadi")
@@ -126,7 +126,11 @@ def delete_sensor(
     },
 )
 @limiter.limit(STRICT_RATE)
-def create_reading(request: Request, reading: SensorReadingCreate, db: Session = Depends(get_db)):
+def create_reading(
+    request: Request,
+    reading: SensorReadingCreate,
+    db: Session = Depends(get_db),
+) -> SoilMoistureReading:
     db_reading = SoilMoistureReading(**reading.model_dump())
     db.add(db_reading)
     db.commit()
@@ -143,7 +147,7 @@ def get_sensor_readings(
     sensor_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Sensor ID (max int64)"),
     limit: int = Query(default=50, ge=1, le=MAX_PAGE_SIZE),
     db: Session = Depends(get_db),
-):
+) -> list[SoilMoistureReading]:
     return (
         db.query(SoilMoistureReading)
         .filter(SoilMoistureReading.sensor_id == sensor_id)

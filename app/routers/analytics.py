@@ -37,7 +37,7 @@ router = APIRouter(prefix="/api/analytics", tags=["Analitik & Görselleştirme"]
 def get_analytics_summary(
     days: int = Query(default=30, ge=1, le=365, description="Son kaç gün"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """
     Dashboard analitik panosu için toplu istatistik verileri döndürür.
 
@@ -209,7 +209,7 @@ def compare_analytics(
     start_date_2: datetime = Query(..., description="2. Periyot Baslangic"),
     end_date_2: datetime = Query(..., description="2. Periyot Bitis"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """
     Kullanicinin belirledigi iki farkli zaman dilimini kiyaslar.
     Sicaklik, nem, sensor okumasi ve sulama sayisi gibi metrikleri
@@ -250,7 +250,7 @@ def compare_analytics(
     stats_1 = _get_stats(start_date_1, end_date_1)
     stats_2 = _get_stats(start_date_2, end_date_2)
 
-    def _diff(val1, val2):
+    def _diff(val1: float, val2: float) -> float:
         if val1 == 0:
             return 100.0 if val2 > 0 else 0.0
         return round(((val2 - val1) / val1) * 100, 2)
@@ -288,7 +288,7 @@ def export_analytics(
     # `days` 1 yıla sınırlanır; sınırsız değerler `timedelta` overflow eder.
     days: int = Query(30, ge=1, le=365, description="Son kac gunluk veri (max 365)"),
     db: Session = Depends(get_db),
-):
+) -> StreamingResponse:
     """
     Analitik verilerini PDF veya Excel formati olarak disari aktarir.
     """

@@ -23,5 +23,5 @@ router = APIRouter(prefix="/api", tags=["Health Check"])
     description="Servisin ayakta olduğunu hızlıca doğrulamak için minimal endpoint. "
     "Load balancer / uptime probe'ları için uygundur.",
 )
-def health_check():
+def health_check() -> dict:
     return {"status": "healthy", "service": "SFDAP API", "version": settings.API_VERSION}

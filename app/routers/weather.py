@@ -30,7 +30,7 @@ def get_weather_data(
     farm_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Farm ID filtresi"),
     limit: int = Query(default=50, ge=1, le=500),
     db: Session = Depends(get_db),
-):
+) -> list[WeatherData]:
     query = db.query(WeatherData)
     if farm_id:
         query = query.filter(WeatherData.farm_id == farm_id)
@@ -45,7 +45,7 @@ def get_weather_data(
     responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
-def create_weather_data(request: Request, data: WeatherDataCreate, db: Session = Depends(get_db)):
+def create_weather_data(request: Request, data: WeatherDataCreate, db: Session = Depends(get_db)) -> WeatherData:
     db_weather = WeatherData(**data.model_dump())
     db.add(db_weather)
     db.commit()
@@ -61,7 +61,7 @@ def create_weather_data(request: Request, data: WeatherDataCreate, db: Session =
 def get_latest_weather(
     farm_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Farm ID (max int64)"),
     db: Session = Depends(get_db),
-):
+) -> WeatherData:
     weather = (
         db.query(WeatherData).filter(WeatherData.farm_id == farm_id).order_by(WeatherData.recorded_at.desc()).first()
     )
@@ -78,7 +78,7 @@ async def fetch_weather_from_api(
     lat: float = Query(..., description="Enlem"),
     lon: float = Query(..., description="Boylam"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """
     OpenWeatherMap API'den anlık hava durumu verisini çeker,
     temizler ve veritabanına kaydeder.
@@ -107,7 +107,7 @@ def get_weather_stats(
     farm_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Farm ID (max int64)"),
     days: int = Query(default=7, ge=1, le=90, description="Son kac gun"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """
     Belirli bir çiftliğin son N günlük hava durumu istatistiklerini döndürür.
     Ortalama, min, max sıcaklık, nem ve toplam yağış bilgilerini içerir.
@@ -117,7 +117,7 @@ def get_weather_stats(
 
 @router.post("/clean")
 @limiter.limit(STRICT_RATE)
-def clean_weather_record(request: Request, data: dict):
+def clean_weather_record(request: Request, data: dict) -> dict:
     """
     Gönderilen hava durumu verisini temizler ve eksik alanları doldurur.
     Veri pipeline'ı test etmek için kullanılır.

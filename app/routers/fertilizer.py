@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/fertilizer", tags=["Gubreleme Onerileri"])
 
 
 @router.get("/crops")
-def get_supported_crops():
+def get_supported_crops() -> dict:
     """Desteklenen bitki türlerini listeler."""
     crops = fertilizer_service.get_supported_crops()
     return {
@@ -36,7 +36,7 @@ def get_supported_crops():
     response_model=FertilizerRecommendResponse,
     responses={400: {"description": "Geçersiz JSON body veya iş kuralı ihlali"}},
 )
-def recommend_fertilizer(data: FertilizerRecommendRequest):
+def recommend_fertilizer(data: FertilizerRecommendRequest) -> FertilizerRecommendResponse:
     """
     Bitki türü ve toprak analiz değerlerine göre gübreleme önerisi döndürür.
 
@@ -61,7 +61,7 @@ def recommend_fertilizer(data: FertilizerRecommendRequest):
     response_model=list[FertilizerScheduleResponse],
     responses={400: {"description": "Geçersiz JSON body"}},
 )
-def get_fertilizer_schedule(data: FertilizerScheduleRequest):
+def get_fertilizer_schedule(data: FertilizerScheduleRequest) -> list[FertilizerScheduleResponse]:
     """
     Ekim tarihine ve bitki türüne göre gübreleme takvimi oluşturur.
 

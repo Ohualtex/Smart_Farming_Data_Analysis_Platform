@@ -70,7 +70,9 @@ def _log_prediction(db: Session, request: IrrigationPredictionRequest, result: d
     responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
-def predict_irrigation(request: Request, data: IrrigationPredictionRequest, db: Session = Depends(get_db)):
+def predict_irrigation(
+    request: Request, data: IrrigationPredictionRequest, db: Session = Depends(get_db)
+) -> IrrigationPredictionResponse:
     result = irrigation_optimizer.predict(
         soil_moisture=data.soil_moisture,
         soil_temperature=data.soil_temperature,
@@ -92,7 +94,7 @@ def get_schedules(
     skip: int = Query(default=0, ge=0, le=MAX_SKIP, description="Atlanacak kayıt sayısı (pagination offset, max 1M)"),
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Sayfa boyutu (max 500)"),
     db: Session = Depends(get_db),
-):
+) -> list[IrrigationSchedule]:
     query = db.query(IrrigationSchedule)
     if field_id:
         query = query.filter(IrrigationSchedule.field_id == field_id)
@@ -124,7 +126,7 @@ def count_schedules(
     responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
-def create_schedule(request: Request, schedule: IrrigationCreate, db: Session = Depends(get_db)):
+def create_schedule(request: Request, schedule: IrrigationCreate, db: Session = Depends(get_db)) -> IrrigationSchedule:
     db_schedule = IrrigationSchedule(**schedule.model_dump())
     db.add(db_schedule)
     db.commit()

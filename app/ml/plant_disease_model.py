@@ -149,7 +149,7 @@ class PlantDiseaseModel:
         }
 
     @staticmethod
-    def _softmax(x):
+    def _softmax(x: np.ndarray | list[float]) -> np.ndarray:
         x = np.asarray(x, dtype=np.float64)
         e = np.exp(x - np.max(x))
         return e / e.sum()

@@ -44,7 +44,7 @@ class InterceptHandler(logging.Handler):
         logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
-def _json_formatter(record) -> str:
+def _json_formatter(record: dict) -> str:
     """Structured JSON log line — production observability stack için.
 
     Her log record'u tek bir JSON satırına çevrilir. trace_id (request_id

@@ -21,6 +21,7 @@ sayaç/gauge'larını da yayar. /metrics endpoint'i main.py'de bağlanır.
 from __future__ import annotations
 
 import time
+from collections.abc import Awaitable, Callable
 
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
@@ -92,7 +93,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
     `/metrics` endpoint'i hariç (recursive metric trafiğini önlemek için).
     """
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         # /metrics endpoint'inin kendi metriklerini ölçmüyoruz (recursive olur)
         if request.url.path == "/metrics":
             return await call_next(request)

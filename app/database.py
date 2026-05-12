@@ -21,8 +21,10 @@ sadece server DB'lerde aktif, SQLite'ta no-op. Constraint naming
 standartlaştırılır, init_db sadece test/ilk boot içindir.
 """
 
+from collections.abc import Iterator
+
 from sqlalchemy import MetaData, create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.config import settings
 
@@ -74,7 +76,7 @@ metadata = MetaData(naming_convention=naming_convention)
 Base = declarative_base(metadata=metadata)
 
 
-def get_db():
+def get_db() -> Iterator[Session]:
     db = SessionLocal()
     try:
         yield db
@@ -82,5 +84,5 @@ def get_db():
         db.close()
 
 
-def init_db():
+def init_db() -> None:
     Base.metadata.create_all(bind=engine)

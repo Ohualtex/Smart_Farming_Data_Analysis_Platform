@@ -66,7 +66,7 @@ def list_logs(
     model_name: str | None = Query(default=None, description="Filtre: belirli bir model"),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
-):
+) -> list[ModelPerformanceLog]:
     query = db.query(ModelPerformanceLog)
     if model_name:
         query = query.filter(ModelPerformanceLog.model_name == model_name)
@@ -82,7 +82,9 @@ def list_logs(
     responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
-def create_log(request: Request, payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)):
+def create_log(
+    request: Request, payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)
+) -> ModelPerformanceLog:
     log = ModelPerformanceLog(**payload.model_dump())
     db.add(log)
     db.commit()
@@ -109,7 +111,7 @@ def update_log(
     payload: ModelPerformanceLogUpdate,
     log_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Log ID (max int64)"),
     db: Session = Depends(get_db),
-):
+) -> ModelPerformanceLog:
     log = db.query(ModelPerformanceLog).filter(ModelPerformanceLog.id == log_id).first()
     if log is None:
         raise HTTPException(status_code=404, detail=f"Log {log_id} bulunamadi")
@@ -127,7 +129,7 @@ def update_log(
     description="Belirtilen model için toplam tahmin sayısı, ortalama doğruluk skoru ve son log zamanını döndürür.",
     responses={404: {"description": "Belirtilen model için log bulunamadı"}},
 )
-def model_summary(model_name: str, db: Session = Depends(get_db)):
+def model_summary(model_name: str, db: Session = Depends(get_db)) -> ModelPerformanceSummary:
     rows = (
         db.query(
             func.count(ModelPerformanceLog.id).label("total"),
@@ -158,7 +160,7 @@ def model_timeseries(
     model_name: str,
     days: int = Query(default=30, ge=1, le=365, description="Son kaç gün"),
     db: Session = Depends(get_db),
-):
+) -> list[ModelPerformanceTimeseriesPoint]:
     since = datetime.now(UTC) - timedelta(days=days)
     # SQLite ve PostgreSQL'de date() farklı çalışıyor — func.date() ile tarih bazlı gruplama
     rows = (
@@ -197,7 +199,7 @@ def compare_models(
     models: str = Query(..., description="Virgülle ayrılmış model isimleri"),
     days: int = Query(default=30, ge=1, le=365),
     db: Session = Depends(get_db),
-):
+) -> list[ModelPerformanceCompareItem]:
     model_names = [m.strip() for m in models.split(",") if m.strip()]
     if not model_names:
         # 400 (not 422) — 422'nin FastAPI auto-üretilen şeması Pydantic
@@ -251,7 +253,7 @@ def detect_drift(
     baseline_days: int = Query(default=30, ge=2, le=365, description="Önceki baz periyot pencere"),
     threshold_percent: float = Query(default=10.0, gt=0, le=100, description="Drift eşik yüzdesi"),
     db: Session = Depends(get_db),
-):
+) -> ModelPerformanceDriftReport:
     now = datetime.now(UTC)
     recent_start = now - timedelta(days=recent_days)
     baseline_start = recent_start - timedelta(days=baseline_days)

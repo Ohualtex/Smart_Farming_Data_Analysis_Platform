@@ -51,7 +51,7 @@ def get_health_images(
     field_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Belirli tarla filtresi"),
     limit: int = Query(default=20, ge=1, le=500),
     db: Session = Depends(get_db),
-):
+) -> list[dict]:
     query = db.query(PlantHealthImage)
     if field_id:
         query = query.filter(PlantHealthImage.field_id == field_id)
@@ -84,7 +84,7 @@ def upload_health_image(
     field_id: int = Query(..., ge=1, le=MAX_SQLITE_INT, description="Tarla ID"),
     image_url: str = Query(..., description="CDN/external görsel URL'i"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     image = PlantHealthImage(field_id=field_id, image_url=image_url)
     db.add(image)
     db.commit()
@@ -106,7 +106,7 @@ async def analyze_plant_image(
     field_id: int = Form(..., ge=1, le=MAX_SQLITE_INT, description="Tarla ID"),
     image: UploadFile = File(..., description="Yaprak görseli (JPG/PNG/WebP, max 5 MB)"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     # ─── Validasyon ──────────────────────────────────────────────
     ext = Path(image.filename or "").suffix.lower()
     if ext not in ALLOWED_EXT:

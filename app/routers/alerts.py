@@ -37,7 +37,7 @@ def list_alerts(
     is_resolved: bool | None = Query(default=None, description="Filtre: çözüldü mü?"),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
-):
+) -> list[SystemAlert]:
     query = db.query(SystemAlert)
     if severity is not None:
         query = query.filter(SystemAlert.severity == severity)
@@ -55,7 +55,7 @@ def list_alerts(
 def get_alert(
     alert_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Alert ID (max int64)"),
     db: Session = Depends(get_db),
-):
+) -> SystemAlert:
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if alert is None:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} bulunamadi")
@@ -71,7 +71,7 @@ def get_alert(
     responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
-def create_alert(request: Request, payload: SystemAlertCreate, db: Session = Depends(get_db)):
+def create_alert(request: Request, payload: SystemAlertCreate, db: Session = Depends(get_db)) -> SystemAlert:
     alert = SystemAlert(**payload.model_dump())
     db.add(alert)
     db.commit()
@@ -95,7 +95,7 @@ def update_alert(
     payload: SystemAlertUpdate,
     alert_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Alert ID (max int64)"),
     db: Session = Depends(get_db),
-):
+) -> SystemAlert:
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if alert is None:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} bulunamadi")

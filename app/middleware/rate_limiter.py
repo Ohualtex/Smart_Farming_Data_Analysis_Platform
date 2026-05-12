@@ -25,7 +25,7 @@ STRICT_RATE = "30/minute"
 AUTH_RATE = "10/minute"
 
 
-async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
     """
     Rate limit aşıldığında tutarlı hata formatı döndürür.
     HTTP 429 Too Many Requests.

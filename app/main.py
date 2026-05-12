@@ -17,9 +17,10 @@ konfigürasyon settings üzerinden, dashboard SPA `/dashboard` altında.
 """
 
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
@@ -52,7 +53,7 @@ from app.tasks.scheduler import shutdown_scheduler, start_scheduler
 
 # Lifespan event handler (on_event yerine modern yaklaşım)
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Startup
     setup_logging()
     # Sentry — active when SENTRY_DSN env is set, otherwise no-op.
@@ -219,7 +220,7 @@ app.include_router(auth.router)
 
 
 @app.get("/", tags=["Root"])
-def root():
+def root() -> dict:
     return {
         "message": "SFDAP - Akilli Tarim Veri Analizi Platformu API",
         "docs": "/docs",
@@ -233,7 +234,7 @@ def root():
 # Scrape config örneği: scrape_interval 30s, target 'sfdap_api:8000'.
 # EN: Prometheus scrape endpoint; standard `/metrics` path (no prefix).
 @app.get("/metrics", include_in_schema=False)
-def prometheus_metrics():
+def prometheus_metrics() -> Response:
     return metrics_response()
 
 
