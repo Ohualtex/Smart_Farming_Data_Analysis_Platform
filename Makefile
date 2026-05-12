@@ -1,4 +1,4 @@
-.PHONY: help install run test lint format migrate backup restore docker-up docker-down clean
+.PHONY: help install run test fuzz lint format migrate backup restore docker-up docker-down clean
 
 help: ## Show this help
 	@egrep -h '\s##\s' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -10,8 +10,11 @@ install: ## Install python dependencies
 run: ## Run the FastAPI application locally
 	uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
-test: ## Run the test suite with coverage
-	pytest tests/ --cov=app --cov-report=term-missing
+test: ## Run the test suite with coverage (Schemathesis fuzz hariç — `make fuzz`)
+	SKIP_SCHEMATHESIS=1 pytest tests/ --cov=app --cov-report=term-missing
+
+fuzz: ## Schemathesis property-based API fuzz (read + write); CI'da ayrı job
+	pytest tests/test_schemathesis_fuzz.py -v --no-cov
 
 lint: ## Run ruff linter
 	ruff check .

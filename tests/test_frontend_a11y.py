@@ -23,13 +23,28 @@ from pathlib import Path
 
 import pytest
 
-FRONTEND_HTML = Path(__file__).resolve().parents[1] / "frontend" / "index.html"
+FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
+FRONTEND_HTML = FRONTEND_DIR / "index.html"
+FRONTEND_CSS = FRONTEND_DIR / "src" / "styles" / "main.css"
+FRONTEND_JS = FRONTEND_DIR / "src" / "main.js"
 
 
 @pytest.fixture(scope="module")
 def html() -> str:
-    """index.html'i bir kere yukle, butun testler ayni string'i goruyor."""
+    """index.html (markup-only after the ES module split)."""
     return FRONTEND_HTML.read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def css() -> str:
+    """Extracted dashboard stylesheet (`frontend/src/styles/main.css`)."""
+    return FRONTEND_CSS.read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def js() -> str:
+    """Extracted dashboard script (`frontend/src/main.js`)."""
+    return FRONTEND_JS.read_text(encoding="utf-8")
 
 
 class TestSkipLinkAndLandmarks:
@@ -125,38 +140,38 @@ class TestAriaBusyTargets:
 
 
 class TestSkeletonHelpersAndCss:
-    """JS skeleton helper'lari + CSS class'lar tanimli mi."""
+    """JS skeleton helper'lari + CSS class'lar tanimli mi (artik ayri dosyalarda)."""
 
-    def test_skeleton_css_variants_defined(self, html: str):
+    def test_skeleton_css_variants_defined(self, css: str):
         """CSS'te skeleton card/line/row variant'lari olmali."""
-        assert ".skeleton-card" in html
-        assert ".skeleton-line" in html
-        assert ".skeleton-row" in html
+        assert ".skeleton-card" in css
+        assert ".skeleton-line" in css
+        assert ".skeleton-row" in css
 
-    def test_reduced_motion_respected(self, html: str):
+    def test_reduced_motion_respected(self, css: str):
         """`prefers-reduced-motion` icin skeleton animation kapali olmali."""
         match = re.search(
             r"@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.skeleton\s*\{[^}]*animation:\s*none",
-            html,
+            css,
             re.DOTALL,
         )
         assert match, "reduced-motion media query'sinde .skeleton animation:none yok"
 
-    def test_focus_visible_outline_defined(self, html: str):
+    def test_focus_visible_outline_defined(self, css: str):
         """Klavye odagi icin :focus-visible outline tanimli."""
-        assert ":focus-visible" in html
+        assert ":focus-visible" in css
 
-    def test_sr_only_utility_defined(self, html: str):
+    def test_sr_only_utility_defined(self, css: str):
         """Screen reader-only yardimci sinifi tanimli olmali."""
-        assert ".sr-only" in html
+        assert ".sr-only" in css
 
     @pytest.mark.parametrize(
         "helper",
         ["_skeletonCards", "_skeletonRows", "_skeletonBlock", "_setBusy"],
     )
-    def test_js_helper_present(self, html: str, helper: str):
-        """JS skeleton helper fonksiyonu tanimli olmali."""
-        assert f"function {helper}(" in html, f"JS helper `{helper}` bulunamadi — skeleton placeholder akisi bozulur."
+    def test_js_helper_present(self, js: str, helper: str):
+        """JS skeleton helper fonksiyonu tanimli olmali (main.js icinde)."""
+        assert f"function {helper}(" in js, f"JS helper `{helper}` bulunamadi — skeleton placeholder akisi bozulur."
 
 
 class TestActiveNavAriaCurrent:
@@ -172,11 +187,39 @@ class TestActiveNavAriaCurrent:
         assert match, "Aktif dashboard nav item icin aria-current='page' yok"
 
 
+class TestAssetSplit:
+    """Frontend artık üç dosyadan oluşuyor (index.html + src/styles + src/main.js)."""
+
+    def test_css_file_referenced_from_index(self, html: str):
+        """index.html harici stylesheet'i link tag'i ile yüklemeli."""
+        assert 'href="src/styles/main.css"' in html
+
+    def test_js_file_referenced_from_index(self, html: str):
+        """index.html harici script'i src attribute ile yüklemeli."""
+        assert 'src="src/main.js"' in html
+
+    def test_no_inline_style_block(self, html: str):
+        """Artık inline `<style>` blok olmamalı; CSS ayrı dosyada."""
+        # Sadece kapanan </style> kontrolü: hiç olmamalı.
+        assert "</style>" not in html
+
+    def test_no_inline_script_block(self, html: str):
+        """Inline `<script>...</script>` (CDN harici) olmamalı.
+
+        Chart.js CDN tag'inin geçtiği `<script src="https://...">` self-closes;
+        block-style inline `<script>` (içerik dolu) olmamalı.
+        """
+        # CDN tag tek satırda `<script src="..."></script>` formunda;
+        # block inline = `<script>` sonrasında newline.
+        # Aslında basitçe: artık `<script>\n` patterni olmamalı.
+        assert "<script>\n" not in html
+
+
 class TestViteScaffold:
     """Vite scaffold dosyalari mevcut + minimum konfig."""
 
     def test_package_json_exists(self):
-        pkg = FRONTEND_HTML.parent / "package.json"
+        pkg = FRONTEND_DIR / "package.json"
         assert pkg.exists()
         content = pkg.read_text(encoding="utf-8")
         assert '"vite"' in content
@@ -184,7 +227,7 @@ class TestViteScaffold:
         assert '"dev"' in content
 
     def test_vite_config_exists(self):
-        cfg = FRONTEND_HTML.parent / "vite.config.js"
+        cfg = FRONTEND_DIR / "vite.config.js"
         assert cfg.exists()
         content = cfg.read_text(encoding="utf-8")
         assert "defineConfig" in content
@@ -193,7 +236,7 @@ class TestViteScaffold:
         assert "8000" in content
 
     def test_frontend_gitignore_excludes_node_modules_and_dist(self):
-        gi = FRONTEND_HTML.parent / ".gitignore"
+        gi = FRONTEND_DIR / ".gitignore"
         assert gi.exists()
         content = gi.read_text(encoding="utf-8")
         assert "node_modules/" in content

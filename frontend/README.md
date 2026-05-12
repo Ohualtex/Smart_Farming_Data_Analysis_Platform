@@ -2,15 +2,24 @@
 
 Static SPA dashboard served by FastAPI at `/dashboard`.
 
-## 📐 Mevcut yapı (shiftFinal A3)
+## 📐 Mevcut yapı
 
-- Tek dosya `index.html` (inline CSS + inline JS, ~2970 satır).
+```
+frontend/
+├── index.html              # Markup-only (~629 satır)
+├── src/
+│   ├── styles/main.css     # Extracted stylesheet (~1239 satır)
+│   └── main.js             # Extracted JavaScript (~1253 satır)
+├── package.json            # Vite + @axe-core/cli devDependencies
+├── vite.config.js          # Vite build scaffold (dev :5173 + FastAPI proxy)
+└── README.md               # bu dosya
+```
+
+- `index.html` sadece markup içerir; CSS `<link>`, JS `<script src>` ile yüklenir.
 - FastAPI `app/main.py` içinde `StaticFiles(directory="frontend", html=True)` ile
-  `/dashboard` altına mount edilir.
+  `/dashboard` altına mount edilir; alt dizinler otomatik servis edilir.
 - Chart.js (`4.4.0`) CDN'den yüklenir; Inter fontu Google Fonts'tan gelir.
-- Vite build iskeleti (`vite.config.js` + `package.json`) hazırdır;
-  şu an inline mimari korunduğu için derleme şart değil, ileride
-  ES modüllerine bölme adımı bu iskelet üzerinden ilerleyecek.
+- Vite build iskeleti hazır; `npm run build` ile minified `dist/` üretilebilir.
 
 ## 🚀 Geliştirici komutları
 

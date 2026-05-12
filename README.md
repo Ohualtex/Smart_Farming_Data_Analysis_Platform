@@ -339,8 +339,11 @@ Smart_Farming_Data_Analysis_Platform/
 │       └── scheduler.py         #   APScheduler periyodik görevler
 │
 ├── frontend/                    # Web arayüzü (SPA Dashboard)
-│   ├── index.html               #   Dark mode, responsive, Chart.js (9 sayfa) + a11y/ARIA + skeleton loaders
-│   ├── package.json             #   Vite + axe-core CLI scaffold
+│   ├── index.html               #   Markup-only (~629 satır, 9 sayfa SPA + a11y)
+│   ├── src/
+│   │   ├── styles/main.css      #   Dashboard stylesheet (~1239 satır, dark/light)
+│   │   └── main.js              #   Vanilla JS + Chart.js + skeleton helpers
+│   ├── package.json             #   Vite + axe-core CLI devDependencies
 │   ├── vite.config.js           #   Vite build/dev scaffold (FastAPI proxy)
 │   └── README.md                #   Frontend dev kılavuzu
 │
