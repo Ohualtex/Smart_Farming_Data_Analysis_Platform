@@ -79,7 +79,12 @@ def get_health_images(
     "Multipart upload için `/health-images/analyze` kullanın.",
 )
 @limiter.limit(STRICT_RATE)
-def upload_health_image(request: Request, field_id: int, image_url: str, db: Session = Depends(get_db)):
+def upload_health_image(
+    request: Request,
+    field_id: int = Query(..., ge=1, le=MAX_SQLITE_INT, description="Tarla ID"),
+    image_url: str = Query(..., description="CDN/external görsel URL'i"),
+    db: Session = Depends(get_db),
+):
     image = PlantHealthImage(field_id=field_id, image_url=image_url)
     db.add(image)
     db.commit()
@@ -98,7 +103,7 @@ def upload_health_image(request: Request, field_id: int, image_url: str, db: Ses
 @limiter.limit(AUTH_RATE)
 async def analyze_plant_image(
     request: Request,
-    field_id: int = Form(..., description="Tarla ID"),
+    field_id: int = Form(..., ge=1, le=MAX_SQLITE_INT, description="Tarla ID"),
     image: UploadFile = File(..., description="Yaprak görseli (JPG/PNG/WebP, max 5 MB)"),
     db: Session = Depends(get_db),
 ):

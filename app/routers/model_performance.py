@@ -22,11 +22,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import ModelPerformanceLog, SystemAlert
@@ -79,6 +79,7 @@ def list_logs(
     status_code=201,
     dependencies=[Depends(verify_api_key)],
     summary="Yeni performans logu kaydet",
+    responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
 def create_log(request: Request, payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)):
@@ -97,9 +98,18 @@ def create_log(request: Request, payload: ModelPerformanceLogCreate, db: Session
     description="Tahmin sonradan gerçekleştiğinde `actual_data` ve `accuracy_score` alanlarını "
     "günceller. Tipik akış: önce POST ile log yaratılır, gerçek sonuç bilindiğinde bu PATCH "
     "ile doldurulur.",
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        404: {"description": "Log kaydı bulunamadı"},
+    },
 )
 @limiter.limit(STRICT_RATE)
-def update_log(request: Request, log_id: int, payload: ModelPerformanceLogUpdate, db: Session = Depends(get_db)):
+def update_log(
+    request: Request,
+    payload: ModelPerformanceLogUpdate,
+    log_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Log ID (max int64)"),
+    db: Session = Depends(get_db),
+):
     log = db.query(ModelPerformanceLog).filter(ModelPerformanceLog.id == log_id).first()
     if log is None:
         raise HTTPException(status_code=404, detail=f"Log {log_id} bulunamadi")

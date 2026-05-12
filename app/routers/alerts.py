@@ -68,6 +68,7 @@ def get_alert(
     status_code=201,
     dependencies=[Depends(verify_api_key)],
     summary="Yeni uyarı oluştur",
+    responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
 def create_alert(request: Request, payload: SystemAlertCreate, db: Session = Depends(get_db)):
@@ -83,6 +84,10 @@ def create_alert(request: Request, payload: SystemAlertCreate, db: Session = Dep
     response_model=SystemAlertResponse,
     dependencies=[Depends(verify_api_key)],
     summary="Uyarıyı güncelle (resolve / severity / mesaj)",
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        404: {"description": "Alert bulunamadı"},
+    },
 )
 @limiter.limit(STRICT_RATE)
 def update_alert(

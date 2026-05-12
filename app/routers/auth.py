@@ -172,13 +172,22 @@ def _get_current_user(authorization: str = Header(default=""), db: Session = Dep
     status_code=status.HTTP_201_CREATED,
     summary="Yeni kullanıcı oluştur",
     description="Yeni hesap kaydı. Şifre bcrypt ile hash'lenir.",
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        409: {"description": "E-posta zaten kayıtlı"},
+    },
 )
 @limiter.limit(AUTH_RATE)
 def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta zaten kayitli")
     if len(payload.password) < 8:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Sifre en az 8 karakter olmali")
+        # 400 — FastAPI'nin auto-generated 422 şeması list[ValidationError]
+        # bekler; düz-string detail uyumsuz olur.
+        # ---
+        # 400 — FastAPI's auto-generated 422 schema expects
+        # list[ValidationError]; a plain-string detail breaks it.
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sifre en az 8 karakter olmali")
     user = User(
         name=payload.name,
         email=payload.email,
@@ -200,6 +209,10 @@ def register(request: Request, payload: UserRegisterRequest, db: Session = Depen
         "Doğru e-posta + şifre ile HS256 imzalı JWT bearer token alınır. "
         "Token varsayılan 24 saat geçerlidir (`JWT_EXPIRE_HOURS` ile ayarlanabilir)."
     ),
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        401: {"description": "E-posta veya şifre hatalı"},
+    },
 )
 @limiter.limit(AUTH_RATE)
 def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)):

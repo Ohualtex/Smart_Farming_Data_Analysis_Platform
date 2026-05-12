@@ -31,7 +31,11 @@ def get_supported_crops():
     }
 
 
-@router.post("/recommend", response_model=FertilizerRecommendResponse)
+@router.post(
+    "/recommend",
+    response_model=FertilizerRecommendResponse,
+    responses={400: {"description": "Geçersiz JSON body veya iş kuralı ihlali"}},
+)
 def recommend_fertilizer(data: FertilizerRecommendRequest):
     """
     Bitki türü ve toprak analiz değerlerine göre gübreleme önerisi döndürür.
@@ -52,7 +56,11 @@ def recommend_fertilizer(data: FertilizerRecommendRequest):
     return result
 
 
-@router.post("/schedules", response_model=list[FertilizerScheduleResponse])
+@router.post(
+    "/schedules",
+    response_model=list[FertilizerScheduleResponse],
+    responses={400: {"description": "Geçersiz JSON body"}},
+)
 def get_fertilizer_schedule(data: FertilizerScheduleRequest):
     """
     Ekim tarihine ve bitki türüne göre gübreleme takvimi oluşturur.

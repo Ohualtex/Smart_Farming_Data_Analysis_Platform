@@ -37,7 +37,13 @@ def get_weather_data(
     return query.order_by(WeatherData.recorded_at.desc()).limit(limit).all()
 
 
-@router.post("/", response_model=WeatherDataResponse, status_code=201, dependencies=[Depends(verify_api_key)])
+@router.post(
+    "/",
+    response_model=WeatherDataResponse,
+    status_code=201,
+    dependencies=[Depends(verify_api_key)],
+    responses={400: {"description": "Geçersiz JSON body"}},
+)
 @limiter.limit(STRICT_RATE)
 def create_weather_data(request: Request, data: WeatherDataCreate, db: Session = Depends(get_db)):
     db_weather = WeatherData(**data.model_dump())

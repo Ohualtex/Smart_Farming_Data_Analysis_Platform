@@ -67,6 +67,7 @@ def _log_prediction(db: Session, request: IrrigationPredictionRequest, result: d
     description="Toprak nemi, sıcaklık, yağış gibi girdileri alıp önerilen "
     "su miktarını (litre) ve aciliyet seviyesini döndürür. Tahmin sonucu "
     "`ModelPerformanceLog` tablosuna otomatik kaydedilir (model_name='irrigation_rf').",
+    responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
 def predict_irrigation(request: Request, data: IrrigationPredictionRequest, db: Session = Depends(get_db)):
@@ -120,6 +121,7 @@ def count_schedules(
     status_code=201,
     dependencies=[Depends(verify_api_key)],
     summary="Yeni sulama programı oluştur",
+    responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
 def create_schedule(request: Request, schedule: IrrigationCreate, db: Session = Depends(get_db)):

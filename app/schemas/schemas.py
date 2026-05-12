@@ -20,7 +20,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, PlainSerializer
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
 
 
 def _serialize_utc(value: datetime) -> str:
@@ -151,11 +151,16 @@ class IrrigationPredictionRequest(BaseModel):
         }
     )
 
-    soil_moisture: float  # %0-100 toprak nemi
-    soil_temperature: float  # °C
-    humidity: float  # %0-100 hava nemi
-    temperature: float  # °C hava sıcaklığı
-    precipitation: float  # son 24 saat yağış (mm)
+    # Range constraints prevent numerical overflow in the downstream
+    # RandomForest predict step (extreme floats blow up numpy ops).
+    # ---
+    # Aralık kısıtları RandomForest predict adımında sayısal overflow'u
+    # engeller; uç değerler numpy işlemlerini patlatır.
+    soil_moisture: float = Field(..., ge=0.0, le=100.0)  # %0-100 toprak nemi
+    soil_temperature: float = Field(..., ge=-50.0, le=80.0)  # °C
+    humidity: float = Field(..., ge=0.0, le=100.0)  # %0-100 hava nemi
+    temperature: float = Field(..., ge=-60.0, le=70.0)  # °C hava sıcaklığı
+    precipitation: float = Field(..., ge=0.0, le=1000.0)  # 24 saat yağış (mm)
 
 
 class IrrigationPredictionResponse(BaseModel):

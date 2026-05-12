@@ -79,6 +79,10 @@ def get_sensor(
     status_code=201,
     dependencies=[Depends(verify_api_key)],
     summary="Yeni sensör ekle",
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        409: {"description": "Serial number zaten kayıtlı"},
+    },
 )
 @limiter.limit(STRICT_RATE)
 def create_sensor(request: Request, sensor: SensorCreate, db: Session = Depends(get_db)):
@@ -93,6 +97,7 @@ def create_sensor(request: Request, sensor: SensorCreate, db: Session = Depends(
     "/{sensor_id}",
     dependencies=[Depends(verify_api_key)],
     summary="Sensör sil",
+    responses={404: {"description": "Sensor bulunamadı"}},
 )
 @limiter.limit(STRICT_RATE)
 def delete_sensor(
@@ -115,6 +120,10 @@ def delete_sensor(
     status_code=201,
     dependencies=[Depends(verify_api_key)],
     summary="Yeni sensör okuması kaydet",
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        409: {"description": "Veri çakışması (örn. duplicate)"},
+    },
 )
 @limiter.limit(STRICT_RATE)
 def create_reading(request: Request, reading: SensorReadingCreate, db: Session = Depends(get_db)):
