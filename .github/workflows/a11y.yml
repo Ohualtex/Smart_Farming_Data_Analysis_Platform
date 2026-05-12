@@ -58,14 +58,19 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: frontend/package.json
+          # Lockfile commit'te; setup-node hash bazlı cache yapar.
+          # ---
+          # Lockfile is committed; setup-node uses it for hash-keyed caching.
+          cache-dependency-path: frontend/package-lock.json
 
       - name: 📦 axe-core CLI kur
         working-directory: frontend
-        # NOT: package-lock.json yok (statik scaffold); `npm install`
-        # bagimlilik agacini olusturur.
-        # EN: lockfile not committed — `npm install` builds tree fresh.
-        run: npm install --no-save
+        # `npm ci` deterministik bağımlılık ağacı kurar (package-lock.json
+        # commit'te) — `npm install`'a göre daha hızlı ve hash-doğrulamalı.
+        # ---
+        # `npm ci` performs a deterministic install from the committed
+        # package-lock.json — faster than `npm install` and verifies hashes.
+        run: npm ci
 
       - name: 🚀 FastAPI sunucusunu arka planda başlat
         env:

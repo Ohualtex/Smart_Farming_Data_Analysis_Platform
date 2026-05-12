@@ -241,3 +241,15 @@ class TestViteScaffold:
         content = gi.read_text(encoding="utf-8")
         assert "node_modules/" in content
         assert "dist/" in content
+
+    def test_package_lock_committed_for_deterministic_install(self):
+        """`frontend/package-lock.json` commit'te — CI'da `npm ci`'nin hash
+        doğrulayıp tekrarlanabilir build üretmesi için."""
+        lock = FRONTEND_DIR / "package-lock.json"
+        assert lock.exists(), "frontend/package-lock.json yok — `cd frontend && npm install` çalıştırın"
+        content = lock.read_text(encoding="utf-8")
+        # Lockfile sürümü 2+ olmalı (npm v7+)
+        assert '"lockfileVersion"' in content
+        # Bağımlılıklarımız orada görünmeli
+        assert "@axe-core/cli" in content
+        assert "vite" in content
