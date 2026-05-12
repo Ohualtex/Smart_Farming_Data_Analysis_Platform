@@ -1,9 +1,11 @@
 """
-Sulama Optimizasyonu API Endpoint'leri
-========================================
-ML tabanlı sulama tahmini (RandomForest) ve sulama programı CRUD.
+Irrigation Optimization API Endpoints
+=======================================
+ML-driven irrigation prediction (RandomForest) plus schedule CRUD.
 
-Miraç Duran — Cycle 4 Görevi
+---
+
+ML tabanlı sulama tahmini (RandomForest) + sulama programı CRUD'u.
 """
 
 from __future__ import annotations
@@ -27,12 +29,12 @@ from app.schemas.schemas import (
     IrrigationResponse,
 )
 
-# Pagination defaults — frontend slider 50'lik sayfalarla çalışıyor
+# Pagination defaults — frontend pages through 50 records at a time.
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 500
-# shiftFinal Ayşe — Schemathesis fuzz tarafından yakalanan int64 overflow
-# fix'i; sensors.py'deki MAX_SKIP ile aynı sebep (SQLite INTEGER).
-# EN: Same int64 overflow fix as sensors.py — cap skip at 1M offset.
+# Same int64 overflow guard as sensors.py — cap skip at 1M offset.
+# ---
+# sensors.py ile aynı int64 overflow koruması — skip 1M ile sınırlanır.
 MAX_SKIP = 1_000_000
 
 router = APIRouter(prefix="/api/irrigation", tags=["Sulama Optimizasyonu"])

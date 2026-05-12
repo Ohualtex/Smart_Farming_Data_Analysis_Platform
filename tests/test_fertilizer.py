@@ -1,9 +1,11 @@
 """
-Gübreleme Servisi Testleri
-============================
-fertilizer_service ve /api/fertilizer endpoint testleri.
+Fertilizer Service Tests
+==========================
+Covers `fertilizer_service` and the `/api/fertilizer` endpoint.
 
-Ayşe Eslem Çekici — Cycle 5 Görevi
+---
+
+fertilizer_service ve /api/fertilizer ucu için testler.
 """
 
 from app.services.fertilizer_service import FertilizerService
@@ -143,7 +145,7 @@ class TestSupportedCrops:
 
     def test_returns_all_crops(self):
         crops = self.service.get_supported_crops()
-        # Cycle 6: 8 → 17 (Türkiye'nin 7 bölgesi için bitki yelpazesi genişletildi)
+        # 17 crops covering the 7 geographic regions of Türkiye.
         assert len(crops) == 17
 
     def test_crop_has_required_fields(self):
@@ -250,5 +252,5 @@ class TestFertilizerCropsEndpoint:
         response = client.get("/api/fertilizer/crops")
         data = response.json()
         assert "crops" in data
-        # Cycle 6: 8 → 17 bitki türü
+        # 17 supported crops covering Türkiye's regional planting profile.
         assert data["count"] == 17

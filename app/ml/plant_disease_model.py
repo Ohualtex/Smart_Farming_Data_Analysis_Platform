@@ -1,17 +1,17 @@
 """
 Plant Disease Detection Model
-==============================
-Yaprak görsellerinden bitki hastalığı teşhisi yapan ML servisi.
+===============================
+ML service that diagnoses plant disease from leaf images.
 
-İki çalışma modu:
-1) **ONNX modu** — `MODEL_PATH` altında `plant_disease_cnn.onnx` mevcutsa
-   onnxruntime InferenceSession ile gerçek CNN inference yapar.
-2) **Heuristic modu** — model dosyası yoksa Pillow ile görsel analiz
-   (renk histogramı + sağlıklı yeşil oranı + kahve/sarı leke oranı)
-   üzerinden kural-bazlı teşhis verir. Hash-stub'tan farklı olarak
-   gerçekten görsele duyarlıdır.
+Two operating modes:
+1) **ONNX mode** — if `plant_disease_cnn.onnx` is present under
+   `MODEL_PATH`, runs real CNN inference via onnxruntime.
+2) **Heuristic mode** — if no model file is present, falls back to a
+   Pillow image analysis (color histogram + healthy-green ratio +
+   brown/yellow lesion ratio). Unlike a hash stub this is genuinely
+   image-sensitive.
 
-Çıktı her iki modda da aynı şemada:
+Output schema (identical for both modes):
     {
         "diagnosis": "leaf_spot",
         "confidence_score": 0.78,
@@ -20,11 +20,14 @@ Yaprak görsellerinden bitki hastalığı teşhisi yapan ML servisi.
         "model_version": "heuristic-v1" | "onnx-v1",
     }
 
-CNN model eğitimi (PlantVillage dataset) tamamlanıp ONNX'e export
-edildiğinde dosyayı `app/ml/models/plant_disease_cnn.onnx` olarak koy;
-servis otomatik olarak ONNX moduna geçer.
+Once a CNN trained on the PlantVillage dataset is exported to ONNX,
+place the file at `app/ml/models/plant_disease_cnn.onnx`; the service
+switches to ONNX mode automatically.
 
-Ayşe Eslem Çekici — Cycle 7
+---
+
+Yaprak görselinden hastalık teşhisi yapar; ONNX dosyası varsa CNN
+inference, yoksa kural-bazlı heuristic mod. Çıktı şeması aynı.
 """
 
 from __future__ import annotations

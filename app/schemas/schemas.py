@@ -194,7 +194,7 @@ class FertilizerScheduleResponse(BaseModel):
     notes: str
 
 
-# ========== SYSTEM ALERT (Ecenur — Cycle 6: Veri hatti izleme & uyari) ==========
+# ========== SYSTEM ALERT (data pipeline monitoring + alerts) ==========
 class SystemAlertCreate(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
@@ -236,7 +236,7 @@ class SystemAlertUpdate(BaseModel):
     message: str | None = None
 
 
-# ========== MODEL PERFORMANCE LOG (Mehmet — Cycle 6: Model perf izleme) ==========
+# ========== MODEL PERFORMANCE LOG (ML model performance tracking) ==========
 class ModelPerformanceLogCreate(BaseModel):
     model_name: str  # 'irrigation_rf' | 'plant_disease_cnn' | ...
     prediction_data: str  # JSON serialized
@@ -313,7 +313,7 @@ class ModelPerformanceCompareItem(BaseModel):
     last_logged: datetime | None
 
 
-# ========== HEALTH (Mehmet — Cycle 6: deep health check) ==========
+# ========== HEALTH (deep health check) ==========
 class HealthCheckResponse(BaseModel):
     """Detayli sistem sagligi raporu."""
 

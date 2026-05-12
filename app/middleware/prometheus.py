@@ -1,20 +1,21 @@
 """
 Prometheus Metrics Middleware
-==================================
-shiftFinal — A2 paketi. HTTP request'leri Prometheus counter ve histogram
-metriklerine kayıt eden middleware + `/metrics` endpoint helper'ı.
+===============================
+Middleware that records every HTTP request into Prometheus counters and
+histograms, plus a `/metrics` exposition helper.
 
-Yayılan metrikler:
+Exposed metrics:
 - `sfdap_http_requests_total{method, path, status}` — Counter
 - `sfdap_http_request_duration_seconds{method, path}` — Histogram
-- `sfdap_model_predictions_total{model_name}` — Counter (ML inference sayacı)
-- `sfdap_active_alerts{severity}` — Gauge (kritik durum izleme)
+- `sfdap_model_predictions_total{model_name}` — Counter (ML inference)
+- `sfdap_active_alerts{severity}` — Gauge (active critical conditions)
 
-`/metrics` endpoint'i `app/routers/metrics.py` içinde wire ediliyor.
+The `/metrics` endpoint is wired up in `app/main.py`.
 
-EN: Prometheus instrumentation middleware. Records request count and
-duration histograms per (method, path, status). Also exposes model
-prediction and active-alert counters/gauges used by other modules.
+---
+
+Her HTTP isteğini sayar/süre dağılımını tutar; ML tahmin ve aktif uyarı
+sayaç/gauge'larını da yayar. /metrics endpoint'i main.py'de bağlanır.
 """
 
 from __future__ import annotations

@@ -1,7 +1,12 @@
 """
-Veri Kalitesi helper testleri
-==============================
-Emirhan'ın Cycle 6 görevi için skeleton testler.
+Data Quality Helper Tests
+===========================
+Covers outlier detection, missing-value imputation, and range-clipping
+utilities in `app.services.data_quality`.
+
+---
+
+Veri kalitesi helper'ları (outlier, eksik veri, range clip) testleri.
 """
 
 from __future__ import annotations

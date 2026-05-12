@@ -1,7 +1,5 @@
 # 🚀 SFDAP Production Deploy — nginx + Let's Encrypt
 
-> Cycle 8 — HTTPS / reverse proxy konfigürasyonu (Miraç Duran)
-
 Bu kılavuz, Docker üzerinde SFDAP'i nginx reverse proxy + Let's Encrypt TLS ile prod-hazır şekilde başlatma adımlarını gösterir.
 
 ## 📋 Önkoşullar
@@ -99,7 +97,7 @@ DATABASE_URL=postgresql+psycopg2://sfdap_user:sfdap_password@db:5432/sfdap_db
 # postgres servisini başlat
 docker compose --profile postgres up -d db
 
-# Migration'ları uygula (Cycle 8 #4 ile gelen 14-tablo initial)
+# Migration'ları uygula (14-tablo initial + sensor reading aggregate)
 docker compose exec api alembic upgrade head
 
 # Seed data (opsiyonel — 81 il + 7500+ kayıt)
@@ -119,7 +117,7 @@ Let's Encrypt cert'leri 90 gün geçerli. Otomatik yenileme için crontab'a ekle
 
 ---
 
-## 4.5. 💾 Yedekleme (Cron + Manuel) — shiftFinal A4
+## 4.5. 💾 Yedekleme (Cron + Manuel)
 
 Veritabanı yedekleri için `scripts/backup.sh` SQLite ve PostgreSQL'i otomatik tanır.
 
@@ -213,8 +211,4 @@ ve `volumes:` bölümünde `plant_uploads:` tanımlayın.
 - [`docker-compose.yml`](../../docker-compose.yml) — servis tanımları (api, nginx, certbot, db)
 - [`nginx/conf.d/default.conf.template`](../../nginx/conf.d/default.conf.template) — nginx reverse proxy şablonu
 - [`.env.example`](../../.env.example) — environment variable referansı
-- [`alembic/versions/`](../../alembic/versions/) — DB migration'ları (Cycle 8 #4)
-
----
-
-**Cycle 8 — Üretim Hazırlığı, Güvenlik ve Cila tamamlandı.**
+- [`alembic/versions/`](../../alembic/versions/) — DB migration'ları

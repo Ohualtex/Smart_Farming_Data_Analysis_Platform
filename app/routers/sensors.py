@@ -1,10 +1,13 @@
 """
-Sensör API Endpoint'leri
-==========================
-Toprak nem / sıcaklık sensörlerinin CRUD işlemleri ve okuma kayıtları.
-Yazma işlemleri (POST/DELETE) için X-API-Key auth zorunludur.
+Sensor API Endpoints
+======================
+CRUD for soil moisture / temperature sensors and their readings.
+Write operations (POST/DELETE) require the X-API-Key header.
 
-Emirhan Günay & Mehmet Sait Tayşi — Cycle 4 Görevi
+---
+
+Toprak nem / sıcaklık sensörlerinin CRUD'u + okuma kayıtları.
+Yazma uçları X-API-Key auth ister.
 """
 
 from __future__ import annotations
@@ -21,14 +24,14 @@ from app.schemas.schemas import SensorCreate, SensorReadingCreate, SensorReading
 
 router = APIRouter(prefix="/api/sensors", tags=["Sensör Verileri"])
 
-# Pagination defaults — frontend slider 50'lik sayfalarla çalışıyor
+# Pagination defaults — frontend pages through 50 records at a time.
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 500
-# shiftFinal Ayşe — Schemathesis fuzz, unbounded `skip` ile int64 overflow
-# yakaladi (SQLite INTEGER taşıyor). 1M offset gerçekçi her kullanım için
-# fazlasıyla yeterli (PAGE_SIZE=500 ile 2000 sayfa = 1M kayıt).
-# EN: Schemathesis fuzz caught int64 overflow on unbounded skip. Cap at 1M
-#     — far beyond any realistic pagination scenario.
+# 1M offset is far beyond any realistic pagination scenario; cap here
+# avoids unbounded `skip` causing an int overflow on the DB binding.
+# ---
+# 1M offset gerçek pagination senaryosunun çok ötesinde; sınırsız `skip`
+# DB binding'inde int overflow'a yol açar, bu sabit onu engeller.
 MAX_SKIP = 1_000_000
 
 

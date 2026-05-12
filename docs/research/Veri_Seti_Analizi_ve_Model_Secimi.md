@@ -1,7 +1,6 @@
 # 🌾 Akıllı Tarım Veri Analizi Platformu
 ## 📈 Keşifsel Veri Analizi (EDA) ve Algoritma Ön Değerlendirme Raporu
 
-> **Hazırlayan:** Mehmet Sait Taysi
 > **Görev:** Veri Seti Analizi ve Model Seçimi
 > **Tarih:** 08.03.2026
 

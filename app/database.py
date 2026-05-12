@@ -1,24 +1,24 @@
 """
-SFDAP Veritabanı Bağlantı Yönetimi
-====================================
-SQLAlchemy engine, sessionmaker ve dependency-injection için `get_db()` helper.
+SFDAP Database Connection Management
+======================================
+SQLAlchemy engine, sessionmaker, and `get_db()` dependency-injection helper.
 
-- Engine `settings.DATABASE_URL` üzerinden yapılandırılır:
+- Engine is configured from `settings.DATABASE_URL`:
   dev → SQLite (`sfdap_dev.db`), prod → PostgreSQL.
-- **Connection pool tuning** (shiftFinal — Emirhan A4): PostgreSQL/MySQL
-  için `pool_size`, `max_overflow`, `pool_pre_ping`, `pool_recycle`
-  env'lerden okunur. SQLite tek-bağlantılı olduğu için bu ayarlar yok
-  sayılır.
-- `naming_convention` ile constraint adlandırma standartlaştırılır
-  (Alembic auto-generate'in tutarlı isim üretmesi için).
-- `init_db()` sadece testlerde / ilk başlangıçta `create_all` ile tabloları
-  yaratır; üretimde Alembic migration kullanılmalıdır.
+- **Connection pool tuning**: for PostgreSQL/MySQL, `pool_size`,
+  `max_overflow`, `pool_pre_ping`, `pool_recycle` are read from env.
+  SQLite is single-connection so these settings are ignored.
+- `naming_convention` standardizes constraint names (so Alembic
+  autogenerate emits consistent identifiers).
+- `init_db()` is only for tests / first boot via `create_all`; production
+  must use Alembic migrations.
 
-Emirhan Günay — Cycle 3/4 + shiftFinal A4 Görevi
+---
 
-EN: Engine config with environment-driven pool tuning for PostgreSQL/
-MySQL (no-op on SQLite). pool_pre_ping defends against killed connections
-in long-running deployments; pool_recycle prevents idle-disconnect.
+SQLAlchemy engine, sessionmaker ve `get_db()` dependency helper.
+Dev'de SQLite, production'da PostgreSQL/MySQL kullanılır; pool ayarları
+sadece server DB'lerde aktif, SQLite'ta no-op. Constraint naming
+standartlaştırılır, init_db sadece test/ilk boot içindir.
 """
 
 from sqlalchemy import MetaData, create_engine
@@ -26,15 +26,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.config import settings
 
-# shiftFinal — Ayşe: Schemathesis fuzz, path/query int param'lara
-# unbounded integer overflow ile 500 attigini yakaladi. SQLite INTEGER
-# kolonlari 64-bit signed → max 2**63 - 1.
-# EN: SQLite INTEGER is 64-bit signed; any value beyond this overflows
-#     binding. Routers should constrain int path/query params with
-#     `Path(..., le=MAX_SQLITE_INT)` / `Query(..., le=MAX_SQLITE_INT)`.
-# TR: SQLite INTEGER 64-bit signed; bu sinir asilirsa binding overflow
-#     verir. Router'larda int path/query parametreleri MAX_SQLITE_INT
-#     ile sinirlanmali.
+# SQLite INTEGER is 64-bit signed; unbounded int path/query params can
+# overflow the binding and surface as a 500. Cap at 2**63 - 1.
+# ---
+# SQLite INTEGER 64-bit signed; sınırsız int path/query parametreleri
+# binding'de overflow olur ve 500 döner. Routerlar bu sabitle sınırlamalı.
 MAX_SQLITE_INT = 9_223_372_036_854_775_807  # 2**63 - 1
 
 

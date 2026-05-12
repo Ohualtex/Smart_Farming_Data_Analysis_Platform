@@ -1,14 +1,16 @@
 """
 Observability Stack Tests
 ============================
-shiftFinal — A2 paketi (Mehmet) için testler:
-- Sentry init (DSN boş vs dolu)
-- Prometheus /metrics endpoint
+Covers:
+- Sentry init contract (empty vs populated DSN)
+- Prometheus /metrics endpoint exposition
 - JSON log formatter
-- Request ID middleware (X-Request-ID header)
+- Request ID middleware (X-Request-ID header) propagation
 
-EN: Tests for the A2 observability bundle — Sentry init contract,
-Prometheus exposition, JSON log format, and request_id propagation.
+---
+
+Sentry init, Prometheus /metrics, JSON log formatter ve request_id
+middleware testleri.
 """
 
 from __future__ import annotations

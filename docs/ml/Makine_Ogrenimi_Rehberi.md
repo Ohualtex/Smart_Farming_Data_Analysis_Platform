@@ -29,20 +29,20 @@ Modelin `predict()` fonksiyonu şu formatta bir sonuç döndürür:
 }
 ```
 
-## 🦠 2. Bitki Sağlığı Görüntü Analizi (CNN Modeli) — *Skeleton hazır (Cycle 7)*
+## 🦠 2. Bitki Sağlığı Görüntü Analizi (CNN Modeli)
 
-Cycle 7 kapsamında Ayşe Eslem Çekici tarafından geliştirilen evrişimli sinir ağı (CNN) modelinin **deterministic stub sarıcısı** `app/ml/plant_disease_model.py` içinde halihazırda canlıdır:
+Bitki yaprak görüntülerinden hastalık teşhisi yapan CNN sarıcısı `app/ml/plant_disease_model.py` içinde canlıdır.
 
-### Mevcut Skeleton (shiftSession)
-- **Sarıcı sınıf:** `PlantDiseaseClassifier` — hash-bazlı deterministic prediction (gerçek inference için ONNX placeholder).
+### Mevcut Yapı
+- **Sarıcı sınıf:** `PlantDiseaseClassifier` — Pillow tabanlı heuristic mod (renk histogramı + sağlıklı yeşil oranı + lezyon oranı). `app/ml/models/plant_disease_cnn.onnx` mevcutsa `onnxruntime` ile gerçek CNN inference'a otomatik geçer.
 - **API endpoint'i:** `POST /api/plants/health-images/analyze` (multipart upload). Yüklenen görseli `app/ml/plant_uploads/` altına kaydedip `PlantHealthImage` ve `ModelPerformanceLog` tablolarına yazar.
-- **Test kapsamı:** `tests/test_plant_disease_model.py` (deterministic output garantisi + endpoint integration testleri).
+- **Test kapsamı:** `tests/test_plants.py` (heuristic ve ONNX path'leri için integration testleri).
 
-### Cycle 7 İçinde Tamamlanacak (Ayşe)
-- Gerçek CNN eğitimi (Keras/TensorFlow) → `.onnx` export
+### CNN Eğitim Adımları
+- PlantVillage dataset üzerinden Keras/TensorFlow eğitimi → ONNX export
 - Sınıf etiketleri: "Sağlıklı", "Pas Hastalığı", "Mantar Lekesi", "Kurşuni Küf", vb.
 - Test seti accuracy hedefi ≥ %85
-- Model dosyası `app/ml/models/plant_disease_cnn.onnx` olarak yüklenir, sarıcı runtime'da `onnxruntime` ile yorumlar.
+- Model dosyası `app/ml/models/plant_disease_cnn.onnx` olarak yerleştirildiğinde sarıcı otomatik olarak ONNX moduna geçer.
 
 ### Otomatik Loglama
 Her tahmin `ModelPerformanceLog` tablosuna yazılır (`model_name='plant_disease_cnn'`). Drift detection endpoint'i (`GET /api/model-performance/drift/plant_disease_cnn`) eşik altı düşüşte otomatik `SystemAlert` üretir.

@@ -1,8 +1,8 @@
 # 🌾 Akıllı Tarım Veri Analizi Platformu
 
-| Hazırlayan | Görev | Tarih |
-| :--- | :--- | :--- |
-| **Mehmet Sait Taysi** | Veri Seti İncelemesi ve Ön İşleme Adımları | 08.03.2026 |
+| Görev | Tarih |
+| :--- | :--- |
+| Veri Seti İncelemesi ve Ön İşleme Adımları | 08.03.2026 |
 
 ---
 

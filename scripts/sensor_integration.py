@@ -1,12 +1,12 @@
 # =============================================
-# SFDAP - Sensör Veri Entegrasyon Modülü
+# SFDAP - Sensor Data Integration Module
 # =============================================
-# Amaç: Toprak nem sensörü verilerini temizleme,
-#       doğrulama ve veritabanına kaydetme
-# Yazar: Emirhan Gunay
+# Purpose: Clean, validate, and persist soil moisture sensor readings.
+# ---
+# Amaç: Toprak nem sensörü verilerini temizle, doğrula ve veritabanına kaydet.
 # =============================================
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -18,13 +18,9 @@ from sqlalchemy.exc import SQLAlchemyError
 # SABITLER VE KONFİGÜRASYON
 # =============================================
 
-# Proje ana dizinine erişim
-# Script: Emirhan_Gunay/sensor_integration.py
-# Database: database/sfdap.db
-# Relative: ../database/
-
-current_dir = Path(__file__).parent.resolve()  # Emirhan_Gunay folder
-PROJECT_ROOT = current_dir.parent  # Smart_Farming_Data_Analysis_Platform
+# Resolve the project root: scripts/ → repo root → database/sfdap.db
+current_dir = Path(__file__).parent.resolve()
+PROJECT_ROOT = current_dir.parent
 DATABASE_PATH = PROJECT_ROOT / "database" / "sfdap.db"
 
 # Windows uyumu için path'i düzeltle
@@ -61,7 +57,7 @@ def generate_sample_raw_data(num_records: int = 20) -> pd.DataFrame:
     """
 
     # Temel veriler
-    base_date = datetime.now()
+    base_date = datetime.now(UTC)
     data = {
         "sensor_id": np.random.randint(1, 5, num_records),
         "reading_timestamp": [base_date - timedelta(hours=i) for i in range(num_records)],
@@ -123,8 +119,7 @@ def generate_sample_raw_data(num_records: int = 20) -> pd.DataFrame:
     ]
     data["soil_temperature_c"] = temperature_values[:num_records]
 
-    df = pd.DataFrame(data)
-    return df
+    return pd.DataFrame(data)
 
 
 # =============================================
@@ -199,7 +194,7 @@ def clean_timestamp_data(df: pd.DataFrame) -> pd.DataFrame:
 
     # Eksik timestamp'ları şimdiki zamana ayarla
     missing_timestamp = df_cleaned["reading_timestamp"].isna()
-    df_cleaned.loc[missing_timestamp, "reading_timestamp"] = datetime.now()
+    df_cleaned.loc[missing_timestamp, "reading_timestamp"] = datetime.now(UTC)
 
     return df_cleaned
 
@@ -383,7 +378,7 @@ def insert_data_row_by_row(df: pd.DataFrame, engine) -> tuple[int, int]:
 
 
 # =============================================
-# RAPORLAMA (Reporting)
+# REPORTING — RAPORLAMA
 # =============================================
 
 

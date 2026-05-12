@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================
-# SFDAP — Veritabanı Restore Script'i
+# SFDAP — Database Restore Script
 # ============================================================
-# `backup.sh` ile alınmış yedeği geri yükler. Hem SQLite hem PostgreSQL
-# için çalışır. shiftFinal — Emirhan A4 görevi.
+# Restores a backup produced by `backup.sh`. Handles both SQLite and
+# PostgreSQL targets based on the file extension.
 #
 # Kullanım:
 #   ./scripts/restore.sh ./backups/sfdap_20260520_023000.db        # SQLite

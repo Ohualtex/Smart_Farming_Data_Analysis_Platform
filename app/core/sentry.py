@@ -1,14 +1,14 @@
 """
 Sentry Integration
-=====================
-shiftFinal — A2 paketi. `SENTRY_DSN` env varsa Sentry SDK'yı başlatır;
-boşsa no-op. Production'da uncaught exception'lar otomatik raporlanır.
+====================
+Initialises the Sentry SDK when `SENTRY_DSN` is set; otherwise a no-op.
+The FastAPI integration auto-captures uncaught exceptions in
+production. Wired into the `app/main.py` lifespan startup.
 
-Çağrı noktası: `app/main.py` lifespan startup.
+---
 
-EN: Initialise Sentry only when SENTRY_DSN is set; otherwise a no-op.
-Wired in main.py lifespan startup; FastAPI integration auto-captures
-uncaught exceptions.
+SENTRY_DSN doluysa Sentry SDK başlatılır, boşsa no-op kalır. main.py
+lifespan startup'ından çağrılır; FastAPI integration ile otomatik yakalama.
 """
 
 from __future__ import annotations

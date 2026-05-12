@@ -1,15 +1,14 @@
 """
-Sistem Uyarı (System Alert) API Endpoint'leri
-==============================================
-Veri hattı izleme ve sistem uyarılarının CRUD işlemleri.
-Sensör anomalisi, hava durumu uyarıları, sistem hataları gibi
-otomatik veya manuel oluşturulan alert'lerin listelenmesi,
-oluşturulması ve resolve edilmesi.
+System Alert API Endpoints
+============================
+CRUD for data-pipeline monitoring and system alerts (sensor anomalies,
+weather warnings, system errors). Supports listing, creation, and
+resolution flows — both automated and manual sources land here.
 
-Ecenur Üner — Cycle 6 Görevi (shiftSession): Veri Hattı İzleme ve Uyarı Sistemi
+---
 
-Bu modül router skeleton + 4 temel endpoint sağlar; Ecenur tarafından
-genişletilebilir (filtreleme, severity bazlı query, batch resolve, vb.).
+Sistem uyarıları için CRUD endpoint'leri: sensör anomalisi, hava
+uyarısı, sistem hatası vb. listele/oluştur/çöz akışları.
 """
 
 from __future__ import annotations

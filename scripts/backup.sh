@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================
-# SFDAP — Veritabanı Yedekleme Script'i
+# SFDAP — Database Backup Script
 # ============================================================
-# Hem SQLite (dev) hem PostgreSQL (prod) için yedek üretir.
-# shiftFinal — Emirhan A4 görevi.
+# Produces a backup for SQLite (dev) or PostgreSQL (prod), driven by
+# the active DATABASE_URL.
 #
 # Kullanım:
 #   ./scripts/backup.sh                       # default ayarlar

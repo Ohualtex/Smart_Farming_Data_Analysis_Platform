@@ -1,16 +1,19 @@
 """
-Bitki Sağlığı API Endpoint'leri
-=================================
-Yaprak görüntülerinin yüklenmesi, listelenmesi ve CNN tabanlı hastalık
-teşhisi. Mevcut model şu an stub (deterministic), Cycle 7'de Ayşe Eslem
-Çekici tarafından gerçek ONNX CNN ile değiştirilecek.
+Plant Health API Endpoints
+============================
+Leaf-image upload, listing, and CNN-based disease diagnosis. The model
+runs in heuristic mode by default and switches to ONNX CNN inference
+when a model artifact is present.
 
-Endpoint'ler:
-- GET  /health-images           : Listele (field_id filtre, limit)
-- POST /health-images           : URL ile kayıt (auth)
-- POST /health-images/analyze   : Multipart upload + anında CNN teşhisi (auth)
+Endpoints:
+- GET  /health-images           : list (field_id filter, limit)
+- POST /health-images           : URL-based record (auth)
+- POST /health-images/analyze   : multipart upload + live CNN diagnosis (auth)
 
-Mehmet Sait Tayşi — Cycle 4 (skeleton) / Ayşe Eslem Çekici — Cycle 7 (CNN)
+---
+
+Yaprak görseli yükle/listele + CNN tabanlı hastalık tespiti uçları.
+Default heuristic mod, ONNX model dosyası varsa otomatik geçer.
 """
 
 from __future__ import annotations

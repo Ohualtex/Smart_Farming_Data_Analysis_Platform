@@ -1,20 +1,19 @@
 """
 Frontend Accessibility + Skeleton Loader Smoke Tests
 =====================================================
-shiftFinal — Ecenur A3 paketi. Static `frontend/index.html` icin yapisal
-a11y kontrolleri ve skeleton helper varligi.
+Verifies that `frontend/index.html` carries the expected a11y landmarks
+and attributes (skip-link, `<main id="main-content">`, ARIA labels on
+nav/hamburger, `scope="col"` on table headers, `aria-busy` on async
+render targets) and that the JS skeleton helpers
+(`_skeletonCards`, `_skeletonRows`, `_skeletonBlock`, `_setBusy`) are
+defined.
 
-EN: Verifies the dashboard HTML carries the a11y landmarks/attributes
-    introduced in shiftFinal A3 (skip link, <main id="main-content">,
-    ARIA labels on nav/hamburger, scope="col" on table headers, aria-busy
-    on async render targets) and that the JS skeleton helpers
-    (_skeletonCards/_skeletonRows/_skeletonBlock/_setBusy) are present.
+Static-only checks — no browser execution.
 
-TR: Dashboard HTML'inin shiftFinal A3 a11y eklemelerini (skip link,
-    <main id="main-content">, nav/hamburger ARIA label, tablo header
-    scope, async hedeflerinde aria-busy) ve JS iskelet helper'larinin
-    (_skeletonCards/_skeletonRows/_skeletonBlock/_setBusy) varligini
-    dogrular. Tarayicida calistirilmaz — statik HTML icerik kontrolu.
+---
+
+Dashboard HTML'inin a11y landmark/attribute'larını ve JS skeleton
+helper'larının varlığını static olarak doğrular; tarayıcıda çalıştırılmaz.
 """
 
 from __future__ import annotations

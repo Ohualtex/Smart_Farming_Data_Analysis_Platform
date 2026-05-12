@@ -23,21 +23,21 @@ make run                # ya da: uvicorn app.main:app --reload
 İki paralel mekanizma çalışır:
 
 1. **`X-API-Key` header** — eski/admin yazma endpoint'leri (POST/DELETE/PATCH) için. Okuma (GET) auth gerektirmez.
-2. **`Authorization: Bearer <token>` header** — `/api/auth/*` ile elde edilen kullanıcı token'ı için. Cycle 7 skeleton (sha256+salt + in-memory dict) Cycle 8'de bcrypt + HS256 JWT'ye yükseltildi.
+2. **`Authorization: Bearer <token>` header** — `/api/auth/*` ile elde edilen kullanıcı token'ı için. Uygulama bcrypt parola hash + HS256 imzalı JWT kullanır.
 
 | Ortam | API Key |
 |:------|:--------|
 | Development (varsayılan) | `dev-api-key` |
 | Production | `.env` dosyasındaki `API_KEY` (`ENVIRONMENT=production` iken default değer reddedilir) |
 
-### Kullanıcı Auth Akışı (Cycle 7 skeleton)
+### Kullanıcı Auth Akışı
 
 | Method | Endpoint | Açıklama |
 |:-------|:---------|:---------|
-| POST | `/api/auth/register` | Email + parola → user kaydı (sha256+salt) |
-| POST | `/api/auth/login` | Email + parola → `{access_token}` döner |
+| POST | `/api/auth/register` | Email + parola → user kaydı (bcrypt hash) |
+| POST | `/api/auth/login` | Email + parola → `{access_token}` döner (HS256 JWT) |
 | GET | `/api/auth/me` | Bearer token ile mevcut kullanıcıyı döner |
-| POST | `/api/auth/logout` | Token'ı blacklist'e atar |
+| POST | `/api/auth/logout` | Token'ı in-memory blacklist'e atar |
 
 ```bash
 # Register
@@ -54,7 +54,7 @@ TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
 curl http://localhost:8000/api/auth/me -H "Authorization: Bearer $TOKEN"
 ```
 
-> **Not:** Mevcut implementasyon `sha256+salt` skeleton'dur. Cycle 8'de `python-jose` + `passlib[bcrypt]` ile JWT'ye yükseltilecek.
+> **Not:** Logout sırasında token in-memory blacklist'e eklenir; production'da bu blacklist Redis veya DB'ye taşınmalı.
 
 ### Swagger UI üzerinden auth
 
@@ -219,5 +219,3 @@ Yoksa Swagger'dan `/openapi.json`'u export edip Postman'in **Import → OpenAPI*
 - Tarih parametreleri ISO 8601 formatında (örn. `2026-04-30T15:00:00Z`).
 - Pagination için `?skip=` ve `?limit=` query parametreleri (çoğu list endpoint'inde).
 - CORS sadece `settings.CORS_ORIGINS` listesindeki origin'lere açık.
-
-**Mehmet Sait Tayşi** — Cycle 4/5/6 Görevi

@@ -1,14 +1,14 @@
 # 🌾 Akıllı Tarım Veri Analizi ve Karar Destek Platformu (S.F.D.A.P.)
 
-**Proje Yürütücüsü:** [Mehmet Sait Taysi](https://github.com/Mehmet_Sait_Taysi)  
-**Departman:** Fırat Üniversitesi, Yazılım Mühendisliği Bölümü  
-**Dönem/Hafta:** 2026 Bahar Dönemi - Hafta 4 Geliştirme Döngüsü  
-**Rol:** Backend Geliştirici & API Tasarımcısı
+> **Tarihsel doküman — proje ilk haftalarındaki API tasarım kararlarını belgeler.**
+> Güncel API kullanımı için [`API_Kullanim_Kilavuzu.md`](./API_Kullanim_Kilavuzu.md) ve `/docs` Swagger UI.
+
+**Departman:** Fırat Üniversitesi, Yazılım Mühendisliği Bölümü
 
 ---
 
 ## 📑 Proje Genel Bakış ve Problem Tanımı
-Modern tarımda verimlilik, rastgele sulama veya gübreleme ile değil; veriye dayalı kararlar ile sağlanır. Bu platform, geleneksel çiftçilik yöntemlerini **IoT (Nesnelerin İnterneti)** ve **Yapay Zeka** ile birleştirerek tarımsal kaynakların optimum kullanılmasını sağlar. 
+Modern tarımda verimlilik, rastgele sulama veya gübreleme ile değil; veriye dayalı kararlar ile sağlanır. Bu platform, geleneksel çiftçilik yöntemlerini **IoT (Nesnelerin İnterneti)** ve **Yapay Zeka** ile birleştirerek tarımsal kaynakların optimum kullanılmasını sağlar.
 
 **Hafta 4 Odak Noktası:** Toprak sensörlerinden ve meteorolojik istasyonlardan gelen heterojen verilerin, sistemin diğer bileşenleri (Mobil uygulama, Web Dashboard ve AI Modelleri) tarafından tüketilebilmesi için standartlaştırılmış bir **RESTful API** katmanının mimari kurulumu gerçekleştirilmiştir.
 
@@ -31,7 +31,7 @@ Sistemin kalbinde yer alan teknolojiler ve tercih nedenleri:
 ## 🛠️ Mimari Katmanlar ve API Tasarımı
 
 ### 1. Veri Erişim Katmanı (Data Access Layer)
-API, düşük seviyeli sensör verilerini alır ve bunları anlamlı JSON objelerine dönüştürür. 
+API, düşük seviyeli sensör verilerini alır ve bunları anlamlı JSON objelerine dönüştürür.
 
 * **Toprak Analizi:** Nem (`moisture`), asidite (`pH`) ve besin değerleri (`nitrogen`) sensörlerden asenkron olarak okunur.
 * **Meteorolojik Veri:** Lokasyon bazlı sıcaklık ve tahmin verileri standardize edilir.

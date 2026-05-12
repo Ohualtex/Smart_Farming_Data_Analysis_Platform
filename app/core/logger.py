@@ -1,14 +1,15 @@
 """
 SFDAP Logger Configuration
 ============================
-Loguru tabanlı central logger.
+Loguru-based central logger with two output formats:
+- `LOG_FORMAT=text` (default): colored console + file rotation
+- `LOG_FORMAT=json`: structured single-line JSON for production
+  observability stacks
 
-İki çıktı formatı (shiftFinal — Mehmet A2):
-- `LOG_FORMAT=text` (default): Renkli console + dosya rotation
-- `LOG_FORMAT=json`: Structured JSON (production observability stack)
+---
 
-EN: Loguru-based central logger with two output formats — text (colored
-console, default) and JSON (structured, production stack compatible).
+Loguru tabanlı central logger; text (renkli console, default) ve json
+(structured, production observability) iki formatı destekler.
 """
 
 from __future__ import annotations

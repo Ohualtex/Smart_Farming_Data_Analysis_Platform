@@ -1,10 +1,13 @@
 """
-Hava Durumu Veri Servisi
-========================
-OpenWeatherMap API'den veri çekme, temizleme, dönüştürme ve
-eksik veri enterpolasyonu işlemleri.
+Weather Data Service
+======================
+Fetches weather data from OpenWeatherMap, cleans and transforms it,
+and interpolates missing samples.
 
-Ayşe Eslem Çekici — Cycle 4 Görevi
+---
+
+OpenWeatherMap'tan veri çekme, temizleme, dönüştürme ve eksik veri
+enterpolasyonu işlemleri.
 """
 
 from __future__ import annotations

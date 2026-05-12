@@ -3,11 +3,13 @@
 ## 📌 Dosya Yapısı
 
 ```
-Emirhan_Gunay/
+scripts/
 ├── sensor_integration.py                    # Ana entegrasyon programı
-├── verify_sensor_data.py                    # Veri doğrulama aracı
+└── verify_sensor_data.py                    # Veri doğrulama aracı
+
+docs/database/
 ├── SENSOR_INTEGRATION_DOCUMENTATION.md      # Detaylı dokümantasyon
-└── README.md                                 # Bu dosya
+└── sensor_readme.md                         # Bu dosya
 ```
 
 ---
@@ -18,7 +20,7 @@ Emirhan_Gunay/
 
 ```bash
 cd Smart_Farming_Data_Analysis_Platform
-python Emirhan_Gunay/sensor_integration.py
+python scripts/sensor_integration.py
 ```
 
 **Ne Olur?**
@@ -38,7 +40,7 @@ python Emirhan_Gunay/sensor_integration.py
 ### 2. Adım: Verileri Doğrula
 
 ```bash
-python Emirhan_Gunay/verify_sensor_data.py
+python scripts/verify_sensor_data.py
 ```
 
 **Ne Gösterir?**
@@ -92,7 +94,7 @@ SELECT * FROM soil_moisture_readings ORDER BY reading_timestamp DESC;
 
 ### İstatistikler
 ```sql
-SELECT 
+SELECT
     COUNT(*) as kayit_sayisi,
     AVG(moisture_percent) as ort_nem,
     MIN(moisture_percent) as min_nem,
@@ -149,7 +151,7 @@ TEMPERATURE_MAX_C = 60        # max
 python -c "import sqlite3; sqlite3.connect('database/sfdap.db').close()"
 
 # Programı çalıştır
-python Emirhan_Gunay/sensor_integration.py
+python scripts/sensor_integration.py
 ```
 
 ### Hata: "Tablo bulunamadı"
@@ -199,11 +201,11 @@ pip install -r requirements.txt
 ## 📚 Dosya İçerik Özeti
 
 ### sensor_integration.py
-**Satır:** ~450 | **Fonksiyon:** 12  
+**Satır:** ~450 | **Fonksiyon:** 12
 **Görevi:** Veri üretme, temizle, kaydetme, raporlama
 
 ### verify_sensor_data.py
-**Satır:** ~300 | **Fonksiyon:** 8  
+**Satır:** ~300 | **Fonksiyon:** 8
 **Görevi:** Veritabanı doğrulama, istatistik, kalite kontrolü
 
 ### SENSOR_INTEGRATION_DOCUMENTATION.md
@@ -281,17 +283,17 @@ print(df.describe())
 
 Programı başarıyla çalıştırdığınızda:
 
-✅ 12 satırlık geçerli veri  
-✅ %100 veritabanı başarı  
-✅ Sıfır eksik değer  
-✅ Tüm değerler geçerli aralıkta  
+✅ 12 satırlık geçerli veri
+✅ %100 veritabanı başarı
+✅ Sıfır eksik değer
+✅ Tüm değerler geçerli aralıkta
 ✅ Mükemmel veri kalitesi
 
 ---
 
 ## 📝 Sürüm
 
-**v1.0** - 2026-04-08  
+**v1.0** - 2026-04-08
 Durum: ✅ Üretim Hazır
 
 ---

@@ -1,12 +1,15 @@
 """
 Database Engine Pool Configuration Tests
 ==========================================
-shiftFinal — Emirhan A4 paketi. `_build_engine_kwargs()` davranışını test
-eder: SQLite için pool ayarları yok, PostgreSQL/MySQL için var.
+Verifies that `_build_engine_kwargs()` switches on the DATABASE_URL
+dialect: SQLite skips pool tuning (single-connection model), while
+server DBs apply `pool_size`, `max_overflow`, `pool_pre_ping`, and
+`pool_recycle` from settings.
 
-EN: Verifies that engine kwargs change based on DATABASE_URL dialect —
-SQLite skips pool tuning (single-connection model), server DBs apply
-pool_size/max_overflow/pool_pre_ping/pool_recycle from settings.
+---
+
+`_build_engine_kwargs()`: SQLite'ta pool ayarları yok, PostgreSQL/MySQL
+için settings'ten okunur.
 """
 
 from __future__ import annotations

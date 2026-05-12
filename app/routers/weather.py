@@ -1,10 +1,12 @@
 """
-Hava Durumu API Endpoint'leri
-================================
-Çiftlik bazlı hava durumu kayıtlarının CRUD işlemleri, dış API'den
-(OpenWeatherMap) veri çekme ve veri temizleme pipeline'ı için endpoint'ler.
+Weather API Endpoints
+=======================
+Farm-level weather records: CRUD, external fetch (OpenWeatherMap), and
+the data-cleaning pipeline.
 
-Ayşe Eslem Çekici & Mehmet Sait Tayşi — Cycle 4/5 Görevi
+---
+
+Çiftlik bazlı hava durumu CRUD'u + OpenWeatherMap fetch + temizleme.
 """
 
 from __future__ import annotations

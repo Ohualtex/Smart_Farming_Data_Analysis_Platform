@@ -1,11 +1,13 @@
 """
 Alembic Environment Configuration
-====================================
-SFDAP veritabanı migration konfigürasyonu.
-app.database ve app.models modüllerini kullanarak
-otomatik migration desteği sağlar.
+===================================
+Wires Alembic into the SFDAP migration toolchain. Pulls the engine
+from `app.database` and metadata from `app.models` to power autogenerate.
 
-Emirhan Günay — Cycle 5 Görevi
+---
+
+Alembic migration konfigürasyonu; app.database ve app.models'i kullanarak
+autogenerate desteği sağlar.
 """
 
 from logging.config import fileConfig

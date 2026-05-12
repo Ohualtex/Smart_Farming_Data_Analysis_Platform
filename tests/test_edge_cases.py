@@ -1,25 +1,21 @@
 """
-SFDAP Edge Case Test Paketi
+SFDAP Edge Case Test Bundle
 ==============================
-shiftFinal hedefi (Ayşe B5) için erken hazırlanan kapsamlı edge case
-testleri. Production'a çıkmadan önce sistemin "kötü niyetli veya
-hatalı girdi" senaryolarına nasıl yanıt verdiğini doğrular.
+Comprehensive edge-case coverage validating how the system responds to
+malicious or malformed input before production exposure.
 
-Kategoriler:
-- TestLargePayload         : 1MB+ JSON gönderimi, header ihlalleri
-- TestInjectionAttempts    : SQL injection denemeleri, unicode/emoji
+Categories:
+- TestLargePayload         : 1MB+ JSON submissions, header violations
+- TestInjectionAttempts    : SQL injection attempts, unicode/emoji
 - TestOversizedUpload      : CNN endpoint multipart size limit
-- TestConcurrentInserts    : Ardışık burst, race condition rejimleri
+- TestConcurrentInserts    : burst sequencing, race condition modes
 - TestAuthFlowIntegration  : register → login → JWT-protected endpoint
-- TestMalformedInput       : Eksik/yanlış tipli/anlamsız payload'lar
+- TestMalformedInput       : missing / mistyped / nonsensical payloads
 
-Cycle 8 audit'inde Miraç tarafından erken hazırlandı; shiftFinal'da
-Ayşe genişletecek.
+---
 
-EN: Comprehensive edge-case test bundle laying groundwork for Ayşe's
-shiftFinal B5 task. Covers large payloads, injection attempts,
-oversized uploads, concurrency, full JWT auth flow, and malformed
-input handling.
+Üretim öncesi sert girdi senaryolarını (büyük payload, injection, aşırı
+upload, race, malformed input vb.) kapsayan edge-case test bundle.
 """
 
 from __future__ import annotations
@@ -380,12 +376,17 @@ class TestMalformedInput:
         assert detail is not None
 
     def test_negative_id_in_path_rejected(self, client):
-        """Negatif ID — validation veya not-found, 4xx olmali.
+        """Negative ID — validation or not-found, must be 4xx.
 
-        EN / TR: shiftFinal Ayşe paketinde path int parametrelerine `ge=1`
-        constraint eklendi (Schemathesis int64 overflow fix'i ile birlikte
-        gelen sıkılaştırma); artık negatif ID 404 yerine 422 doner. İki
-        davranis da kullanici acisindan client-error; testi gevsetiyoruz.
+        Path int params declare `ge=1`, so a negative ID is rejected at
+        validation (422) instead of running into a 404 query. Both are
+        client errors; we accept either.
+
+        ---
+
+        Path int parametrelerinde `ge=1` constraint olduğundan negatif
+        ID validation aşamasında reddedilir (422). Her iki yanıt da
+        client error; ikisini de kabul ediyoruz.
         """
         response = client.get("/api/sensors/-1")
         assert response.status_code in (404, 422)

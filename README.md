@@ -58,7 +58,7 @@ API çalışınca şu adreslerde erişebilirsin:
 
 ### 🌐 Production Deploy (HTTPS + nginx + Let's Encrypt)
 
-Cycle 8'de eklenen prod-hazır şablon — `nginx` reverse proxy önünde TLS termination, otomatik Let's Encrypt sertifika alma, opsiyonel PostgreSQL profili. Kurulum adımları için: **[`docs/setup/PROD_DEPLOY.md`](docs/setup/PROD_DEPLOY.md)**
+Prod-hazır şablon — `nginx` reverse proxy önünde TLS termination, otomatik Let's Encrypt sertifika alma, opsiyonel PostgreSQL profili. Kurulum adımları için: **[`docs/setup/PROD_DEPLOY.md`](docs/setup/PROD_DEPLOY.md)**
 
 ```bash
 # Hızlı bakış
@@ -82,18 +82,21 @@ docker compose exec api alembic upgrade head       # Migration uygula
 | 📈 Analitik Panosu | Bölge bazlı gruplanmış (7 bölge) veri görselleştirme ve içgörü |
 | 🔐 API Güvenliği | API Key auth, rate limiting, request logging |
 | 🌤️ Veri Pipeline | Hava durumu veri temizleme ve dönüştürme |
-| 🗄️ Migration | Alembic 14-tablo initial migration üretildi (Cycle 8 #4); `alembic upgrade head` ile prod'a uygulanır |
+| 🗄️ Migration | Alembic 14-tablo initial + sensor aggregate migration; `alembic upgrade head` ile prod'a uygulanır |
 
-### 🗺️ Yol Haritası (Cycle 7+)
+### 🗺️ Mevcut Özellikler
 
-| Özellik | Hedef Sprint | Durum |
-|:--------|:------------:|:-----:|
-| 🌱 Filiz Maskot ve UX cilası — animasyonlu SVG asistan + tema toggle | Cycle 7 | ✅ Tamamlandı |
-| 🦠 Hastalık Tespiti — heuristic + ONNX-ready bitki sağlığı analizi | Cycle 7 | ✅ Tamamlandı (heuristic; CNN dosyası geldiğinde drop-in) |
-| 🔐 Auth UI — kullanıcı giriş/kayıt/profil arayüzü | Cycle 7 | ✅ Tamamlandı |
-| 🚨 İzleme & Uyarı Paneli — frontend | Cycle 7 | ✅ Tamamlandı |
-| 📡 IoT/MQTT stream simülasyonu (paho-mqtt + publisher) | Cycle 7 | ✅ Tamamlandı |
-| 📊 Model performans dashboard'u | Cycle 7 | ✅ Tamamlandı (Cycle 6'da) |
+| Özellik | Durum |
+|:--------|:-----:|
+| 🌱 Filiz Maskot ve UX cilası — animasyonlu SVG asistan + tema toggle | ✅ |
+| 🦠 Bitki Hastalığı Tespiti — heuristic + ONNX-ready CNN sarıcısı | ✅ |
+| 🔐 Auth UI ve backend — kullanıcı giriş/kayıt/profil (JWT + bcrypt) | ✅ |
+| 🚨 İzleme & Uyarı Paneli — frontend + SystemAlert CRUD | ✅ |
+| 📡 IoT/MQTT stream simülasyonu (paho-mqtt + publisher) | ✅ |
+| 📊 Model performans dashboard'u — log + summary + drift detection | ✅ |
+| 🛡️ Observability — Sentry + Prometheus + structured JSON log | ✅ |
+| ♿ A11y — skip-link, ARIA, skeleton loaders, axe-core CI | ✅ |
+| 💾 Backup/Restore — SQLite/PostgreSQL otomatik yedekleme + cron | ✅ |
 
 ---
 
@@ -161,15 +164,15 @@ curl -X POST http://localhost:8000/api/sensors/ \
 | GET | `/api/health` | Sığ sistem durumu | ❌ |
 | GET | `/api/health/deep` | Derin sağlık (DB latency, scheduler, freshness, alerts) | ❌ |
 
-### Kimlik Doğrulama (Cycle 7 skeleton)
+### Kimlik Doğrulama
 | Method | Endpoint | Açıklama | Auth |
 |:-------|:---------|:---------|:----:|
-| POST | `/api/auth/register` | Kullanıcı kaydı (sha256+salt) | ❌ |
-| POST | `/api/auth/login` | Token alma | ❌ |
+| POST | `/api/auth/register` | Kullanıcı kaydı (bcrypt hash) | ❌ |
+| POST | `/api/auth/login` | JWT bearer token alma | ❌ |
 | GET | `/api/auth/me` | Mevcut kullanıcı | ✅ Bearer |
-| POST | `/api/auth/logout` | Token iptali | ✅ Bearer |
+| POST | `/api/auth/logout` | Token iptali (blacklist) | ✅ Bearer |
 
-> Cycle 8'de JWT (`python-jose` + `passlib[bcrypt]`) ile değiştirildi (Cycle 8 #3).
+> Şifre hash: `passlib[bcrypt]`. Token imzalama: `python-jose` HS256.
 
 ### Sensör Verileri
 | Method | Endpoint | Açıklama | Auth |
@@ -272,8 +275,8 @@ make format
 
 | Metrik | Değer |
 |:-------|:------|
-| Toplam Test | **425** (shiftFinal — 350 → 365 [A2] → 372 [A4] → 400 [A3] → 425 [Ayşe]; sprint devam ediyor) |
-| Coverage | **%95.04** (eşik %80, shiftFinal hedefi %95+ resmen geçildi — bkz. [QUALITY_AUDIT.md](docs/QUALITY_AUDIT.md)) |
+| Toplam Test | **425** |
+| Coverage | **%95.04** (eşik %80; detay için [`docs/QUALITY_AUDIT.md`](docs/QUALITY_AUDIT.md)) |
 | Linting | Ruff (17 kural seti, All checks passed) |
 | Security | bandit (medium+) + pip-audit (CVE DB) — CI haftalık |
 | Fuzz | Schemathesis property-based API fuzz (25 GET endpoint, deterministik seed) |
@@ -337,7 +340,7 @@ Smart_Farming_Data_Analysis_Platform/
 │
 ├── frontend/                    # Web arayüzü (SPA Dashboard)
 │   ├── index.html               #   Dark mode, responsive, Chart.js (9 sayfa) + a11y/ARIA + skeleton loaders
-│   ├── package.json             #   Vite + axe-core CLI (shiftFinal scaffold)
+│   ├── package.json             #   Vite + axe-core CLI scaffold
 │   ├── vite.config.js           #   Vite build/dev scaffold (FastAPI proxy)
 │   └── README.md                #   Frontend dev kılavuzu
 │
@@ -348,7 +351,7 @@ Smart_Farming_Data_Analysis_Platform/
 │
 ├── alembic/                     # DB migration sistemi
 ├── tests/                       # 425 test (27 dosya, %95.04 coverage + Schemathesis fuzz)
-├── scripts/backup.sh + restore.sh # SQLite/PostgreSQL yedek+restore (shiftFinal A4)
+├── scripts/backup.sh + restore.sh # SQLite/PostgreSQL yedek+restore
 ├── .github/workflows/           # CI/CD pipeline:
 │   ├── ci.yml                   #   lint → test → migrations → fuzz (Schemathesis)
 │   ├── security.yml             #   bandit + pip-audit (haftalık cron)
@@ -381,15 +384,7 @@ Smart_Farming_Data_Analysis_Platform/
 
 ## 👥 Ekip
 
-| Üye | Görev Alanı |
-|:----|:-----------|
-| Miraç Duran | Proje yönetimi, analitik dashboard, CI/CD, integration testler |
-| Ayşe Eslem Çekici | UI/UX wireframe, gübreleme servisi, hava durumu pipeline |
-| Ecenur Üner | Dashboard SPA, veri görselleştirme |
-| Emirhan Günay | Veritabanı tasarımı, sensör entegrasyonu, seed data |
-| Mehmet Sait Tayşı | API geliştirme, güvenlik, rate limiting |
-
-Detaylı katkı matrisi için [CONTRIBUTORS.md](CONTRIBUTORS.md) dosyasına bakınız.
+5 kişilik geliştirici ekibi: Scrum Master + 4 geliştirici. Rol dağılımı ve cycle bazlı katkı detayı için [`CONTRIBUTORS.md`](CONTRIBUTORS.md).
 
 ---
 

@@ -1,30 +1,29 @@
 """
-Sensör Okumaları Arşivleme Servisi
-======================================
-30 günden eski `SoilMoistureReading` kayıtlarını aylık özet tabloya
-(`SensorReadingMonthlyAggregate`) toplayan arşivleme akışı. IoT
-stream'in sürekli yazdığı tablonun şişmesini önler.
+Sensor Readings Archival Service
+==================================
+Folds `SoilMoistureReading` rows older than 30 days into the per-
+(sensor, year, month) `SensorReadingMonthlyAggregate` table. Keeps the
+IoT-stream insert path from bloating its hot table.
 
-Akış (atomik tek transaction):
-1) `cutoff = now - 30 gün`'den eski tüm readings'i çek.
-2) (sensor_id, year, month) ile grupla; her grup için count + avg/min/max
-   moisture, avg/min/max soil_temperature_c, avg electrical_conductivity
-   hesapla.
-3) Mevcut aggregate satırı varsa (idempotency) **birleştir**: count'lari
-   topla, avg ağırlıklı yeniden hesapla, min/max güncelle.
-4) Aggregate satırlarını upsert et.
-5) Kaynak readings'i sil (cascade gerekmez — FK yok).
+Atomic single-transaction flow:
+1) Fetch readings older than `cutoff = now - 30 days`.
+2) Group by (sensor_id, year, month); compute count + avg/min/max
+   moisture, avg/min/max `soil_temperature_c`, avg
+   `electrical_conductivity` per group.
+3) If an aggregate row exists (idempotency) **merge**: sum counts,
+   weighted-avg recompute, min/max update.
+4) Upsert aggregates.
+5) Delete the source readings (no cascade needed — no FK).
 6) Commit.
 
-Hata olursa rollback; archived satır sayısı + silinen satır sayısı
-döner. Caller (scheduler veya manuel) bu sayıları log'lar.
+On error: rollback. Returns (archived_count, deleted_count); caller
+(scheduler or manual) logs these numbers.
 
-Emirhan Günay — Cycle 7 (Cycle 8'e taşındı), Miraç tarafından
-shiftFinal öncesi tamamlandı.
+---
 
-EN: Archives sensor readings older than 30 days into a per-(sensor,
-year, month) aggregate. Idempotent: re-running on the same window
-merges with the existing aggregate row instead of creating duplicates.
+30 günden eski sensor okumalarını ay bazlı aggregate'e indiren idempotent
+arşivleyici. Aynı pencerede yeniden çalışınca mevcut aggregate'le
+birleştirir; çift kayıt üretmez.
 """
 
 from __future__ import annotations
@@ -38,7 +37,9 @@ from sqlalchemy.orm import Session
 
 from app.models.models import SensorReadingMonthlyAggregate, SoilMoistureReading
 
-# Kaç günden eski okumaları arşivle. shiftFinal'da env-driven yapılabilir.
+# Age cutoff for archival (in days). Can be promoted to an env later.
+# ---
+# Bu yaştan eski okumalar arşivlenir; ileride env'e taşınabilir.
 DEFAULT_ARCHIVE_CUTOFF_DAYS = 30
 
 

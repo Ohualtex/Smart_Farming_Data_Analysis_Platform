@@ -1,9 +1,12 @@
 """
-Auth Backend (kullanıcı kayıt/giriş) skeleton testleri
-========================================================
-`app/routers/auth.py` JWT skeleton'ı için: register, login, me, logout
-akışı + edge case'ler. Cycle 8'de bcrypt + gerçek JWT'ye geçilince bu
-testler güncellenir.
+Auth Backend Tests
+====================
+Covers the `app/routers/auth.py` flow — register, login, me, logout —
+plus the relevant edge cases (bcrypt hash, JWT validation, blacklist).
+
+---
+
+`app/routers/auth.py` için register/login/me/logout akışı ve edge case'ler.
 """
 
 from __future__ import annotations

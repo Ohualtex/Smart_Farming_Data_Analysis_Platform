@@ -1,19 +1,21 @@
 """
-Model Performans Raporlama API'si
-===================================
-ML modellerin tahmin / gerçekleşen sapmalarını ve doğruluk skorlarını
-saklayan ModelPerformanceLog tablosu için CRUD + agregat raporlama.
+Model Performance Reporting API
+=================================
+CRUD plus aggregate reporting on the `ModelPerformanceLog` table, which
+stores ML prediction vs. observed deltas and accuracy scores.
 
-Mehmet Sait Tayşi — Cycle 6 Görevi (shiftSession): Model Performansını
-İzleme ve Raporlama Altyapısı
+Endpoints:
+- GET /              list (model_name + limit filter)
+- POST /             new log (auth)
+- PATCH /{id}        fill observed value + accuracy (auth)
+- GET /summary/{m}   per-model aggregate summary
+- GET /timeseries/{m} daily accuracy time series
+- GET /compare       compare several models
 
-Endpoint'ler:
-- GET /              listele (model_name + limit filtre)
-- POST /             yeni log (auth)
-- PATCH /{id}        gerçek değer + accuracy doldur (auth)
-- GET /summary/{m}   model bazlı agregat özet
-- GET /timeseries/{m} günlük accuracy zaman serisi
-- GET /compare       birden fazla modeli karşılaştır
+---
+
+ML modellerin tahmin/gerçekleşen sapma ve doğruluk skorlarını tutan
+ModelPerformanceLog tablosu üstünde CRUD + agregat raporlama uçları.
 """
 
 from __future__ import annotations

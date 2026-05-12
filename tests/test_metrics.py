@@ -1,7 +1,11 @@
 """
-/api/health/deep endpoint testleri
-====================================
-Mehmet'in Cycle 6 görevi için skeleton testler.
+/api/health/deep Endpoint Tests
+=================================
+Smoke tests for the deep health probe.
+
+---
+
+/api/health/deep ucu için temel testler.
 """
 
 from __future__ import annotations

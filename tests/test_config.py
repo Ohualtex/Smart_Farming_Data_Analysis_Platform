@@ -1,11 +1,13 @@
 """
-SFDAP Konfigürasyon Testleri
-==============================
-`app/config.py` — production fail-fast validator + CORS parsing.
-Cycle 8 audit'inde eklendi: config %78 → hedef %95 (Tier B1).
+Configuration Tests
+=====================
+Covers `app/config.py` — the production fail-fast validator that
+refuses default secrets in production, plus CORS origin-list parsing.
 
-EN: Settings validation tests — production fail-fast guard against
-default secrets, plus CORS origin list parsing.
+---
+
+Production'da default secret kullanımını engelleyen fail-fast validator
+ve CORS origin parsing testleri.
 """
 
 from __future__ import annotations

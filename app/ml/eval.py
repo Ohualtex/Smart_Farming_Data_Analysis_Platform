@@ -1,17 +1,20 @@
 """
-ML Model Değerlendirme Yardımcıları
-=====================================
-Eğitilmiş regresyon ve sınıflandırma modellerinin performansını
-ölçmek için ortak metrik hesaplayıcıları + cross-validation wrapper.
+ML Model Evaluation Utilities
+===============================
+Shared metric calculators + a cross-validation wrapper for trained
+regression and classification models.
 
-Ayşe Eslem Çekici — Cycle 6 Görevi (shiftSession): Makine Öğrenimi
-Modelini Değerlendirme ve Geliştirme
+Built-in metrics:
+- Regression: MAE, MSE, RMSE, R²
+- Classification: accuracy, precision, recall, F1
 
-Skeleton: regresyon (MAE, MSE, RMSE, R²) ve sınıflandırma (accuracy,
-precision, recall, F1) metrikleri için fonksiyonlar. Genişletme:
-- Hiperparametre optimizasyonu (GridSearchCV wrapper)
-- Confusion matrix ve ROC curve görselleştirme
-- Model karşılaştırma helper'ı
+Possible extensions: GridSearchCV wrapper, confusion-matrix / ROC plots,
+side-by-side model comparison helper.
+
+---
+
+Eğitilmiş regresyon/sınıflandırma modelleri için ortak metrik
+hesaplayıcıları ve cross-validation wrapper.
 """
 
 from __future__ import annotations

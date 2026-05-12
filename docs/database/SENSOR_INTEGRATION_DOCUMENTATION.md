@@ -2,11 +2,9 @@
 
 ## 📋 Proje Özeti
 
-**Proje Adı:** Smart Farming Data Analysis Platform (SFDAP) - Sensör Veri Entegrasyon  
-**Modül:** Toprak Nem Sensörleri Veri Temizleme & Veritabanına Kayıt  
-**Dosya:** `sensor_integration.py`  
-**Tarih:** 2026-04-08  
-**Yazar:** Emirhan Gunay
+**Proje Adı:** Smart Farming Data Analysis Platform (SFDAP) — Sensör Veri Entegrasyonu
+**Modül:** Toprak Nem Sensörleri Veri Temizleme & Veritabanına Kayıt
+**Dosya:** `scripts/sensor_integration.py`
 
 ---
 
@@ -174,7 +172,7 @@ df.to_sql(
 ✅ BAŞARILI İŞLEMLER:
    └─ Kayıtlı satır sayısı: 12
 
-📊 ÖZETLEMESİ:  
+📊 ÖZETLEMESİ:
    ├─ Toplam satır: 12
    ├─ Başarı oranı: %100.0
    └─ Veritabanı güncellemesi: ✓ Tamamlandı
@@ -245,7 +243,7 @@ except SQLAlchemyError as e:
 
 ```bash
 cd Smart_Farming_Data_Analysis_Platform
-python Emirhan_Gunay/sensor_integration.py
+python scripts/sensor_integration.py
 ```
 
 ### Çıktı Dosyaları
@@ -269,7 +267,7 @@ SELECT * FROM soil_moisture_readings ORDER BY reading_timestamp DESC LIMIT 5;
 
 ```python
 import pandas as pd          # Veri işleme
-import numpy as np          # Sayısal hesaplamalar  
+import numpy as np          # Sayısal hesaplamalar
 from sqlalchemy import create_engine, text  # Veritabanı
 from pathlib import Path    # Dosya yolu yönetimi
 from datetime import datetime, timedelta  # Zaman işlemleri
@@ -332,5 +330,5 @@ from datetime import datetime, timedelta  # Zaman işlemleri
 
 ---
 
-**Son Güncelleme:** 2026-04-08  
+**Son Güncelleme:** 2026-04-08
 **Durum:** ✅ Üretim Hazır

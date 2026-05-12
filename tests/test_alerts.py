@@ -1,7 +1,11 @@
 """
-Sistem Uyarı (SystemAlert) endpoint testleri
-=============================================
-Ecenur'un Cycle 6 görevi için skeleton testler.
+System Alert Endpoint Tests
+=============================
+Smoke tests for the SystemAlert CRUD endpoints.
+
+---
+
+SystemAlert CRUD uçları için temel testler.
 """
 
 from __future__ import annotations

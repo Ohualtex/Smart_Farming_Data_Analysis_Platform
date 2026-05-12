@@ -1,11 +1,12 @@
 """
-Custom Exception Sınıfları ve Global Exception Handler
-=======================================================
-Tutarlı hata response formatı sağlar.
-Tüm API hataları standart bir yapıda döndürülür:
+Custom Exceptions and Global Exception Handler
+================================================
+Returns a uniform error envelope for every API failure:
     {"error_code": "...", "message": "...", "detail": "..."}
 
-Mehmet Sait Tayşi — Cycle 5 Görevi
+---
+
+Tüm API hataları için tutarlı response formatı sağlar.
 """
 
 from __future__ import annotations

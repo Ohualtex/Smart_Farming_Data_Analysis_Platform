@@ -56,12 +56,11 @@ class Settings(BaseSettings):
     API_KEY: str = _DEV_API_KEY
     SECRET_KEY: str = _DEV_SECRET_KEY
 
-    # JWT (Cycle 8) — kullanıcı bazlı bearer token üretimi
     # JWT user-based bearer token settings.
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_HOURS: int = 24
 
-    # ─── Observability (shiftFinal — A2) ───────────────────────
+    # ─── Observability ─────────────────────────────────────────
     # Sentry: hata raporlama. Boş string ise devre dışı (dev/test default).
     # Production'da gerçek DSN ile aktif edilir.
     # EN: Sentry DSN; empty value disables Sentry entirely (dev/test default).
@@ -81,7 +80,7 @@ class Settings(BaseSettings):
     # ─── ML & dosya yolları ────────────────────────────────────
     MODEL_PATH: str = "app/ml/models/"
 
-    # ─── MQTT (Cycle 7 — IoT stream) ──────────────────────────
+    # ─── MQTT (IoT sensor stream) ─────────────────────────────
     # MQTT_ENABLED=false iken listener no-op kalır (test ve dev için).
     MQTT_ENABLED: bool = False
     MQTT_BROKER_HOST: str = "localhost"

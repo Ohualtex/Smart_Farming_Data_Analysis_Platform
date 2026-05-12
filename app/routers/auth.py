@@ -1,27 +1,28 @@
 """
-Kullanıcı Authentication Endpoint'leri — JWT + bcrypt
-=======================================================
-Cycle 7'de skeleton (sha256+salt + in-memory token dict) olarak başlayan
-auth backend, Cycle 8'de production-grade JWT + bcrypt'e yükseltildi.
+User Authentication Endpoints — JWT + bcrypt
+==============================================
+Production-grade auth: bcrypt password hashing, HS256 JWT tokens, and an
+in-memory blacklist for logout invalidation.
 
-Bileşenler:
-- **Şifre hash'leme**: `passlib[bcrypt]` ile bcrypt; her register'da otomatik salt.
-- **Token üretimi**: `python-jose` ile HS256 imzalı JWT (`SECRET_KEY` ile).
-  Payload: `{sub: user_id, iat, exp}`; varsayılan ömür `JWT_EXPIRE_HOURS` (24h).
-- **Logout**: JWT stateless olduğundan logout'ta token'ı in-memory blacklist'e
-  ekliyoruz; `/me` her istek başında blacklist kontrolü yapıyor. Production'da
-  bu blacklist Redis veya DB'ye taşınmalı (multi-process / restart koruması).
+Components:
+- **Password hashing**: `passlib[bcrypt]`; salt generated per register.
+- **Token issuance**: `python-jose` HS256 JWT signed with `SECRET_KEY`.
+  Payload: `{sub: user_id, iat, exp}`; default TTL `JWT_EXPIRE_HOURS` (24h).
+- **Logout**: since JWT is stateless, logout adds the token to an
+  in-memory blacklist; `/me` checks the blacklist on every request.
+  Production should move this blacklist to Redis or the DB for
+  multi-process / restart safety.
 
-Endpoint'ler:
-    POST /api/auth/register  — yeni hesap (bcrypt hash)
-    POST /api/auth/login     — JWT bearer token al
-    GET  /api/auth/me        — token'la mevcut kullanıcı
-    POST /api/auth/logout    — token'ı blacklist'e ekle (204)
+Endpoints:
+    POST /api/auth/register  — new account (bcrypt hash)
+    POST /api/auth/login     — issue JWT bearer token
+    GET  /api/auth/me        — current user from token
+    POST /api/auth/logout    — blacklist the token (204)
 
-EN: Cycle 8 production-grade auth — bcrypt password hashing + HS256 JWT
-tokens, plus an in-memory blacklist for logout invalidation.
+---
 
-Miraç Duran — Cycle 8
+Production-grade auth: bcrypt + HS256 JWT + in-memory logout blacklist.
+Logout sonrası blacklist üretime alınınca Redis/DB'ye taşınmalı.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-# TODO Cycle 8+: pydantic[email] kurulduğunda EmailStr'e geç (email-validator gerekli)
+# TODO: swap to EmailStr once pydantic[email] (email-validator) is installed.
 from app.config import settings
 from app.database import get_db
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
@@ -47,7 +48,7 @@ router = APIRouter(prefix="/api/auth", tags=["Kimlik Doğrulama"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT için stateless logout sağlayan in-memory blacklist.
-# TODO Cycle 8+: production'da Redis (multi-process + restart koruması).
+# TODO: move to Redis or DB in production (multi-process + restart safe).
 _BLACKLISTED_TOKENS: set[str] = set()
 
 
@@ -65,7 +66,7 @@ class UserRegisterRequest(BaseModel):
     )
 
     name: str
-    email: str  # TODO Cycle 8+: EmailStr (pydantic[email])
+    email: str  # TODO: switch to EmailStr once pydantic[email] is in.
     password: str  # min 8 karakter (validator alttaki register'da)
     phone: str | None = None
 
@@ -170,7 +171,7 @@ def _get_current_user(authorization: str = Header(default=""), db: Session = Dep
     response_model=CurrentUserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Yeni kullanıcı oluştur",
-    description="Yeni hesap kaydı. Şifre bcrypt ile hash'lenir (Cycle 8'de sha256'dan bcrypt'e geçildi).",
+    description="Yeni hesap kaydı. Şifre bcrypt ile hash'lenir.",
 )
 @limiter.limit(AUTH_RATE)
 def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)):

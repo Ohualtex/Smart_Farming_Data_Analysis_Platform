@@ -1,18 +1,18 @@
 """
 Request Logging Middleware
 ===========================
-Her API isteğini loglar: endpoint, method, status code, süre, client IP.
-shiftFinal — A2 paketi: her isteğe **request_id (UUID)** atanır,
-`X-Request-ID` response header'ına yazılır ve loguru context'ine bind
-edilir (trace_id propagation).
+Logs every API request (endpoint, method, status, duration, client IP)
+and attaches a UUID `request_id` to each one. The id is exposed via the
+`X-Request-ID` response header and bound to the loguru context so every
+downstream log record inherits it (trace propagation for structured
+logging).
 
-Log formatı: [2026-04-20 15:30:00] GET /api/sensors/ 200 45ms 192.168.1.1 [req-id=abc]
+Log format: `[2026-04-20 15:30:00] GET /api/sensors/ 200 45ms 192.168.1.1 [req-id=abc]`
 
-Mehmet Sait Tayşi — Cycle 5 + shiftFinal Görevi
+---
 
-EN: Generates a UUID request_id per request, exposes it via X-Request-ID
-header, and binds to loguru context so all child log records carry it
-(trace propagation for structured logging).
+Her isteğe UUID request_id atanır, X-Request-ID header'ına yazılır ve
+loguru context'ine bind edilerek tüm child log kayıtlarına yayılır.
 """
 
 from __future__ import annotations

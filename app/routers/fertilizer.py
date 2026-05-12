@@ -1,9 +1,11 @@
 """
-Gübreleme API Endpoint'leri
-=============================
-Bitki türüne göre gübreleme önerisi ve takvim oluşturma.
+Fertilizer API Endpoints
+==========================
+Crop-specific fertilizer recommendation and scheduling.
 
-Ayşe Eslem Çekici — Cycle 5 Görevi
+---
+
+Bitki türüne göre gübreleme önerisi + takvim oluşturma uçları.
 """
 
 from fastapi import APIRouter, HTTPException

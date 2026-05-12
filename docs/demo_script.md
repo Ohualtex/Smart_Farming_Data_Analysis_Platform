@@ -3,8 +3,6 @@
 **Hedef süre:** 12-15 dakika
 **Teknik gereksinimler:** Python 3.12, dashboard tarayıcıda açık, terminal ile API canlı
 
-> **Not:** Filiz maskotu (Adım 1 hero ve Adım 6) Cycle 7 sonunda dashboard'a entegre olacaktır. Bu PR (`shiftSession` → `main`) Cycle 7 öncesi snapshot'ı taşır; Filiz adımları ayrı bir PR'da etkinleşir.
-
 ---
 
 ## ⚙️ Hazırlık (sunumdan önce, 2 dk)
@@ -41,7 +39,7 @@ python database/seed_data.py    # 7500+ kayıtlık seed yüklenir, ~5 sn
 **Göster:** Dashboard ana sayfa
 - Hero banner: "81 il · 324 sensör · 4860 okuma · 17 bitki türü"
 - Üst kartlar: günlük genel durum
-- *(Cycle 7'de: Filiz maskotu sağ alt köşede karşılayacak)*
+- Filiz maskotu sağ alt köşede karşılar
 
 ---
 
@@ -116,7 +114,7 @@ Form değerlerini gir:
 
 ---
 
-### Adım 6 — UX Cilası (1.5 dk) *(Cycle 7'de Filiz Asistan eklenecek)*
+### Adım 6 — UX Cilası ve Filiz Asistan (1.5 dk)
 
 > *"Dashboard light/dark tema, mobil-responsive, Türkçe arayüz.
 > Çiftçinin kullanacağı bir araç olduğu için UI dilimiz teknik değil
@@ -124,9 +122,9 @@ Form değerlerini gir:
 
 **Tema toggle (sağ üst):** Dark → Light geçiş
 
-> *"Cycle 7'de **Filiz** adlı SVG-tabanlı maskot karakter eklenecek:
+> *"**Filiz** adlı SVG-tabanlı maskot karakter dashboard'da canlı:
 > 65+ tarımsal ipucu, gündüz/gece mood otomasyonu, göz takibi, tıklama
-> tepkileri. Geliştirme bitti, ayrı PR ile main'e alınacak."*
+> tepkileri ile çiftçi-dostu mikro-etkileşim."*
 
 ---
 
@@ -187,11 +185,12 @@ make test
 
 ### Adım 10 — Yol Haritası ve Kapanış (1 dk)
 
-> *"Cycle 7'de CNN bitki sağlığı modeli, Auth UI ve IoT/MQTT entegrasyonu
-> tamamlandı. Cycle 8'de üretim çekirdeği geldi (JWT auth, Alembic migration,
-> rate limit, N+1 fix, nginx+Let's Encrypt). `shiftFinal` bridge sprint'inde
-> cila ve gözlemlenebilirlik (Sentry, Prometheus, frontend a11y, backup).
-> Cycle 9 final rapor + akademik teslim."*
+> *"Proje yolculuğumuzda CNN bitki sağlığı modeli, Auth UI ve IoT/MQTT
+> entegrasyonu öne çıkan özellikler oldu. Üretim çekirdeği olarak JWT auth,
+> Alembic migration, rate limit, N+1 fix ve nginx+Let's Encrypt katmanları
+> kuruldu. Cila & gözlemlenebilirlik aşamasında Sentry, Prometheus,
+> frontend a11y ve backup süreçleri devreye alındı. Final teslim akademik
+> rapor ile tamamlanacak."*
 
 **README "Yol Haritası" tablosunu göster.**
 
@@ -210,8 +209,8 @@ make test
 
 | Soru | Cevap |
 |:--|:--|
-| Gerçek çiftçiler nasıl kullanır? | "Pilot için sensör donanım kiti + mobil app gerek. Cycle 8'de auth UI + JWT backend tamamlandığı için 1-2 pilot çiftliğe deploy edilebilir." |
-| Hangi veriyi kullandınız? | "Eğitim setimiz 1000 sentetik örnek (RandomForest). Cycle 7'de gerçek IoT verisi entegre olacak." |
+| Gerçek çiftçiler nasıl kullanır? | "Pilot için sensör donanım kiti + mobil app gerek. Auth UI + JWT backend kuruldu, 1-2 pilot çiftliğe deploy edilebilir." |
+| Hangi veriyi kullandınız? | "Eğitim setimiz 1000 sentetik örnek (RandomForest). IoT MQTT entegrasyonu ile gerçek sensör akışına hazır." |
 | Filiz neden var? | "Çiftçilerin teknolojiyle bağ kurması için sevimli bir asistan. Tarımsal ipuçları + sistem durumu görselleştirme." |
 | Maliyet modeli? | "Akademik proje. Üretim için kooperatif/Bakanlık destekli SaaS modeli düşünülebilir." |
-| Veri gizliliği? | "Cycle 8'de RBAC + JWT ile kullanıcı bazlı izolasyon. Şu an local dev." |
+| Veri gizliliği? | "JWT + bcrypt ile kullanıcı bazlı izolasyon var; üretimde RBAC + KVKK uyumlu data handling planlı." |

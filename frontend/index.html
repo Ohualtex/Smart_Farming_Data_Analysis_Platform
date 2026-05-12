@@ -10,7 +10,6 @@
     <style>
 /* ============================================================
    SFDAP Dashboard — Design System
-   Ecenur Üner — Cycle 5 Görevi
    ============================================================ */
 :root {
     --primary: #10b981; --primary-hover: #059669; --primary-glow: rgba(16,185,129,.15);
@@ -196,8 +195,9 @@ tr:hover td { background: var(--surface-2); }
 .result-card .value { font-size: 2rem; font-weight: 700; }
 
 /* ─── LOADING / EMPTY ────────────────────────────── */
-/* shiftFinal A3 — Ecenur: skeleton loaders + a11y states.
-   EN / TR: Reduced motion respects user preference; skeleton becomes static. */
+/* Skeleton loaders + a11y loading states. Respects
+   `prefers-reduced-motion`: skeleton becomes static when the user
+   has reduced-motion enabled. */
 .skeleton { background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
     background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius-sm); display: block; }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -235,7 +235,7 @@ button:focus-visible, .nav-item:focus-visible, a:focus-visible { outline: 2px so
 .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
 
 /* ════════════════════════════════════════════════════════════
-   ✨ Sevimlilik Pack — global mikro-iyileştirmeler (Cycle 7)
+   ✨ Sevimlilik Pack — global mikro-iyileştirmeler
    ════════════════════════════════════════════════════════════ */
 ::selection { background: rgba(16,185,129,.28); color: var(--text); }
 
@@ -350,7 +350,7 @@ button:focus-visible, .nav-item:focus-visible, a:focus-visible { outline: 2px so
 }
 
 /* ============================================================
-   ✨ Cycle 6 Cila — Şıklık + Filiz Maskotu (eski palet korunur)
+   ✨ Polish layer — Filiz mascot + gradient accents
    ============================================================ */
 
 /* Yardımcı gradient değişkenleri (eski palet üzerine) */
@@ -1884,14 +1884,13 @@ async function api(endpoint, options = {}) {
     }
 }
 
-// ─── SKELETON LOADERS (shiftFinal A3 — Ecenur) ────────────────
-// EN: Skeleton placeholders shown during async loads. Set aria-busy="true"
-//     on the container before fetch, swap to "false" when data is ready.
-//     Reduces perceived latency and gives screen readers a status hint.
+// ─── SKELETON LOADERS ─────────────────────────────────────────
+// Skeleton placeholders shown during async loads. Sets aria-busy="true"
+// on the container before fetch and "false" when data is ready: this
+// reduces perceived latency and gives screen readers a status hint.
 // ---
-// TR: Async yukleme suresince gosterilen iskelet placeholder'lar.
-//     Fetch oncesi aria-busy="true", veri hazirlandiginda "false" yapilir.
-//     Algilanan gecikme dusurulur, ekran okuyucu durum bilgisi alir.
+// Async yükleme süresince gösterilen iskelet placeholder'lar. Fetch
+// öncesi aria-busy="true", veri hazırlandığında "false" yapılır.
 function _skeletonCards(count = 4) {
     // EN/TR: cards-grid icin kart iskeleti (icon, value, label hizalanir).
     let html = '';
@@ -1948,7 +1947,7 @@ function navigate(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => {
         n.classList.remove('active');
-        // shiftFinal A3: aria-current'i pasif items'tan kaldir
+        // Drop aria-current from inactive nav items.
         n.removeAttribute('aria-current');
     });
     document.getElementById(`page-${page}`).classList.add('active');
@@ -1959,8 +1958,8 @@ function navigate(page) {
     }
     document.getElementById('pageTitle').textContent = pageTitles[page][0];
     document.getElementById('pageSubtitle').textContent = pageTitles[page][1];
-    // shiftFinal A3: aktif sayfayi <main>'a odakla — keyboard kullanicilari
-    // sekme degisikligini fark etsin (tabindex=-1 ile programatik focus).
+    // Focus the <main> programmatically (tabindex=-1) so keyboard users
+    // hear the page change via the screen reader.
     const main = document.getElementById('main-content');
     if (main) main.focus({ preventScroll: false });
     // Load page data
@@ -1982,7 +1981,7 @@ function navigate(page) {
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const isOpen = sidebar.classList.toggle('open');
-    // shiftFinal A3: aria-expanded state'i hamburger butonu ile senkron tut
+    // Keep aria-expanded in sync with the visual sidebar state.
     const hamburger = document.querySelector('.hamburger');
     if (hamburger) hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
@@ -1995,7 +1994,7 @@ window.addEventListener('hashchange', () => {
 
 // ─── DASHBOARD ────────────────────────────────────────────────
 async function loadDashboard() {
-    // shiftFinal A3: skeleton placeholder yerlestir, sonra fetch et.
+    // Insert skeleton placeholders before the fetch starts.
     document.getElementById('dashboardCards').innerHTML = _skeletonCards(5);
     _setBusy('dashboardCards', true);
     const [sensors, weather, schedules] = await Promise.all([
@@ -2070,7 +2069,7 @@ let sensorsPage = 1;
 let sensorsTotal = 0;
 
 async function loadSensors(page = 1) {
-    // shiftFinal A3: tablo iskeleti — fetch oncesinde 6 satir, 4 sutun.
+    // Table skeleton — 6 rows × 4 columns before the fetch returns.
     document.getElementById('sensorsTable').innerHTML = _skeletonRows(6, 4);
     _setBusy('sensorsTable', true);
     // Toplam sayiyi her sayfa degisikliginde tekrar cekmek pahali —
@@ -2489,7 +2488,7 @@ function renderSensorStatsChart(stats) {
 // ─── PLANTS (BİTKİ SAĞLIĞI) ───────────────────────────────────
 async function loadPlants() {
     const tbl = document.getElementById('plantsHistoryTable');
-    // shiftFinal A3: blok iskelet (tablo cell olmadigi icin generic block)
+    // Generic block skeleton (target is a div, not a tbody).
     tbl.innerHTML = _skeletonBlock(4);
     _setBusy('plantsHistoryTable', true);
     const list = await api('/api/plants/health-images?limit=20');
@@ -2600,7 +2599,7 @@ document.addEventListener('change', (e) => {
 async function loadAlerts() {
     const tbl = document.getElementById('alertsTable');
     const cards = document.getElementById('alertsSummaryCards');
-    // shiftFinal A3: fetch oncesi iskelet + aria-busy
+    // Skeleton + aria-busy before the fetch.
     cards.innerHTML = _skeletonCards(3);
     tbl.innerHTML = _skeletonBlock(5);
     _setBusy('alertsSummaryCards', true);

@@ -11,7 +11,7 @@
 graph TB
     subgraph "İstemci Katmanı"
         Browser[🌐 Tarayıcı / Mobil]
-        Sensor[📡 IoT Sensörler<br/>Cycle 7+]
+        Sensor[📡 IoT Sensörler]
         ExtAPI[🌤️ OpenWeatherMap API]
     end
 
@@ -23,12 +23,12 @@ graph TB
         Routers[11 Router<br/>41 Endpoint]
         Services[İş Mantığı<br/>weather, fertilizer, ml_eval]
         Tasks[⏰ APScheduler<br/>Daily weather fetch]
-        MQTT[📨 MQTT Listener<br/>Cycle 7]
+        MQTT[📨 MQTT Listener]
     end
 
     subgraph "ML Katmanı"
         Irrigation[🌾 RandomForest<br/>Sulama Tahmini]
-        CNN[🦠 CNN<br/>Bitki Hastalığı<br/>Cycle 7]
+        CNN[🦠 CNN<br/>Bitki Hastalığı]
         Eval[📊 model_eval helpers]
     end
 
@@ -74,10 +74,10 @@ app/
 ├── database.py                # SQLAlchemy engine + session + naming convention
 │
 ├── core/
-│   └── logger.py              # Loguru kurulumu (LOG_FORMAT=json opsiyonu shiftFinal)
+│   └── logger.py              # Loguru kurulumu (LOG_FORMAT=text|json)
 │
 ├── models/
-│   └── models.py              # 15 ORM tablosu (+sensor_reading_monthly_aggregates — Cycle 8)
+│   └── models.py              # 15 ORM tablosu (+sensor_reading_monthly_aggregates)
 │
 ├── schemas/
 │   └── schemas.py             # 30+ Pydantic request/response modeli
@@ -93,24 +93,24 @@ app/
 │   ├── analytics.py           # Toplu istatistik + compare + PDF/Excel export
 │   ├── alerts.py              # SystemAlert CRUD (severity filtre)
 │   ├── model_performance.py   # Log + summary + timeseries + compare + drift
-│   └── auth.py                # Register/login/me/logout (skeleton, Cycle 8 JWT)
+│   └── auth.py                # Register/login/me/logout (JWT + bcrypt)
 │
 ├── services/                  # İş mantığı
 │   ├── weather_service.py     # OpenWeatherMap entegrasyonu + temizleme
 │   ├── fertilizer_service.py  # 17 bitki NPK ihtiyaç hesabı
 │   ├── report_service.py      # PDF (FPDF) + Excel (openpyxl)
 │   ├── data_quality.py        # IQR outlier + missing fill + sensor validation
-│   └── mqtt_listener.py       # IoT stream subscriber (Cycle 7 skeleton)
+│   └── mqtt_listener.py       # IoT stream subscriber
 │
 ├── ml/
 │   ├── irrigation_model.py    # RandomForest sulama (sklearn 1.8)
-│   ├── plant_disease_model.py # CNN sarıcı (Cycle 7 skeleton, ONNX placeholder)
+│   ├── plant_disease_model.py # CNN sarıcı (ONNX + heuristic fallback)
 │   ├── eval.py                # MAE/RMSE/F1/cross-validate helpers
 │   └── models/                # *.pkl dosyaları (gitignored)
 │
 ├── middleware/
 │   ├── auth.py                # X-API-Key Security
-│   ├── rate_limiter.py        # SlowAPI (decorator'lar Cycle 8'de bağlanacak)
+│   ├── rate_limiter.py        # SlowAPI rate limiting
 │   ├── request_logger.py      # Her isteği loguru'ya yazar
 │   └── exceptions.py          # SFDAPError + global handler
 │
@@ -158,7 +158,7 @@ sequenceDiagram
     Note over API,DB: 5 ayrı sorgu paralel
     API-->>U: JSON response × 5
     U->>U: Chart.js render
-    Note over U: Cycle 7+: Filiz boots (3 sn sonra selam)
+    Note over U: Filiz mascot boots (greets after 3s)
 ```
 
 ---
@@ -206,15 +206,15 @@ erDiagram
 | Görev | Trigger | Açıklama |
 |:--|:--|:--|
 | `fetch_daily_weather` | Cron `02:00` | Tüm 81 ilden OpenWeatherMap'e istek + DB'ye yaz |
-| `aggregate_old_readings` | Haftalık (Cycle 7+) | 30+ günlük sensör okumalarını günlük özet tabloya taşı |
-| `model_drift_check` | Günlük (Cycle 8+) | Tüm aktif modeller için drift endpoint'ini çağır |
+| `aggregate_old_readings` | Haftalık | 30+ günlük sensör okumalarını aylık özet tabloya taşı |
+| `model_drift_check` | Günlük | Tüm aktif modeller için drift endpoint'ini çağır |
 
 ### Auto-logging
 
 | Tetikleyici | Hedef Tablo | Notlar |
 |:--|:--|:--|
 | `POST /api/irrigation/predict` | `ModelPerformanceLog` | model_name='irrigation_rf', input + output JSON |
-| `POST /api/plants/health-images/analyze` | `PlantHealthImage` + `ModelPerformanceLog` | (Cycle 7'de plant_disease_cnn auto-log) |
+| `POST /api/plants/health-images/analyze` | `PlantHealthImage` + `ModelPerformanceLog` | model_name='plant_disease_cnn', auto-log |
 
 ---
 
@@ -224,13 +224,13 @@ erDiagram
 ┌─────────────────────────────────────────────────────────┐
 │  1. CORS                  (settings.CORS_ORIGINS)       │
 ├─────────────────────────────────────────────────────────┤
-│  2. Rate Limiter          (slowapi, decorator Cycle 8)  │
+│  2. Rate Limiter          (slowapi decorator'leri)      │
 ├─────────────────────────────────────────────────────────┤
 │  3. Request Logger        (loguru, her istek için)      │
 ├─────────────────────────────────────────────────────────┤
 │  4. Auth Middleware                                      │
 │     - X-API-Key  (POST/DELETE)                          │
-│     - JWT Bearer (Cycle 8'de full)                      │
+│     - JWT Bearer (bcrypt + HS256)                       │
 ├─────────────────────────────────────────────────────────┤
 │  5. Pydantic Validation   (request body schema)         │
 ├─────────────────────────────────────────────────────────┤
@@ -242,7 +242,7 @@ erDiagram
 
 ---
 
-## 🚀 Deploy Topolojisi (Cycle 8 hedef)
+## 🚀 Deploy Topolojisi
 
 ```mermaid
 graph LR
@@ -276,30 +276,30 @@ graph LR
 |:--|:--:|:--:|
 | `GET /api/health` | < 10 ms | ✓ |
 | `GET /api/sensors/?limit=100` | < 100 ms | ✓ |
-| `GET /api/analytics/summary` | < 500 ms | ⚠️ N+1 sorgu (Cycle 8 fix) |
+| `GET /api/analytics/summary` | < 500 ms | ✓ Tek sorgu (N+1 fix uygulandı) |
 | `POST /api/irrigation/predict` | < 100 ms | ~50 ms ✓ |
 | `GET /api/health/deep` | < 200 ms | ~60 ms ✓ |
 
 ---
 
-## 🔮 Cycle 7+ Genişlemeler
+## 🔮 Mevcut Yetenek Haritası
 
 ```mermaid
 graph LR
-    subgraph "Mevcut"
+    subgraph "Temel"
         A1[FastAPI Backend]
         A2[Static SPA]
         A3[Sentetik Seed]
     end
 
-    subgraph "Cycle 7"
+    subgraph "Özellikler"
         B1[CNN Bitki Sağlığı]
         B2[Auth UI]
         B3[İzleme Paneli]
         B4[MQTT IoT Stream]
     end
 
-    subgraph "Cycle 8 (Üretim Core)"
+    subgraph "Üretim Çekirdeği"
         C1[JWT + bcrypt Auth Backend]
         C2[Alembic Migration]
         C3[Rate Limit Decorator]
@@ -307,14 +307,14 @@ graph LR
         C5[nginx + Let's Encrypt]
     end
 
-    subgraph "shiftFinal (Cila & Gözlemlenebilirlik bridge)"
+    subgraph "Cila & Gözlemlenebilirlik"
         D1[Sentry + Prometheus]
         D2[Frontend Bundling + a11y]
         D3[Backup + DB Pool]
         D4[Edge Tests + Coverage 95%+]
     end
 
-    subgraph "Cycle 9 (Final Teslim)"
+    subgraph "Final Teslim"
         E1[Final Rapor]
         E2[Sunum]
         E3[Test Validasyon]

@@ -1,10 +1,12 @@
 """
-API Key Doğrulama Middleware
-=============================
-Basit API anahtarı tabanlı kimlik doğrulama.
-İsteklerin X-API-Key header'ında geçerli bir anahtar göndermesi gerekir.
+API Key Verification Middleware
+=================================
+Simple API key-based authentication. Requests must send a valid key in
+the `X-API-Key` header.
 
-Mehmet Sait Tayşi — Cycle 4 Görevi
+---
+
+API anahtarı tabanlı kimlik doğrulama; X-API-Key header zorunludur.
 """
 
 from fastapi import HTTPException, Security, status
