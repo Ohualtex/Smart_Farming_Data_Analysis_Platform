@@ -6,7 +6,7 @@
 # =============================================
 
 import sqlite3
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -171,7 +171,7 @@ def generate_summary_report(df: pd.DataFrame):
 
     print_separator("📄 ÖZET RAPOR")
 
-    print(f"\n📅 Rapor Tarihi: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\n📅 Rapor Tarihi: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"💾 Veritabanı: {DATABASE_PATH}")
 
     print("\n📊 Veri Özeti:")

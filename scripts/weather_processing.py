@@ -11,7 +11,7 @@
 
 import os
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
@@ -77,26 +77,25 @@ def veri_cek(api_key, city, units="metric"):
 
 def json_to_dataframe(data):
     """Ham API verisini proje veri modeline uygun DataFrame'e çevirir."""
-    kayitlar = []
-    for item in data["list"]:
-        kayitlar.append(
-            {
-                "tarih_saat": item["dt_txt"],
-                "sicaklik": item["main"].get("temp"),
-                "hissedilen": item["main"].get("feels_like"),
-                "min_sicaklik": item["main"].get("temp_min"),
-                "max_sicaklik": item["main"].get("temp_max"),
-                "nem": item["main"].get("humidity"),
-                "basinc": item["main"].get("pressure"),
-                "bulutluluk": item["clouds"].get("all"),
-                "ruzgar_hizi": item["wind"].get("speed"),
-                "ruzgar_yon": item["wind"].get("deg"),
-                "yagis": item.get("rain", {}).get("3h", 0.0),
-                "hava_durumu": item["weather"][0].get("description") if item.get("weather") else None,
-                "hava_kodu": item["weather"][0].get("id") if item.get("weather") else None,
-                "sehir": data.get("city", {}).get("name", CITY),
-            }
-        )
+    kayitlar = [
+        {
+            "tarih_saat": item["dt_txt"],
+            "sicaklik": item["main"].get("temp"),
+            "hissedilen": item["main"].get("feels_like"),
+            "min_sicaklik": item["main"].get("temp_min"),
+            "max_sicaklik": item["main"].get("temp_max"),
+            "nem": item["main"].get("humidity"),
+            "basinc": item["main"].get("pressure"),
+            "bulutluluk": item["clouds"].get("all"),
+            "ruzgar_hizi": item["wind"].get("speed"),
+            "ruzgar_yon": item["wind"].get("deg"),
+            "yagis": item.get("rain", {}).get("3h", 0.0),
+            "hava_durumu": item["weather"][0].get("description") if item.get("weather") else None,
+            "hava_kodu": item["weather"][0].get("id") if item.get("weather") else None,
+            "sehir": data.get("city", {}).get("name", CITY),
+        }
+        for item in data["list"]
+    ]
     df = pd.DataFrame(kayitlar)
     print(f"[BİLGİ] DataFrame oluşturuldu: {df.shape[0]} satır, {df.shape[1]} sütun")
     return df
@@ -272,7 +271,7 @@ def veri_donustur(df):
         if s in df.columns:
             df[s] = pd.to_numeric(df[s], errors="coerce").round(0)
 
-    df["islem_zamani"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    df["islem_zamani"] = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
     print("[BİLGİ] Dönüşüm tamamlandı.\n")
     return df
 
