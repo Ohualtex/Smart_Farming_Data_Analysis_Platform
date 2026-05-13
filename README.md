@@ -402,7 +402,7 @@ Smart_Farming_Data_Analysis_Platform/
 | Cycle 5 | 14 – 27 Nisan | ✅ Tamamlandı |
 | Cycle 6 | 28 Nisan – 3 Mayıs | ✅ Tamamlandı |
 | Cycle 7 | 3 – 10 Mayıs | ✅ Tamamlandı |
-| Cycle 8 | 10 – 12 Mayıs | ⏳ Üretim hazırlığı (core) |
+| Cycle 8 | 10 – 12 Mayıs | ✅ Tamamlandı — üretim çekirdeği (auth, RBAC, migration, %95 coverage) |
 | **shiftFinal** *(bridge)* | 13 – 19 Mayıs | ⏳ Cila ve gözlemlenebilirlik |
 | Cycle 9 | 20 – 31 Mayıs | ⏳ Final rapor ve akademik teslim |
 
@@ -412,6 +412,7 @@ Detaylı görev dağılımı için [projeakisi.md](projeakisi.md) dosyasına bak
 
 | Doküman | Açıklama |
 |:--|:--|
+| [`CHANGELOG.md`](CHANGELOG.md) | Sürüm notları — Keep a Changelog formatında cycle/sürüm değişiklikleri |
 | [`docs/FINAL_REPORT.md`](docs/FINAL_REPORT.md) | **Cycle 9 akademik teslim raporu** (iskelet — Cycle 9'da doldurulacak) |
 | [`docs/CYCLE_8_RETROSPECTIVE.md`](docs/CYCLE_8_RETROSPECTIVE.md) | Cycle 8 retrospective — başarılar, zorluklar, öğrenmeler |
 | [`docs/QUALITY_AUDIT.md`](docs/QUALITY_AUDIT.md) | Cycle 8 sonu kalite denetimi — Tier A/B/C yol haritası |
