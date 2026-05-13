@@ -47,6 +47,15 @@ UtcDateTime = Annotated[
     PlainSerializer(_serialize_utc, return_type=str, when_used="json"),
 ]
 
+# SQLite INTEGER is signed 64-bit: max = 2**63 - 1 = 9_223_372_036_854_775_807.
+# Without this bound Schemathesis / hand-crafted clients can submit ints
+# beyond that and trip an OverflowError → 500 inside SQLAlchemy's
+# `do_execute`. With the bound Pydantic returns 422 cleanly.
+# Mirrors the Query-side `MAX_SKIP` guard added in `7e49bef` for skip/limit;
+# this is the body-side companion (caught by POST /api/weather/ fuzz).
+SQLITE_INT_MAX = 9_223_372_036_854_775_807
+SqliteSafeInt = Annotated[int, Field(le=SQLITE_INT_MAX, ge=-SQLITE_INT_MAX - 1)]
+
 
 # ========== SENSOR ==========
 class SensorCreate(BaseModel):
@@ -65,7 +74,7 @@ class SensorCreate(BaseModel):
         }
     )
 
-    field_id: int
+    field_id: SqliteSafeInt
     sensor_type: str  # 'soil_moisture' | 'soil_temperature' | 'humidity' | ...
     serial_number: str
     depth_cm: float | None = None
@@ -89,7 +98,7 @@ class SensorResponse(BaseModel):
 class SensorReadingCreate(BaseModel):
     """Create payload for SensorReading."""
 
-    sensor_id: int
+    sensor_id: SqliteSafeInt
     moisture_percent: float
     depth_cm: float | None = None
     soil_temperature_c: float | None = None
@@ -112,7 +121,7 @@ class SensorReadingResponse(BaseModel):
 class WeatherDataCreate(BaseModel):
     """Create payload for WeatherData."""
 
-    farm_id: int
+    farm_id: SqliteSafeInt
     temperature_c: float | None = None
     humidity_percent: float | None = None
     precipitation_mm: float | None = None
@@ -136,7 +145,7 @@ class WeatherDataResponse(BaseModel):
 class IrrigationCreate(BaseModel):
     """Create payload for Irrigation."""
 
-    field_id: int
+    field_id: SqliteSafeInt
     scheduled_date: datetime
     duration_min: int | None = None
     water_amount_liters: float | None = None
@@ -269,8 +278,8 @@ class SystemAlertCreate(BaseModel):
         }
     )
 
-    farm_id: int | None = None
-    field_id: int | None = None
+    farm_id: SqliteSafeInt | None = None
+    field_id: SqliteSafeInt | None = None
     alert_type: str  # 'sensor_anomaly' | 'weather_warning' | 'system_error' | ...
     severity: str = "low"  # 'low' | 'medium' | 'critical'
     message: str
