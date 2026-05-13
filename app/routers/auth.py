@@ -27,6 +27,7 @@ Logout sonrası blacklist üretime alınınca Redis/DB'ye taşınmalı.
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
@@ -48,8 +49,12 @@ router = APIRouter(prefix="/api/auth", tags=["Kimlik Doğrulama"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT için stateless logout sağlayan in-memory blacklist.
+# `jti` (JWT ID, RFC 7519 §4.1.7) üzerinden çalışır — aynı kullanıcının aynı
+# saniyede aldığı iki token'ın `sub`+`iat`+`exp` payload'ı identical olabilir
+# ve token-string-eşleşmesi cross-contamination yaratırdı. `jti` her token
+# için benzersiz UUID (`uuid4().hex`).
 # TODO: move to Redis or DB in production (multi-process + restart safe).
-_BLACKLISTED_TOKENS: set[str] = set()
+_BLACKLISTED_JTIS: set[str] = set()
 
 
 # ─── Pydantic schemas ────────────────────────────────────────────────
@@ -127,13 +132,16 @@ def _verify_password(password: str, stored_hash: str) -> bool:
 
 
 def _create_token(user_id: int) -> tuple[str, int]:
-    """Yeni JWT üret — payload: sub, iat, exp. (token, expires_in_seconds) döner."""
+    """Yeni JWT üret — payload: sub, iat, exp, jti. (token, expires_in_seconds) döner."""
     expire_delta = timedelta(hours=settings.JWT_EXPIRE_HOURS)
     now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
         "iat": int(now.timestamp()),
         "exp": int((now + expire_delta).timestamp()),
+        # jti: token başına benzersiz ID — blacklist `jti` ile çalışır
+        # (token-string yerine), aynı saniye + aynı user collision'ından korur.
+        "jti": uuid.uuid4().hex,
     }
     token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return token, int(expire_delta.total_seconds())
@@ -141,12 +149,16 @@ def _create_token(user_id: int) -> tuple[str, int]:
 
 def _decode_token(token: str) -> int:
     """JWT decode + sub'ı user_id olarak döndür. Geçersizse 401 fırlat."""
-    if token in _BLACKLISTED_TOKENS:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token iptal edildi")
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
     except JWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gecersiz token") from exc
+    # jti blacklist kontrolü — payload.get çünkü eski (jti'siz) token'lara
+    # tolerans (`jti` yoksa never-blacklisted sayılır; eski client'lar yeni
+    # login alana kadar çalışmaya devam eder).
+    jti = payload.get("jti")
+    if jti is not None and jti in _BLACKLISTED_JTIS:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token iptal edildi")
     sub = payload.get("sub")
     if sub is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token icerigi eksik")
@@ -258,5 +270,13 @@ def logout(request: Request, authorization: str = Header(default="")) -> None:
     if authorization.startswith("Bearer "):
         token = authorization[7:]
         if token:
-            _BLACKLISTED_TOKENS.add(token)
+            # Decode et, jti'yi al, blacklist'e ekle. Decode hatası logout'u
+            # 204 sessiz başarıya çevirmez — best-effort (idempotent kontrat).
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+            except JWTError:
+                return  # Bozuk/expired token zaten geçersiz — ek iş yok.
+            jti = payload.get("jti")
+            if jti:
+                _BLACKLISTED_JTIS.add(jti)
     return
