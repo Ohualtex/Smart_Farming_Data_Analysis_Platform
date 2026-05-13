@@ -14,6 +14,11 @@ Cycle 8 sonrası bridge sprint — cila ve gözlemlenebilirlik. Sprint açık,
 ek commit'ler bu bölüme eklenmeye devam edecek.
 
 ### Added
+- **Frontend Vitest birim test scaffold'u**: `frontend/src/lib/skeleton.js`
+  (main.js'teki 4 a11y helper'ının ESM mirror'ı — drift TODO Cycle 9
+  frontend split'inde kapanacak), `vitest.config.js` (jsdom env),
+  `frontend/tests/skeleton.test.js` (14 test — HTML contract + aria-busy
+  toggle). CI'a `frontend-test` job eklendi (`ci.yml`).
 - **Gözlemlenebilirlik stack'i** (`e6259ae`): Sentry SDK (FastAPI + Starlette
   + SQLAlchemy + Logging integration, `send_default_pii=False`),
   Prometheus middleware (4 metric: request count/duration histogram, model

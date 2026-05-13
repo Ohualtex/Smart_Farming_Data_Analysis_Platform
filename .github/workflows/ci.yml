@@ -126,6 +126,33 @@ jobs:
           alembic upgrade head
           alembic current
 
+  frontend-test:
+    name: 🧩 Frontend Birim Testleri (Vitest)
+    runs-on: ubuntu-latest
+    # shiftFinal cila — `frontend/src/lib/skeleton.js` (main.js'in 4 a11y
+    # helper'ının ESM mirror'ı) için Vitest birim testleri. Drift TODO
+    # `frontend/src/lib/skeleton.js` header'ında; Cycle 9 frontend split
+    # tamamlanınca main.js doğrudan lib'den import edecek.
+
+    steps:
+      - name: 📥 Kodu indir
+        uses: actions/checkout@v4
+
+      - name: 🟢 Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 npm ci (frontend)
+        working-directory: frontend
+        run: npm ci
+
+      - name: 🧪 Vitest (skeleton + aria-busy helper'ları)
+        working-directory: frontend
+        run: npm test
+
   fuzz:
     name: 🎲 Schemathesis API Fuzz (shiftFinal Ayşe)
     runs-on: ubuntu-latest
