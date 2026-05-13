@@ -279,21 +279,25 @@ Projenin gerçek kullanıma çıkabilmesi için kritik altyapı eksikliklerini k
 > operatöre dönük cila pasajı.
 >
 > **Ara durum (11 Mayıs):** Temel paketler A2 (Mehmet — `e6259ae`), A3 (Ecenur — `02d1359`),
-> A4 (Emirhan — `2a889f8`) ve Ayşe paketi (`7e49bef` — Schemathesis fuzz + axe-core CI +
-> 6 gerçek int64 overflow bug fix) tamamlandı. Suite **246 → 425 test** (+%73), 3 CI workflow
-> (ci.yml + security.yml + a11y.yml), 25 fuzz testi, 28 a11y testi.
+> A4 (Emirhan — `2a889f8`), Ayşe paketi (`7e49bef` — Schemathesis fuzz + axe-core CI +
+> 6 gerçek int64 overflow bug fix) ve Miraç polish paketi (`cfe752b` + `d011017` — _clean_tr
+> modernize + magic numbers + Pillow 14 prep + bandit/pip-audit CI) tamamlandı.
+> Suite **246 → 425 test** (+%73), 3 CI workflow (ci.yml + security.yml + a11y.yml),
+> 25 fuzz testi, 28 a11y testi.
 > **Sprint 19 Mayıs'a kadar açık** — kalan günler PR review, doc cila ve ek geliştirmeler
 > (POST/PATCH fuzz, axe-core strict mode, ES module split, vb.) için kullanılacak.
 
-### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
+### 👤 MİRAÇ DURAN *(Scrum Master / Manager)* — ✅ Paket pre-sprint kapandı (`cfe752b` + `d011017`)
 
-#### 📌 Kod Kalitesi Polish ve Sızıntı Kapatma *(shiftFinal)*
-Cycle 8 audit raporundan kalan teknik borçları kapat:
+#### 📌 Kod Kalitesi Polish ve Sızıntı Kapatma *(shiftFinal — Cycle 8 sonunda erken kapandı)*
+Cycle 8 audit raporundan kalan teknik borçlar; shiftFinal'a taşınmadan önce pre-sprint polish batch'inde tamamlandı:
 
-1) **`_clean_tr` 130 satırlık fonksiyonu refactor** — `app/services/report_service.py`'deki Türkçe karakter dönüşümünü modül-seviyesi sözlüğe çıkar; fonksiyon 20-30 satıra düşsün.
-2) **Magic numbers → modül seviyesi sabitler** — token TTL (24h), default page limits (100), drift threshold (10.0) gibi değerleri isimli sabitlere taşı.
-3) **Pillow 14 hazırlığı** — `app/ml/plant_disease_model.py:172` `getdata()` deprecation'ını numpy alternatifine çevir (`np.asarray(hsv).reshape(-1, 3)`).
-4) **Security scan CI entegrasyonu** — `bandit` (Python source security) + `pip-audit` (dependency CVE) GitHub Actions pipeline'ına ekle; weekly run + PR check.
+1) ✅ **`_clean_tr` refactor** (`cfe752b`) — [`app/services/report_service.py:20-42`](app/services/report_service.py:20): 22-satır for-loop → `str.translate` + modül-seviyesi `_TR_ASCII_MAP` (`str.maketrans`). O(n*m) → tek geçişlik O(n).
+2) ✅ **Magic numbers → isimli sabitler** (`cfe752b`) — `model_performance.py`: `DEFAULT_PAGE_LIMIT` (100), `MAX_PAGE_LIMIT` (500), `DEFAULT_RECENT_WINDOW_DAYS` (7), `DEFAULT_BASELINE_WINDOW_DAYS` (30), `DEFAULT_DRIFT_THRESHOLD_PERCENT` (10.0), `ALERT_DEDUP_WINDOW_HOURS` (24). Ayrıca `sensors.py`/`irrigation.py`: `MAX_SKIP` (1_000_000), `DEFAULT_PAGE_SIZE` (50); `plant_disease_model.py`: `HEALTHY_GREEN_HUE`, `YELLOW_HUE`, `BROWN_HUE`, `WHITE_LIGHTNESS_MIN`.
+3) ✅ **Pillow 14 hazırlığı** (`cfe752b`) — [`app/ml/plant_disease_model.py:176`](app/ml/plant_disease_model.py:176): `hsv.getdata()` (Pillow 14'te kaldırılacak, 2027-10-15) → `np.asarray(hsv, dtype=np.uint8).reshape(-1, 3)`. ~3× daha hızlı; `import numpy as np` modül seviyesine çıkarıldı.
+4) ✅ **Security scan CI** (`d011017`) — [`.github/workflows/security.yml`](.github/workflows/security.yml): `bandit -r app/` (severity/confidence ≥ medium, JSON artifact 30 gün) + `pip-audit --strict` (PyPI advisory DB). Tetikleyiciler: PR(main), push(main/cycle_8/shiftFinal), Pzt 06:00 UTC cron, `workflow_dispatch`.
+
+**Sonuç:** Test suite 301 → 313 (+12 config testi), TOTAL coverage 94.42% → 95% (Cycle 8 resmî hedef tutturuldu), Ruff 17 rule group temiz.
 
 ### 👤 EMİRHAN GÜNAY — ✅ Tamamlandı (`2a889f8`)
 
