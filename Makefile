@@ -1,4 +1,4 @@
-.PHONY: help install run test fuzz lint format migrate backup restore docker-up docker-down clean
+.PHONY: help install run test fuzz lint format audit a11y ci migrate backup restore docker-up docker-down clean
 
 help: ## Show this help
 	@egrep -h '\s##\s' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -21,6 +21,18 @@ lint: ## Run ruff linter
 
 format: ## Run ruff formatter
 	ruff format .
+
+audit: ## Security audit suite (ruff + bandit + pip-audit) — CI security.yml parity
+	@echo "▶ ruff (lint + format check)" && ruff check . && ruff format --check .
+	@echo "\n▶ bandit (Python source security, medium+)" && \
+		python -m bandit -r app/ -f screen --severity-level medium --confidence-level medium
+	@echo "\n▶ pip-audit (dependency CVE)" && \
+		python -m pip_audit --requirement requirements.txt --strict
+
+a11y: ## Run axe-core a11y scan against running dashboard (frontend npm script)
+	cd frontend && npm run a11y:axe
+
+ci: lint test audit ## Local CI parity (lint + test + audit)
 
 migrate: ## Run database migrations
 	alembic upgrade head
