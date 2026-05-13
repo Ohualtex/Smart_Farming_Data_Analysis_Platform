@@ -178,13 +178,18 @@
 ## 10. Test, Coverage ve CI/CD
 
 ```
-Test sayısı:        425 (27 dosya) — shiftFinal ara durum (sprint açık)
-                    246 → 313 → 350 → 365 (A2) → 372 (A4) → 400 (A3) → 425 (Ayşe)
+Test sayısı:        446 (28 dosya) — shiftFinal ara durum (sprint açık)
+                    246 → 313 → 350 → 365 (A2) → 372 (A4) → 400 (A3)
+                    → 425 (Ayşe ilk paket) → 446 (auth-aware POST/PATCH/
+                    DELETE fuzz `61c64e4` + 7. int64 fix `4a0308a`)
 Coverage:           %95.04
 Linter:             Ruff (17 kural grubu) — All checks passed
 Source security:    Bandit medium+ — 0 issue
-API fuzz:           Schemathesis property-based — 25 GET endpoint × ~10 case
-A11y:               axe-core CLI WCAG 2.0 + 2.1 A/AA — CI haftalık tarama
+API fuzz:           Schemathesis property-based — 25 GET + auth-aware
+                    POST/PATCH/DELETE write endpoints (`61c64e4`),
+                    strict OpenAPI contract conformance (`c683da0`)
+A11y:               axe-core CLI WCAG 2.0 + 2.1 A/AA — strict mode
+                    (`f2e9bf8`), CI haftalık + PR tarama
 CI workflows:       3 (.github/workflows/ci.yml + security.yml + a11y.yml)
 Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
                     merge-conflict, detect-private-key
@@ -243,13 +248,25 @@ Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
 
 ## 14. Gelecek Çalışmalar
 
-**Bilinen teknik borçlar (shiftFinal sonrası):**
+**Bilinen teknik borçlar (Cycle 9 ve sonrası için):**
 - `bcrypt 5.0` geçişi (passlib yeni sürümünü bekliyoruz)
-- Frontend ES module split — `frontend/index.html`'in inline CSS/JS'inin `src/styles/*.css` + `src/main.js`'e bölünmesi (Vite scaffold hazır)
 - RBAC (role-based access control) — kullanıcı bazlı izolasyon
 - Refresh token + JWT blacklist Redis'e taşıma
-- axe-core CI'ın `continue-on-error: false`'a alınması (ilk run kalan WCAG warning'ları temizlendikten sonra)
-- Schemathesis fuzz kapsamının POST/PATCH/DELETE write operasyonlarına genişletilmesi (auth-aware fuzz)
+- Frontend Vitest birim test scaffold'u — şu an sadece axe-core E2E var
+- pip-audit lokal venv subprocess hatası (CI'da temiz, dev makine env sorunu)
+- `.venv` recreate yardımcısı — eski mutlak path shebang'leri kaldıktan
+  sonra Python script'leri (`bandit`, `pip-audit`) `python -m` üzerinden
+  çağrılmak zorunda
+
+**shiftFinal sırasında kapatılanlar:**
+- ✅ Frontend ES module split — `frontend/index.html`'in inline CSS/JS'i
+  `src/styles/main.css` + `src/main.js`'e ayrıldı (`8f5920e`)
+- ✅ axe-core CI strict mode — `continue-on-error: false`'a alındı +
+  WCAG AA kontrast hataları düzeltildi (`f2e9bf8`)
+- ✅ Schemathesis fuzz POST/PATCH/DELETE genişletme — auth-aware (`61c64e4`)
+- ✅ Strict OpenAPI contract conformance — schema/status/content-type/
+  no-5xx (`c683da0`)
+- ✅ `SqliteSafeInt` Create-schema FK bound'u — fuzz 7. int64 bug (`4a0308a`)
 
 **Olası ileri özellikler:**
 - Gerçek CNN dataset eğitimi (PlantVillage)
