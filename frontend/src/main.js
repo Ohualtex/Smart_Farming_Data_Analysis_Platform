@@ -75,6 +75,7 @@ const pageTitles = {
     fertilizer: ['Gübreleme', 'NPK önerisi ve takvim'],
     sensors: ['Sensörler', 'Tarladaki ölçüm cihazları'],
     analytics: ['Raporlar', 'Bölge bazında özet ve dışa aktarma'],
+    map: ['Türkiye Haritası', 'Çiftliklerin coğrafi dağılımı'],
     plants: ['Bitki Sağlığı', 'Yapraktan hastalık tespiti'],
     alerts: ['Uyarılar', 'Sistem ve sensör uyarıları'],
     auth: ['Hesabım', 'Giriş, kayıt ve profil'],
@@ -105,6 +106,7 @@ function navigate(page) {
     else if (page === 'weather') loadWeather();
     else if (page === 'irrigation') loadIrrigation();
     else if (page === 'analytics') loadAnalytics();
+    else if (page === 'map') loadMap();
     else if (page === 'plants') loadPlants();
     else if (page === 'alerts') loadAlerts();
     else if (page === 'auth') refreshAuthState();
@@ -620,6 +622,121 @@ function renderSensorStatsChart(stats) {
             }
         }
     });
+}
+
+// ─── MAP (TÜRKİYE HARİTASI — Cycle 9 prep) ────────────────────
+// 7 coğrafi bölge için sabit renk kodu (legend ile birebir uyumlu).
+const REGION_COLORS = {
+    'Marmara':           '#4A90E2',
+    'Ege':               '#7ED321',
+    'Akdeniz':           '#F5A623',
+    'İç Anadolu':        '#BD10E0',
+    'Karadeniz':         '#50E3C2',
+    'Doğu Anadolu':      '#D0021B',
+    'Güneydoğu Anadolu': '#F8E71C',
+};
+const DEFAULT_REGION_COLOR = '#94a3b8';   // bilinmeyen bölge — slate-400
+
+// Türkiye merkezi yaklaşık koordinat + ulusal ölçek için 6 zoom yeterli.
+const TURKEY_CENTER = [39.0, 35.0];
+const TURKEY_ZOOM = 6;
+
+// Leaflet map instance singleton — sayfa her ziyaret edildiğinde init yeniden
+// çağrılmasın diye saklanır. invalidateSize() ile container size refresh edilir.
+let _mapInstance = null;
+let _mapMarkersLayer = null;
+
+function _ensureMapInstance() {
+    if (_mapInstance) {
+        // Container display:none idi → reflow sonrası boyut hesabı bozulur.
+        // Bunu invalidateSize ile sıfırla.
+        setTimeout(() => _mapInstance.invalidateSize(), 50);
+        return _mapInstance;
+    }
+    if (typeof L === 'undefined') {
+        console.warn('Leaflet (window.L) henüz yüklenmedi; loadMap ertelendi.');
+        return null;
+    }
+    _mapInstance = L.map('mapContainer', { zoomControl: true }).setView(TURKEY_CENTER, TURKEY_ZOOM);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıda bulunanlar',
+        maxZoom: 18,
+    }).addTo(_mapInstance);
+    _mapMarkersLayer = L.layerGroup().addTo(_mapInstance);
+    return _mapInstance;
+}
+
+function _farmMarker(farm) {
+    const color = REGION_COLORS[farm.region] || DEFAULT_REGION_COLOR;
+    // Circle marker — bölge renk kodlu, opaklık ve outline ile WCAG'a uygun
+    // kontrast. Radius pixel-tabanlı (zoom-independent visual size).
+    return L.circleMarker([farm.location_lat, farm.location_lng], {
+        radius: 7,
+        fillColor: color,
+        color: '#1f2937',
+        weight: 1.5,
+        opacity: 0.9,
+        fillOpacity: 0.85,
+    });
+}
+
+function _escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+function _farmPopupHtml(farm) {
+    const area = farm.area_hectares != null ? `${farm.area_hectares.toFixed(1)} ha` : '—';
+    return `
+        <div>
+            <strong>${_escapeHtml(farm.name)}</strong><br>
+            <span style="color:#64748b;">${_escapeHtml(farm.city || '')} · ${_escapeHtml(farm.region || '')}</span><br>
+            <small>Alan: ${area}</small><br>
+            <small>ID: #${farm.id}</small>
+        </div>
+    `;
+}
+
+async function loadMap() {
+    const status = document.getElementById('mapStatus');
+    const container = document.getElementById('mapContainer');
+    container.setAttribute('aria-busy', 'true');
+    status.textContent = 'Çiftlikler yükleniyor…';
+
+    const map = _ensureMapInstance();
+    if (!map) {
+        status.textContent = '⚠️ Harita kütüphanesi yüklenemedi (Leaflet). Sayfayı yenileyin.';
+        container.setAttribute('aria-busy', 'false');
+        return;
+    }
+
+    // /api/farms/ — Cycle 9 prep router; limit=500 tüm 81 il + ek çiftlikleri kapsar.
+    const farms = await api('/api/farms/?limit=500');
+    if (!farms || !Array.isArray(farms)) {
+        status.textContent = '⚠️ Çiftlik verisi alınamadı (API offline?).';
+        container.setAttribute('aria-busy', 'false');
+        return;
+    }
+
+    // Önceki marker'ları temizle (sayfa tekrar açıldığında çakışmasın)
+    _mapMarkersLayer.clearLayers();
+
+    let plotted = 0, skipped = 0;
+    farms.forEach(farm => {
+        if (farm.location_lat == null || farm.location_lng == null) { skipped++; return; }
+        const marker = _farmMarker(farm);
+        marker.bindPopup(_farmPopupHtml(farm));
+        // a11y: keyboard erişim için title (focus etiketi)
+        marker.bindTooltip(`${farm.name} (${farm.city || ''})`, { direction: 'top', opacity: 0.9 });
+        marker.addTo(_mapMarkersLayer);
+        plotted++;
+    });
+
+    container.setAttribute('aria-busy', 'false');
+    status.textContent = `🌍 ${plotted} çiftlik haritada gösteriliyor`
+        + (skipped > 0 ? ` · ${skipped} çiftlik koordinat eksikliği nedeniyle atlandı.` : '.');
 }
 
 // ─── PLANTS (BİTKİ SAĞLIĞI) ───────────────────────────────────

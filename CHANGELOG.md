@@ -14,6 +14,14 @@ Cycle 8 sonrası bridge sprint — cila ve gözlemlenebilirlik. Sprint açık,
 ek commit'ler bu bölüme eklenmeye devam edecek.
 
 ### Added
+- **Türkiye haritası dashboard sayfası (Cycle 9 prep)**: Leaflet 1.9.4
+  ile 81 il × 81 çiftlik coğrafi dağılım haritası. Sidebar'da yeni
+  "🗺️ Harita" nav item, `<section id="page-map">` Leaflet container
+  + 7 coğrafi bölge için renk kodu legend, OpenStreetMap tile layer,
+  bölge bazlı `L.circleMarker`, çiftlik adı + il + alan popup'ı.
+  Veri kaynağı: yeni `GET /api/farms/?limit=500` endpoint'i.
+  `frontend/src/styles/main.css` map-legend + popup tema uyumu (dark
+  mode dahil) için ek stiller.
 - **`farms` router (Cycle 9 prep)**: schema-only kalan `Farm`/`Field`/
   `SoilAnalysis` modelleri için GET endpoint'leri:
   - `GET /api/farms/` — region + city filter + skip/limit pagination

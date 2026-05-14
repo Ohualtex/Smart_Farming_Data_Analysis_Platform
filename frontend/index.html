@@ -6,6 +6,11 @@
     <meta name="description" content="SFDAP - Akıllı Tarım Veri Analizi Platformu Dashboard">
     <title>SFDAP — Akıllı Tarım Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <!-- Leaflet — Türkiye haritası (Cycle 9 prep). CSS önce, JS body sonunda
+         (main.js'den önce yüklenir; window.L global olarak erişilebilir). -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="src/styles/main.css">
 </head>
@@ -49,6 +54,9 @@
             </a>
             <a class="nav-item" href="#analytics" onclick="navigate('analytics')">
                 <span class="icon" aria-hidden="true">📈</span> Raporlar
+            </a>
+            <a class="nav-item" href="#map" onclick="navigate('map')">
+                <span class="icon" aria-hidden="true">🗺️</span> Harita
             </a>
             <a class="nav-item" href="#plants" onclick="navigate('plants')">
                 <span class="icon" aria-hidden="true">🦠</span> Bitki Sağlığı
@@ -307,6 +315,34 @@
                     <div class="chart-box"><h3>🌡️ Çiftliklerin Günlük Sıcaklık Trendi</h3><canvas id="dailyTrendChart"></canvas></div>
                     <div class="chart-box"><h3>📊 Sensör Okuma İstatistikleri</h3><canvas id="sensorStatsChart"></canvas></div>
                 </div>
+            </section>
+
+            <!-- ═══ MAP (TÜRKİYE HARİTASI) PAGE ═══ -->
+            <!-- shiftFinal Cycle 9 prep — Leaflet ile 81 il çiftlik dağılımı.
+                 Veri kaynağı: GET /api/farms/?limit=500 (yeni Cycle 9 router). -->
+            <section class="page" id="page-map">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">🗺️</span> Türkiye Çiftlik Haritası</h1>
+                    <p>81 ildeki çiftliklerin coğrafi dağılımı. Marker rengi bölgeye göre kodlanmıştır; tıklayınca çiftlik detayları açılır.</p>
+                </div>
+
+                <div class="section-header">🎨 Bölge Renk Kodu</div>
+                <div id="mapLegend" class="map-legend" role="list" aria-label="Bölge renk kodu">
+                    <span role="listitem"><span class="map-legend-swatch" style="background:#4A90E2"></span> Marmara</span>
+                    <span role="listitem"><span class="map-legend-swatch" style="background:#7ED321"></span> Ege</span>
+                    <span role="listitem"><span class="map-legend-swatch" style="background:#F5A623"></span> Akdeniz</span>
+                    <span role="listitem"><span class="map-legend-swatch" style="background:#BD10E0"></span> İç Anadolu</span>
+                    <span role="listitem"><span class="map-legend-swatch" style="background:#50E3C2"></span> Karadeniz</span>
+                    <span role="listitem"><span class="map-legend-swatch" style="background:#D0021B"></span> Doğu Anadolu</span>
+                    <span role="listitem"><span class="map-legend-swatch" style="background:#F8E71C"></span> Güneydoğu Anadolu</span>
+                </div>
+
+                <div class="section-header">📍 Harita</div>
+                <!-- Leaflet container; sabit yükseklik (responsive width) -->
+                <div id="mapContainer" style="height:560px;border-radius:12px;border:1px solid var(--border);"
+                     aria-label="Türkiye çiftlik haritası" role="application" aria-busy="true"></div>
+
+                <div id="mapStatus" class="map-status" aria-live="polite" style="margin-top:12px;color:var(--text-muted);font-size:0.9em;"></div>
             </section>
 
             <!-- ═══ PLANTS (BİTKİ SAĞLIĞI) PAGE ═══ -->
@@ -624,6 +660,11 @@
     </svg>
 </button>
 
+<!-- Leaflet JS — Türkiye haritası için (Cycle 9 prep).
+     CLASSIC script: main.js'ten önce yüklenir, window.L global'dir. -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin="anonymous"></script>
 <script src="src/main.js"></script>
 </body>
 </html>
