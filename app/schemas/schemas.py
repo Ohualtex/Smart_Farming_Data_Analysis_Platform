@@ -389,6 +389,60 @@ class ModelPerformanceCompareItem(BaseModel):
     last_logged: UtcDateTime | None
 
 
+# ========== FARM / FIELD / SOIL (Cycle 9 GET endpoint'leri) ==========
+class FieldSummary(BaseModel):
+    """Field özet — `FarmDetailResponse.fields` içinde nested olarak döner."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    area_hectares: float | None = None
+    soil_type: str | None = None
+    elevation_m: float | None = None
+    crop_id: int | None = None
+
+
+class FarmResponse(BaseModel):
+    """Farm liste yanıtı (`GET /api/farms/`)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    name: str
+    city: str | None = None
+    region: str | None = None
+    area_hectares: float | None = None
+    location_lat: float | None = None
+    location_lng: float | None = None
+
+
+class FarmDetailResponse(FarmResponse):
+    """Farm detay yanıtı (`GET /api/farms/{farm_id}`) — `fields` nested."""
+
+    fields: list[FieldSummary]
+
+
+class SoilAnalysisResponse(BaseModel):
+    """SoilAnalysis serializer (`GET /api/farms/{farm_id}/soil`)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    field_id: int
+    analysis_date: UtcDateTime
+    ph_level: float | None = None
+    organic_matter_pct: float | None = None
+    nitrogen_mg_kg: float | None = None
+    phosphorus_mg_kg: float | None = None
+    potassium_mg_kg: float | None = None
+    calcium_mg_kg: float | None = None
+    magnesium_mg_kg: float | None = None
+    texture_class: str | None = None
+    notes: str | None = None
+
+
 # ========== HEALTH (deep health check) ==========
 class HealthCheckResponse(BaseModel):
     """Detayli sistem sagligi raporu."""

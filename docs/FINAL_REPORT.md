@@ -100,11 +100,12 @@
 
 ## 6. API Endpoint'leri
 
-**43 endpoint × 11 router:**
+**~47 endpoint × 12 router:**
 
 | Router | Endpoint | Anahtar Yetenek |
 |:--|:--:|:--|
-| `auth` | 4 | JWT bearer + bcrypt (Cycle 8 #3) |
+| `auth` | 4 | JWT bearer + bcrypt (Cycle 8 #3); `jti` blacklist (shiftFinal `dec2e82`) |
+| `farms` | 3 | **Cycle 9 prep:** list/detail + nested fields + per-farm soil analyses |
 | `sensors` | 7 | CRUD + readings + **count (pagination)** |
 | `weather` | 6 | CRUD + OpenWeatherMap fetch + clean |
 | `irrigation` | 4 | ML predict + schedule CRUD + **count (pagination)** |
@@ -178,10 +179,11 @@
 ## 10. Test, Coverage ve CI/CD
 
 ```
-Test sayısı:        446 (28 dosya) — shiftFinal ara durum (sprint açık)
+Test sayısı:        462 backend (29 dosya) + 14 frontend (Vitest)
                     246 → 313 → 350 → 365 (A2) → 372 (A4) → 400 (A3)
                     → 425 (Ayşe ilk paket) → 446 (auth-aware POST/PATCH/
                     DELETE fuzz `61c64e4` + 7. int64 fix `4a0308a`)
+                    → 462 (Cycle 9 prep: `farms` router 13 test)
 Coverage:           %95.04
 Linter:             Ruff (17 kural grubu) — All checks passed
 Source security:    Bandit medium+ — 0 issue
@@ -267,6 +269,15 @@ Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
 - ✅ Strict OpenAPI contract conformance — schema/status/content-type/
   no-5xx (`c683da0`)
 - ✅ `SqliteSafeInt` Create-schema FK bound'u — fuzz 7. int64 bug (`4a0308a`)
+- ✅ JWT `jti` blacklist — `_create_token` `iat` saniye-precision
+  collision'ı; logout 8. audit bug (`dec2e82`)
+- ✅ Frontend Vitest scaffold — 14 birim test, jsdom env, CI'da
+  `frontend-test` job (`466dfab`)
+- ✅ Cycle 9 prep: `farms` router (list + detail + per-farm soil) —
+  schema-only kalan `Farm`/`Field`/`SoilAnalysis` modelleri için GET
+  endpoint'leri (commit pending bu batch'te)
+- ✅ `database/sfdap_schema.sql` Alembic head'den regenerate; drift
+  kaldı (`make schema-dump` target eklendi)
 
 **Olası ileri özellikler:**
 - Gerçek CNN dataset eğitimi (PlantVillage)

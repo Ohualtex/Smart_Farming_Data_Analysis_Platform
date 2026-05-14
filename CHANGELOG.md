@@ -14,6 +14,22 @@ Cycle 8 sonrası bridge sprint — cila ve gözlemlenebilirlik. Sprint açık,
 ek commit'ler bu bölüme eklenmeye devam edecek.
 
 ### Added
+- **`farms` router (Cycle 9 prep)**: schema-only kalan `Farm`/`Field`/
+  `SoilAnalysis` modelleri için GET endpoint'leri:
+  - `GET /api/farms/` — region + city filter + skip/limit pagination
+  - `GET /api/farms/{farm_id}` — nested fields ile detay (selectinload
+    ile N+1 önlendi)
+  - `GET /api/farms/{farm_id}/soil` — çiftliğin tüm tarlalarındaki
+    toprak analizleri (analiz tarihine göre desc)
+  - 13 birim test (`tests/test_farms.py`) + `app/schemas/schemas.py`
+    `FarmResponse` / `FarmDetailResponse` / `FieldSummary` /
+    `SoilAnalysisResponse` Pydantic modelleri.
+- **`make schema-dump` target**: `database/sfdap_schema.sql`'i Alembic
+  head'den otomatik regenerate eder (geçici SQLite + `.schema` dump).
+  Schema dosyası 23 Nisan tarihliydi — 4 yeni tablo (`soil_analyses`,
+  `crop_plantings`, `fertilizer_recommendations`,
+  `sensor_reading_monthly_aggregates`) eksikti; bu batch'te 245 satıra
+  güncellendi.
 - **Frontend Vitest birim test scaffold'u**: `frontend/src/lib/skeleton.js`
   (main.js'teki 4 a11y helper'ının ESM mirror'ı — drift TODO Cycle 9
   frontend split'inde kapanacak), `vitest.config.js` (jsdom env),

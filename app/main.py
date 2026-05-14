@@ -38,6 +38,7 @@ from app.routers import (
     alerts,
     analytics,
     auth,
+    farms,
     fertilizer,
     health,
     irrigation,
@@ -206,6 +207,7 @@ register_exception_handlers(app)
 # ─── ROUTER'LARI KAYDET ─────────────────────────────────────────
 
 app.include_router(health.router)
+app.include_router(farms.router)
 app.include_router(sensors.router)
 app.include_router(weather.router)
 app.include_router(irrigation.router)

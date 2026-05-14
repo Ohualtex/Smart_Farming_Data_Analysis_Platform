@@ -1,4 +1,4 @@
-.PHONY: help install run test fuzz lint format audit a11y ci migrate backup restore docker-up docker-down clean
+.PHONY: help install run test fuzz lint format audit a11y ci migrate schema-dump backup restore docker-up docker-down clean
 
 help: ## Show this help
 	@egrep -h '\s##\s' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -36,6 +36,22 @@ ci: lint test audit ## Local CI parity (lint + test + audit)
 
 migrate: ## Run database migrations
 	alembic upgrade head
+
+schema-dump: ## Alembic head'den database/sfdap_schema.sql'i yeniden uret
+	@echo "▶ Migration zincirini gecici SQLite uzerinde calistir + .schema dump'la"
+	@rm -f /tmp/_sfdap_schema_dump.db
+	@DATABASE_URL=sqlite:////tmp/_sfdap_schema_dump.db python -m alembic upgrade head
+	@echo "-- ============================================================" > database/sfdap_schema.sql
+	@echo "-- SFDAP Database Schema (auto-generated from Alembic head)" >> database/sfdap_schema.sql
+	@echo "-- ============================================================" >> database/sfdap_schema.sql
+	@echo "-- Bu dosya 'alembic upgrade head' cikti'sinin SQL dump'idir." >> database/sfdap_schema.sql
+	@echo "-- Generated: $$(date -u +'%Y-%m-%d %H:%M UTC')" >> database/sfdap_schema.sql
+	@echo "-- Regenerate: make schema-dump" >> database/sfdap_schema.sql
+	@echo "-- ============================================================" >> database/sfdap_schema.sql
+	@echo "" >> database/sfdap_schema.sql
+	@sqlite3 /tmp/_sfdap_schema_dump.db .schema >> database/sfdap_schema.sql
+	@rm -f /tmp/_sfdap_schema_dump.db
+	@echo "✓ database/sfdap_schema.sql guncellendi ($$(wc -l < database/sfdap_schema.sql) satir)"
 
 backup: ## Veritabanını yedekle (SQLite/PostgreSQL; ./backups/ altına)
 	@./scripts/backup.sh
