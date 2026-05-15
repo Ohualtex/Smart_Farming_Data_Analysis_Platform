@@ -72,17 +72,22 @@ class TestProductionValidator:
         assert "SECRET_KEY" in message
 
     def test_production_with_real_secrets_succeeds(self):
-        """Tüm secret'lar gerçek değerlerle override edildiğinde OK."""
+        """Tüm secret'lar + güvenli CORS gerçek değerlerle override edildiğinde OK."""
         settings = Settings(
             ENVIRONMENT="production",
             API_KEY="real-prod-api-key-secret-32-chars-xx",
             SECRET_KEY="real-prod-secret-key-secret-32-chars",
             API_HOST="0.0.0.0",  # noqa: S104 — container/prod uyumlu
+            CORS_ORIGINS="https://app.sfdap.example.com",
         )
         assert settings.ENVIRONMENT == "production"
 
     def test_production_with_localhost_host_warns(self):
-        """API_HOST=127.0.0.1 ile production: warning üretilmeli (container hatası)."""
+        """API_HOST=127.0.0.1 ile production: warning üretilmeli (container hatası).
+
+        CORS_ORIGINS gerçek bir prod domain'i — yeni CORS guard'ı tetiklemesin
+        (host warning'ini izole et).
+        """
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             Settings(
@@ -90,6 +95,7 @@ class TestProductionValidator:
                 API_KEY="real-prod-api-key-secret-32-chars-xx",
                 SECRET_KEY="real-prod-secret-key-secret-32-chars",
                 API_HOST="127.0.0.1",  # warning tetiklemeli
+                CORS_ORIGINS="https://app.sfdap.example.com",
             )
             # 'production' ve '127.0.0.1' iletisinde geçmeli
             messages = [str(warning.message) for warning in w]

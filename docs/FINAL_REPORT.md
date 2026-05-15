@@ -170,11 +170,13 @@
 | Yetkilendirme | JWT bearer (HS256) + bcrypt | 8 |
 | Hız sınırlama | slowapi 30/min STRICT + 10/min AUTH (17 endpoint) | 8 |
 | TLS | nginx reverse proxy + Let's Encrypt | 8 |
-| CORS | env-driven origin listesi | 5 |
-| Production fail-fast | default secret kullanımı engellenir | 5 |
+| **Response header'lar** | **CSP + HSTS (prod) + XFO + XCTO + Referrer-Policy + Permissions-Policy** | **shiftFinal** |
+| CORS | env-driven origin listesi + production guard (`*`/localhost yasak) | 5 + shiftFinal |
+| Production fail-fast | default secret + güvensiz CORS engellenir | 5 + shiftFinal |
 | Source taraması | bandit medium+ severity (0 issue) | 8 |
 | Dependency taraması | pip-audit (CI, haftalık cron) | 8 |
-| Logout | JWT in-memory blacklist | 8 |
+| Logout | JWT `jti` blacklist (RFC 7519 §4.1.7) | 8 + shiftFinal |
+| `/metrics` discovery | `X-Robots-Tag: noindex, nofollow` | shiftFinal |
 
 ## 10. Test, Coverage ve CI/CD
 

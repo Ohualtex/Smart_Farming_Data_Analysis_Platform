@@ -34,6 +34,7 @@ from app.middleware.exceptions import register_exception_handlers
 from app.middleware.prometheus import PrometheusMiddleware, metrics_response
 from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 from app.middleware.request_logger import RequestLoggerMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.routers import (
     alerts,
     analytics,
@@ -199,6 +200,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Defense-in-depth response header'ları (CSP, HSTS, XFO, XCTO, Referrer-Policy,
+# Permissions-Policy). En son eklendi → tüm middleware/router yanıtlarına
+# yansır. CORS'tan sonra eklenmeli ki preflight OPTIONS'lara da yansısın.
+app.add_middleware(SecurityHeadersMiddleware)
 
 # ─── GLOBAL EXCEPTION HANDLER ───────────────────────────────────
 

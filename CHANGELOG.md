@@ -14,6 +14,29 @@ Cycle 8 sonrası bridge sprint — cila ve gözlemlenebilirlik. Sprint açık,
 ek commit'ler bu bölüme eklenmeye devam edecek.
 
 ### Added
+- **Production security hardening (A-batch)**: yeni
+  `SecurityHeadersMiddleware` her response'a 5 (dev) / 6 (prod)
+  defense-in-depth header ekler:
+  - `Content-Security-Policy` — default-src 'self', script-src
+    Chart.js + Leaflet CDN allowlist, frame-ancestors 'none'
+    (`'unsafe-inline'` geçici — `main.js` ES module split sonrası
+    daraltılacak)
+  - `Strict-Transport-Security` (yalnız production)
+  - `X-Frame-Options: DENY`
+  - `X-Content-Type-Options: nosniff`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy` — geolocation/microphone/camera/payment/
+    usb/magnetometer/gyroscope/accelerometer hepsi `()`
+  - `X-Robots-Tag: noindex, nofollow` (sadece `/metrics`)
+- **CORS production guard genişletildi**: `_validate_production` artık
+  CORS_ORIGINS içinde wildcard `*` veya `localhost`/`127.0.0.1`
+  gördüğünde fail-fast RuntimeError fırlatır (önceden sadece
+  API_KEY/SECRET_KEY default'ları kontrol ediliyordu).
+- **`tests/test_security_headers.py`** — 13 test (8 header behaviour
+  + 5 CORS production guard senaryosu).
+- **`tests/conftest.py`** — `client` fixture'ı artık her test öncesi
+  `_BLACKLISTED_JTIS.clear()` çağırarak JWT blacklist state
+  kontaminasyonunu önler.
 - **Türkiye haritası dashboard sayfası (Cycle 9 prep)**: Leaflet 1.9.4
   ile 81 il × 81 çiftlik coğrafi dağılım haritası. Sidebar'da yeni
   "🗺️ Harita" nav item, `<section id="page-map">` Leaflet container

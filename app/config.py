@@ -95,7 +95,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_production(self) -> Settings:
-        """Prod'da default secret kullanımını yasakla (fail-fast)."""
+        """Prod'da güvenlik açıklarını yasakla (fail-fast).
+
+        Kontrol edilenler:
+            * Default API_KEY / SECRET_KEY (dev sentinel'leri)
+            * CORS_ORIGINS içinde wildcard `*` veya `localhost`/`127.0.0.1`
+            * API_HOST=127.0.0.1 (container içinde 0.0.0.0 olmalı — warning)
+        """
         if self.ENVIRONMENT == "production":
             insecure = []
             if self.API_KEY == _DEV_API_KEY:
@@ -106,6 +112,15 @@ class Settings(BaseSettings):
                 raise RuntimeError(
                     f"ENVIRONMENT=production iken default {', '.join(insecure)} kullanilamaz. "
                     f".env dosyasinda override edin."
+                )
+            # CORS allowlist hijack defense: production'da `*` veya local
+            # origin'ler attack surface açar (CSRF, credential exfil).
+            insecure_origins = [o for o in self.cors_origins_list if o == "*" or "localhost" in o or "127.0.0.1" in o]
+            if insecure_origins:
+                raise RuntimeError(
+                    f"ENVIRONMENT=production iken CORS_ORIGINS guvensiz origin'ler "
+                    f"icermemeli: {insecure_origins}. .env dosyasinda gercek "
+                    f"domain'leri set edin (ornek: https://app.ornek.com)."
                 )
             if self.API_HOST == "127.0.0.1":
                 warnings.warn(
