@@ -1,6 +1,18 @@
 /* ============================================================
-   SFDAP Dashboard — JavaScript
+   SFDAP Dashboard — Entry Point
+   ============================================================
+   B-batch (Cycle 9): ES module entry-point. Reusable helpers
+   `src/lib/` altına ayrıldı, drift TODO kapandı.
+
+   Bu dosya `<script type="module">` ile yüklenir. Inline `onclick`
+   handler'lar `window` global'ine ihtiyaç duyar — dosyanın sonunda
+   tüm public function'lar `window.X = X` ile expose edilir
+   (window-bridge bölümü).
    ============================================================ */
+
+import { _skeletonBlock, _skeletonCards, _skeletonRows, _setBusy } from "./lib/skeleton.js";
+import { loadMap as _loadMapImpl } from "./lib/map.js";
+
 const API_BASE = window.location.origin;
 let refreshInterval = null;
 let charts = {};
@@ -19,52 +31,6 @@ async function api(endpoint, options = {}) {
         console.warn(`API Error: ${endpoint}`, e);
         return null;
     }
-}
-
-// ─── SKELETON LOADERS ─────────────────────────────────────────
-// Skeleton placeholders shown during async loads. Sets aria-busy="true"
-// on the container before fetch and "false" when data is ready: this
-// reduces perceived latency and gives screen readers a status hint.
-// ---
-// Async yükleme süresince gösterilen iskelet placeholder'lar. Fetch
-// öncesi aria-busy="true", veri hazırlandığında "false" yapılır.
-function _skeletonCards(count = 4) {
-    // EN/TR: cards-grid icin kart iskeleti (icon, value, label hizalanir).
-    let html = '';
-    for (let i = 0; i < count; i++) {
-        html += '<div class="card skeleton-card">'
-            + '<div class="skeleton skeleton-line lg" style="height:32px;width:32px;border-radius:50%;"></div>'
-            + '<div class="skeleton skeleton-line lg" style="margin-top:12px;"></div>'
-            + '<div class="skeleton skeleton-line sm" style="margin-top:8px;"></div>'
-            + '</div>';
-    }
-    return html;
-}
-function _skeletonRows(rows = 6, cols = 4) {
-    // EN/TR: tablo iskeleti — <tr>'lerin sayisi rows, hucre sayisi cols.
-    let html = '';
-    for (let r = 0; r < rows; r++) {
-        html += '<tr class="skeleton-row">';
-        for (let c = 0; c < cols; c++) {
-            html += '<td><span class="skeleton skeleton-line"></span></td>';
-        }
-        html += '</tr>';
-    }
-    return html;
-}
-function _skeletonBlock(lines = 3) {
-    // EN/TR: jenerik blok iskeleti — innerHTML hedefi divler icin.
-    let html = '<div class="skeleton-card" style="margin:0;">';
-    for (let i = 0; i < lines; i++) {
-        html += `<div class="skeleton skeleton-line${i === 0 ? ' lg' : i === lines - 1 ? ' sm' : ''}"></div>`;
-    }
-    html += '</div>';
-    return html;
-}
-function _setBusy(elementId, busy) {
-    // EN/TR: aria-busy toggle helper. data render bittiginde "false" verilir.
-    const el = document.getElementById(elementId);
-    if (el) el.setAttribute('aria-busy', busy ? 'true' : 'false');
 }
 
 // ─── NAVIGATION ───────────────────────────────────────────────
@@ -624,152 +590,11 @@ function renderSensorStatsChart(stats) {
     });
 }
 
-// ─── MAP (TÜRKİYE HARİTASI — Cycle 9 prep) ────────────────────
-// 7 coğrafi bölge için sabit renk kodu (legend ile birebir uyumlu).
-const REGION_COLORS = {
-    'Marmara':           '#4A90E2',
-    'Ege':               '#7ED321',
-    'Akdeniz':           '#F5A623',
-    'İç Anadolu':        '#BD10E0',
-    'Karadeniz':         '#50E3C2',
-    'Doğu Anadolu':      '#D0021B',
-    'Güneydoğu Anadolu': '#F8E71C',
-};
-const DEFAULT_REGION_COLOR = '#94a3b8';   // bilinmeyen bölge — slate-400
-
-// Türkiye merkezi yaklaşık koordinat + ulusal ölçek için 6 zoom yeterli.
-// Zoom alt/üst sınırı YOK — kullanıcı dünya görünümüne ya da sokak detayına
-// kadar serbestçe inip çıkabilir.
-const TURKEY_CENTER = [39.0, 35.0];
-const TURKEY_ZOOM = 6;
-
-// Leaflet map instance singleton — sayfa her ziyaret edildiğinde init yeniden
-// çağrılmasın diye saklanır. invalidateSize() ile container size refresh edilir.
-let _mapInstance = null;
-let _mapMarkersLayer = null;
-
-function _ensureMapInstance() {
-    if (_mapInstance) {
-        // Container display:none idi → reflow sonrası boyut hesabı bozulur.
-        // requestAnimationFrame ile reflow tamamlandıktan sonra çağırıyoruz.
-        requestAnimationFrame(() => _mapInstance.invalidateSize());
-        return _mapInstance;
-    }
-    if (typeof L === 'undefined') {
-        console.warn('Leaflet (window.L) henüz yüklenmedi; loadMap ertelendi.');
-        return null;
-    }
-    _mapInstance = L.map('mapContainer', {
-        zoomControl: true,
-        zoomSnap: 1,
-        zoomDelta: 1,
-        // Leaflet'in built-in wheel zoom'u trackpad inertia ile başa
-        // çıkamıyor (wheelDebounceTime ne kadar büyük olursa olsun 1-2
-        // saniyelik momentum 30+ ayrı burst üretiyor). Aşağıdaki custom
-        // wheel handler ile değiştirildi.
-        scrollWheelZoom: false,
-    }).setView(TURKEY_CENTER, TURKEY_ZOOM);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıda bulunanlar',
-        maxZoom: 19,   // OSM tile sunucusunun desteklediği üst sınır
-    }).addTo(_mapInstance);
-    _mapMarkersLayer = L.layerGroup().addTo(_mapInstance);
-
-    // ─── Custom throttled wheel zoom ───────────────────────────────
-    // Trackpad bir iki-parmak swipe'da 30+ wheel event ateşliyor;
-    // Leaflet'in built-in handler'ı bunları tek tek zoom step'lerine
-    // çeviriyordu (debounce ile bile inertia kuyruğu sızıyor).
-    // Burada her wheel event = en fazla 1 zoom step ve ardışık zoom'lar
-    // arası ZOOM_COOLDOWN_MS minimum cooldown var. Yani:
-    //   - Bir trackpad jesti → ilk event işlenir, geri kalan burst yok sayılır
-    //   - Mouse scroll wheel → her tick cooldown aralıkla işlenir
-    const ZOOM_COOLDOWN_MS = 250;
-    let _lastWheelZoomAt = 0;
-    _mapInstance.getContainer().addEventListener('wheel', (e) => {
-        e.preventDefault();   // sayfa scroll'unu da engelle
-        const now = Date.now();
-        if (now - _lastWheelZoomAt < ZOOM_COOLDOWN_MS) return;
-        _lastWheelZoomAt = now;
-        const direction = e.deltaY > 0 ? -1 : 1;  // aşağı kaydır = uzaklaş
-        // setZoomAround: mouse pozisyonuna doğru zoom (Leaflet default'u)
-        const point = _mapInstance.mouseEventToContainerPoint(e);
-        _mapInstance.setZoomAround(point, _mapInstance.getZoom() + direction);
-    }, { passive: false });
-
-    return _mapInstance;
-}
-
-function _farmMarker(farm) {
-    const color = REGION_COLORS[farm.region] || DEFAULT_REGION_COLOR;
-    // Circle marker — bölge renk kodlu, opaklık ve outline ile WCAG'a uygun
-    // kontrast. Radius pixel-tabanlı (zoom-independent visual size).
-    return L.circleMarker([farm.location_lat, farm.location_lng], {
-        radius: 7,
-        fillColor: color,
-        color: '#1f2937',
-        weight: 1.5,
-        opacity: 0.9,
-        fillOpacity: 0.85,
-    });
-}
-
-function _escapeHtml(s) {
-    if (s == null) return '';
-    return String(s).replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-}
-
-function _farmPopupHtml(farm) {
-    const area = farm.area_hectares != null ? `${farm.area_hectares.toFixed(1)} ha` : '—';
-    return `
-        <div>
-            <strong>${_escapeHtml(farm.name)}</strong><br>
-            <span style="color:#64748b;">${_escapeHtml(farm.city || '')} · ${_escapeHtml(farm.region || '')}</span><br>
-            <small>Alan: ${area}</small><br>
-            <small>ID: #${farm.id}</small>
-        </div>
-    `;
-}
-
+// ─── MAP (TÜRKİYE HARİTASI) ───────────────────────────────────
+// Asıl logic `frontend/src/lib/map.js`'te (B-batch refactor).
+// Burada wrapper: navigate() bunu çağırır, lib `api` parametresini alır.
 async function loadMap() {
-    const status = document.getElementById('mapStatus');
-    const container = document.getElementById('mapContainer');
-    container.setAttribute('aria-busy', 'true');
-    status.textContent = 'Çiftlikler yükleniyor…';
-
-    const map = _ensureMapInstance();
-    if (!map) {
-        status.textContent = '⚠️ Harita kütüphanesi yüklenemedi (Leaflet). Sayfayı yenileyin.';
-        container.setAttribute('aria-busy', 'false');
-        return;
-    }
-
-    // /api/farms/ — Cycle 9 prep router; limit=500 tüm 81 il + ek çiftlikleri kapsar.
-    const farms = await api('/api/farms/?limit=500');
-    if (!farms || !Array.isArray(farms)) {
-        status.textContent = '⚠️ Çiftlik verisi alınamadı (API offline?).';
-        container.setAttribute('aria-busy', 'false');
-        return;
-    }
-
-    // Önceki marker'ları temizle (sayfa tekrar açıldığında çakışmasın)
-    _mapMarkersLayer.clearLayers();
-
-    let plotted = 0, skipped = 0;
-    farms.forEach(farm => {
-        if (farm.location_lat == null || farm.location_lng == null) { skipped++; return; }
-        const marker = _farmMarker(farm);
-        marker.bindPopup(_farmPopupHtml(farm));
-        // a11y: keyboard erişim için title (focus etiketi)
-        marker.bindTooltip(`${farm.name} (${farm.city || ''})`, { direction: 'top', opacity: 0.9 });
-        marker.addTo(_mapMarkersLayer);
-        plotted++;
-    });
-
-    container.setAttribute('aria-busy', 'false');
-    status.textContent = `🌍 ${plotted} çiftlik haritada gösteriliyor`
-        + (skipped > 0 ? ` · ${skipped} çiftlik koordinat eksikliği nedeniyle atlandı.` : '.');
+    return _loadMapImpl({ api });
 }
 
 // ─── PLANTS (BİTKİ SAĞLIĞI) ───────────────────────────────────
@@ -1401,3 +1226,31 @@ function initFiliz() {
 }
 
 init();
+
+// ─── WINDOW BRIDGE ────────────────────────────────────────────
+// `<script type="module">` module scope'ta function decls global olmuyor.
+// `index.html`'deki 12 inline `on*` handler (navigate, toggleSidebar,
+// loadSensors, loadIrrigation, predictIrrigation, recommendFertilizer,
+// fertilizerSchedule, analyzePlantImage, loadAlerts, doLogin,
+// doRegister, doLogout) için bunları window'a expose etmek gerekiyor.
+//
+// Bu köprü Cycle 9 sonrası event delegation'a çevrilerek kaldırılabilir;
+// o zaman CSP `script-src 'unsafe-inline'`'ı drop edilir.
+Object.assign(window, {
+    navigate,
+    toggleSidebar,
+    loadSensors,
+    loadIrrigation,
+    predictIrrigation,
+    recommendFertilizer,
+    fertilizerSchedule,
+    analyzePlantImage,
+    loadAlerts,
+    doLogin,
+    doRegister,
+    doLogout,
+    // Status panel ve alerts bridge için (showToast başka modüllerden çağrılıyor)
+    showToast,
+    resolveAlert,
+    loadSensorDetail,
+});

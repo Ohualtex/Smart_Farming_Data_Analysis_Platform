@@ -27,6 +27,9 @@ FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 FRONTEND_HTML = FRONTEND_DIR / "index.html"
 FRONTEND_CSS = FRONTEND_DIR / "src" / "styles" / "main.css"
 FRONTEND_JS = FRONTEND_DIR / "src" / "main.js"
+# B-batch (Cycle 9): skeleton helper'ları main.js'ten extract edildi —
+# drift TODO kapandı, artık tek kaynak `src/lib/skeleton.js`.
+FRONTEND_LIB_SKELETON = FRONTEND_DIR / "src" / "lib" / "skeleton.js"
 
 
 @pytest.fixture(scope="module")
@@ -45,6 +48,12 @@ def css() -> str:
 def js() -> str:
     """Extracted dashboard script (`frontend/src/main.js`)."""
     return FRONTEND_JS.read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def skeleton_js() -> str:
+    """Skeleton helper modülü (`frontend/src/lib/skeleton.js`) — B-batch."""
+    return FRONTEND_LIB_SKELETON.read_text(encoding="utf-8")
 
 
 class TestSkipLinkAndLandmarks:
@@ -169,9 +178,22 @@ class TestSkeletonHelpersAndCss:
         "helper",
         ["_skeletonCards", "_skeletonRows", "_skeletonBlock", "_setBusy"],
     )
-    def test_js_helper_present(self, js: str, helper: str):
-        """JS skeleton helper fonksiyonu tanimli olmali (main.js icinde)."""
-        assert f"function {helper}(" in js, f"JS helper `{helper}` bulunamadi — skeleton placeholder akisi bozulur."
+    def test_js_helper_present(self, skeleton_js: str, helper: str):
+        """JS skeleton helper fonksiyonu tanimli olmali (`src/lib/skeleton.js`).
+
+        B-batch sonrasi helper'lar main.js'ten extract edildi — drift TODO
+        kapandi, tek kaynak src/lib/skeleton.js.
+        """
+        assert f"export function {helper}(" in skeleton_js, (
+            f"JS helper `{helper}` bulunamadi — skeleton placeholder akisi bozulur."
+        )
+
+    def test_main_js_imports_skeleton_helpers(self, js: str):
+        """main.js artık skeleton helper'ları lib'den import etmeli."""
+        # B-batch: ES module entry-point; skeleton helper'lar lib'den geliyor.
+        assert "from './lib/skeleton.js'" in js or 'from "./lib/skeleton.js"' in js, (
+            "main.js skeleton helper'larını `./lib/skeleton.js`'ten import etmeli."
+        )
 
 
 class TestActiveNavAriaCurrent:
