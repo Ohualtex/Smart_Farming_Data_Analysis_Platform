@@ -661,29 +661,41 @@ function _ensureMapInstance() {
     }
     _mapInstance = L.map('mapContainer', {
         zoomControl: true,
-        // ─── Wheel zoom yumuşatması ───────────────────────────────────
-        // Trackpad/Magic Mouse hassas; default'lar bir jest = 3-4 zoom
-        // atlama hissi veriyor. Üç parametre birlikte çalışıyor:
-        //
-        //  wheelPxPerZoomLevel 60 → 240  : Tek zoom adımı için gerekli
-        //                                  toplam wheel deltası 4× arttı.
-        //                                  Yumuşak adım sağlar.
-        //  wheelDebounceTime    40 → 100 : Trackpad bir scroll jest'inde
-        //                                  30+ event burst'ler — daha uzun
-        //                                  debounce penceresi tek zoom
-        //                                  hareketi olarak konsolide eder.
-        //  zoomSnap/zoomDelta    1       : Fractional zoom (0.5/0.25)
-        //                                  kazara aktif olmasın.
-        wheelPxPerZoomLevel: 240,
-        wheelDebounceTime: 100,
         zoomSnap: 1,
         zoomDelta: 1,
+        // Leaflet'in built-in wheel zoom'u trackpad inertia ile başa
+        // çıkamıyor (wheelDebounceTime ne kadar büyük olursa olsun 1-2
+        // saniyelik momentum 30+ ayrı burst üretiyor). Aşağıdaki custom
+        // wheel handler ile değiştirildi.
+        scrollWheelZoom: false,
     }).setView(TURKEY_CENTER, TURKEY_ZOOM);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıda bulunanlar',
         maxZoom: 19,   // OSM tile sunucusunun desteklediği üst sınır
     }).addTo(_mapInstance);
     _mapMarkersLayer = L.layerGroup().addTo(_mapInstance);
+
+    // ─── Custom throttled wheel zoom ───────────────────────────────
+    // Trackpad bir iki-parmak swipe'da 30+ wheel event ateşliyor;
+    // Leaflet'in built-in handler'ı bunları tek tek zoom step'lerine
+    // çeviriyordu (debounce ile bile inertia kuyruğu sızıyor).
+    // Burada her wheel event = en fazla 1 zoom step ve ardışık zoom'lar
+    // arası ZOOM_COOLDOWN_MS minimum cooldown var. Yani:
+    //   - Bir trackpad jesti → ilk event işlenir, geri kalan burst yok sayılır
+    //   - Mouse scroll wheel → her tick cooldown aralıkla işlenir
+    const ZOOM_COOLDOWN_MS = 250;
+    let _lastWheelZoomAt = 0;
+    _mapInstance.getContainer().addEventListener('wheel', (e) => {
+        e.preventDefault();   // sayfa scroll'unu da engelle
+        const now = Date.now();
+        if (now - _lastWheelZoomAt < ZOOM_COOLDOWN_MS) return;
+        _lastWheelZoomAt = now;
+        const direction = e.deltaY > 0 ? -1 : 1;  // aşağı kaydır = uzaklaş
+        // setZoomAround: mouse pozisyonuna doğru zoom (Leaflet default'u)
+        const point = _mapInstance.mouseEventToContainerPoint(e);
+        _mapInstance.setZoomAround(point, _mapInstance.getZoom() + direction);
+    }, { passive: false });
+
     return _mapInstance;
 }
 
