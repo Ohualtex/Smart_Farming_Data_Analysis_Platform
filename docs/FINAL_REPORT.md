@@ -241,14 +241,86 @@ Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
 
 ## 13. Karşılaşılan Zorluklar ve Çözümler
 
-> 🚧 **TODO Cycle 9:** Her cycle'ın retrospective'inden anahtar zorlukları topla. Şimdilik Cycle 8 detayları için bkz. [`CYCLE_8_RETROSPECTIVE.md`](CYCLE_8_RETROSPECTIVE.md) §4.
-
 **Cycle bazlı kısa liste:**
 - **Cycle 4:** Pydantic v1 → v2 geçişi, FastAPI lifespan API'si
 - **Cycle 5:** Coverage hedefi %80'i tutturma — eksik integration testler
 - **Cycle 6:** 81 il mega seed data — gerçekçi diurnal pattern üretme
 - **Cycle 7:** Filiz maskot inline SVG kompozisyonu — animasyon timing
 - **Cycle 8:** bcrypt 5↔passlib 1.7.4 uyumsuzluğu, alembic versions/ git-tracking sorunu, naming refactor (8.5 → shiftFinal)
+- **shiftFinal:** 4 ayrı production-risk bug yakalanıp düzeltildi (aşağıda detayı).
+
+### shiftFinal sprintinde yakalanan bug'lar
+
+**1. `int64` overflow ailesi (8 ayrı bug, 2 dalga)**
+
+*Belirti:* Schemathesis fuzz testleri rastgele `2^63`'e yakın int değerleri
+üretiyor; backend bunları SQLite INTEGER (signed-64bit) sütunlarına yazmaya
+çalıştığında `OverflowError: Python int too large to convert to SQLite
+INTEGER` fırlatıyor → 500 server error.
+
+*Kök neden:* Pydantic v2 default `int` türü Python'un sınırsız integer'ına
+karşılık geliyor; SQLite (PostgreSQL `BIGINT` de aynı sınırı paylaşır)
+2^63-1 üstünü kabul etmiyor.
+
+*Düzeltme:*
+- **6 bug** (Ayşe, `7e49bef`): GET sorgu parametrelerinde `MAX_SKIP =
+  1_000_000` Query constraint'i (`sensors.py`, `irrigation.py`); >1M skip
+  artık 422 graceful dönüyor.
+- **7. bug** (`4a0308a`): POST body'lerdeki FK int alanları için ortak
+  `SqliteSafeInt = Annotated[int, Field(le=2^63-1, ge=-2^63)]` alias
+  (`app/schemas/schemas.py`) — 6 Create schema'ya uygulandı.
+- **8. bug — JWT `jti` collision** (`dec2e82`): `_create_token` `iat`'i
+  saniye-precision integer yazıyor; aynı `sub` + aynı saniyede iki token
+  payload'ı byte-identical → encode edilince *aynı JWT string*'i veriyor.
+  Test suite'inde `TestLogout` ve `test_full_auth_lifecycle` ardışık
+  koştuğunda ilk logout ikinci login'in token'ını da blacklist'liyor (production'da düşük olasılık ama mümkün edge).
+  Fix: token payload'a `uuid.uuid4().hex` ile `jti` claim'i (RFC 7519
+  §4.1.7); blacklist token-string yerine `jti` ile çalışıyor. Geriye
+  uyumluluk: `jti`'siz eski token'lar "never-blacklisted" sayılır.
+
+**2. Trackpad inertia: kontrolsüz harita zoom (`8ff0234`)**
+
+*Belirti:* Türkiye haritası sayfasında trackpad ile büyütüp küçültürken
+"3-4 atlama" oluyordu; tek iki-parmak swipe = 3+ zoom adımı, kullanım
+"öldürücü" hale geliyordu.
+
+*Kök neden:* macOS trackpad bir iki-parmak swipe için 1-2 saniyelik
+inertia kuyruğunda 30+ wheel event ateşliyor. Leaflet'in built-in
+`scrollWheelZoom` handler'ı `wheelDebounceTime=100ms` ile bunları ~10
+burst'e indiriyordu — yine de yetersiz, her burst bir zoom adımı
+demek.
+
+*Düzeltme:* `scrollWheelZoom: false` ile Leaflet'in kendi handler'ı
+tamamen kapatıldı; yerine custom `wheel` listener: tek event = ±1 zoom
+step + 250ms cooldown. Bir trackpad jesti artık tek zoom step yapıyor,
+inertia kuyruğundaki geri kalan 30 event sessiz drop ediliyor.
+
+**3. JWT blacklist test sızıntısı (`2950672` — conftest fix)**
+
+*Belirti:* `test_full_auth_lifecycle` tam suite'te 401, tek başına 200.
+Random test ordering altında flaky.
+
+*Kök neden:* `_BLACKLISTED_JTIS` modül-seviyesi global; `TestLogout`
+test'lerinden kalan jti'ler edge-case test'lerine sızıyordu (özellikle
+jti'siz iki test arası).
+
+*Düzeltme:* `tests/conftest.py` `client` fixture'ı her test öncesi
+`_BLACKLISTED_JTIS.clear()` çağırıyor — test isolation hijyeni.
+
+**4. Production CORS allowlist (`2950672`)**
+
+*Belirti:* Dev ortamı için ayarlı `CORS_ORIGINS="http://localhost:..."`
+production deploy'a kayarsa attacker-controlled localhost iframe credential
+exfil yapabilir; mevcut `_validate_production` sadece API_KEY/SECRET_KEY
+default sentinel'lerini kontrol ediyordu.
+
+*Düzeltme:* `_validate_production` artık `CORS_ORIGINS` listesinde
+wildcard `*` veya `localhost`/`127.0.0.1` görünce `RuntimeError`
+fırlatıyor — fail-fast.
+
+> Tüm 4 maddenin kapsamlı testleri `tests/test_jti_blacklist.py`,
+> `tests/test_security_headers.py` ve `tests/test_edge_cases.py` içinde
+> yaşıyor (toplam **475+ pytest** + **32 Vitest** test).
 
 ## 14. Gelecek Çalışmalar
 
