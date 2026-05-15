@@ -638,8 +638,12 @@ const REGION_COLORS = {
 const DEFAULT_REGION_COLOR = '#94a3b8';   // bilinmeyen bölge — slate-400
 
 // Türkiye merkezi yaklaşık koordinat + ulusal ölçek için 6 zoom yeterli.
+// minZoom/maxZoom: ulus-altı görünümü engelle (zoom 5 ≈ Türkiye + komşular,
+// zoom 10 ≈ il-altı detay; daha fazla "kontrolsüz" hissi verir).
 const TURKEY_CENTER = [39.0, 35.0];
 const TURKEY_ZOOM = 6;
+const TURKEY_MIN_ZOOM = 5;
+const TURKEY_MAX_ZOOM = 10;
 
 // Leaflet map instance singleton — sayfa her ziyaret edildiğinde init yeniden
 // çağrılmasın diye saklanır. invalidateSize() ile container size refresh edilir.
@@ -649,18 +653,35 @@ let _mapMarkersLayer = null;
 function _ensureMapInstance() {
     if (_mapInstance) {
         // Container display:none idi → reflow sonrası boyut hesabı bozulur.
-        // Bunu invalidateSize ile sıfırla.
-        setTimeout(() => _mapInstance.invalidateSize(), 50);
+        // requestAnimationFrame ile reflow tamamlandıktan sonra çağırıyoruz;
+        // setTimeout(50) yarış koşulunda boyut 0 yakalanabiliyordu (bug:
+        // ilk geçişte wheel-zoom container boyunu doğru hesaplamıyor → zoom
+        // adımı orantısız büyük/küçük geliyordu).
+        requestAnimationFrame(() => _mapInstance.invalidateSize());
         return _mapInstance;
     }
     if (typeof L === 'undefined') {
         console.warn('Leaflet (window.L) henüz yüklenmedi; loadMap ertelendi.');
         return null;
     }
-    _mapInstance = L.map('mapContainer', { zoomControl: true }).setView(TURKEY_CENTER, TURKEY_ZOOM);
+    _mapInstance = L.map('mapContainer', {
+        zoomControl: true,
+        minZoom: TURKEY_MIN_ZOOM,
+        maxZoom: TURKEY_MAX_ZOOM,
+        // scrollWheelZoom default açık + hassasiyet artırıldı: default
+        // wheelPxPerZoomLevel=60 trackpad'lerde 1 jest = 2-3 zoom seviyesi
+        // atlatıyor; 120'ye çıkarmak adımı orantılı yapar.
+        wheelPxPerZoomLevel: 120,
+        // Tam-integer zoom seviyeleri: pixel-snap fractional zoom (default
+        // zoomSnap=1, zoomDelta=1) zaten doğru; explicit yazmak future-proof.
+        zoomSnap: 1,
+        zoomDelta: 1,
+        // Çift tıklama zoom'unu da yavaşlat — küçük ekranlarda hızlı hissediyordu.
+        doubleClickZoom: true,
+    }).setView(TURKEY_CENTER, TURKEY_ZOOM);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıda bulunanlar',
-        maxZoom: 18,
+        maxZoom: TURKEY_MAX_ZOOM,
     }).addTo(_mapInstance);
     _mapMarkersLayer = L.layerGroup().addTo(_mapInstance);
     return _mapInstance;
