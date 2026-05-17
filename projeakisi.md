@@ -270,13 +270,12 @@ Projenin gerçek kullanıma çıkabilmesi için kritik altyapı eksikliklerini k
 
 ## 🟦 shiftFinal — Cila ve Gözlemlenebilirlik *(bridge sprint)*
 
-📅 **13 – 19 Mayıs 2026** *(devam ediyor)*
+📅 **13 – 17 Mayıs 2026** *(✅ kapandı — 17 May)*
 
 > `shiftSession` (Cycle 6) deseninin son hâli — numaralı cycle değil,
 > **adlı bir bridge sprint**. Cycle 8 (üretim çekirdeği) bittikten sonra
-> 7 günlük cila döngüsü: cross-team polish, gözlemlenebilirlik ve UX
-> cilasını kapsar. Final rapor (Cycle 9) öncesi son kullanıcıya/
-> operatöre dönük cila pasajı.
+> 5 günlük cila döngüsü: cross-team polish, gözlemlenebilirlik ve UX
+> cilasını kapsar.
 >
 > **Ara durum (11 Mayıs):** Temel paketler A2 (Mehmet — `e6259ae`), A3 (Ecenur — `02d1359`),
 > A4 (Emirhan — `2a889f8`), Ayşe paketi (`7e49bef` — Schemathesis fuzz + axe-core CI +
@@ -284,8 +283,9 @@ Projenin gerçek kullanıma çıkabilmesi için kritik altyapı eksikliklerini k
 > modernize + magic numbers + Pillow 14 prep + bandit/pip-audit CI) tamamlandı.
 > Suite **246 → 425 test** (+%73), 3 CI workflow (ci.yml + security.yml + a11y.yml),
 > 25 fuzz testi, 28 a11y testi.
-> **Sprint 19 Mayıs'a kadar açık** — kalan günler PR review, doc cila ve ek geliştirmeler
-> (POST/PATCH fuzz, axe-core strict mode, ES module split, vb.) için kullanılacak.
+> **Kapanış (17 Mayıs):** Miraç audit + cila batch'i ile suite **425 → 485 test**,
+> 4. CI workflow (frontend-test/Vitest) + 6 security header eklendi. Sprint REBUILD
+> pivot kararıyla planlanandan 2 gün önce kapatıldı.
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)* — ✅ Paket pre-sprint kapandı (`cfe752b` + `d011017`)
 
@@ -341,36 +341,105 @@ Toplam: 28 yeni test (`test_frontend_a11y.py`).
 
 Toplam: 15 yeni test (`test_observability.py`), `sentry-sdk[fastapi]>=2.0.0` + `prometheus-client>=0.20.0`.
 
+> **shiftFinal kapanışı (17 Mayıs 2026):** 5 ekip paketi (A2/A3/A4/Ayşe/Miraç polish) ✅, ek olarak shiftFinal'in 13–17 May dilimi içinde Miraç audit + cila batch'i ile 8 production-risk bug daha kapatıldı (int64 #7 + JWT `jti` collision dahil), security headers + CORS production guard + farms router + Türkiye haritası + Vitest scaffold landed. Sprint sonu: **485 backend + 32 frontend test**, %95 coverage, 4 CI workflow (lint+test+migrations+frontend-test, security, a11y). **Branch `shiftFinal` kapatıldı, `v0.9.0-pre-rebuild` tag'i atıldı.**
+
+---
+
+## 🟪 REBUILD — Kullanıcı-Odaklı Yeniden Yapılandırma *(solo, Miraç)*
+
+📅 **18 – 30 Mayıs 2026** *(13 gün, shiftFinal kapanışı sonrası)*
+🌿 **Branch:** `rebuild` *(shiftFinal kapatıldıktan sonra ayrılır)*
+
+> shiftFinal'ın 3. gününde stratejik gözlem: teknik kalite çok yüksek
+> (485 test, %95 coverage, 6 security header) ama **UI hiçbir gerçek
+> kullanıcı persona'sına yetmiyor**. Auth boş vaat (per-user filter
+> yok), tablolar veri dump, eyleme yönelik akış yok. Bu tech debt değil
+> — eksik temel feature.
+>
+> **Karar:** Miraç **solo** bir yeniden yapılandırma yürütüyor —
+> 7 fazlık, **çiftçi-odaklı** saha aracı dönüşümü. Ekip Cycle 9
+> görevlerinden bağımsız çalışır.
+>
+> **Detaylı yol haritası:** [`docs/REBUILD_ROADMAP.md`](docs/REBUILD_ROADMAP.md)
+
+### Hedef persona
+
+**Çiftçi Ahmet** — 47, Konya, 8 ha, 4 tarla, 6 sensör. iPhone'undan
+tarlada bağlanır. 5 sorusuna cevap arar:
+1. "Tarlam susuz mu, ne zaman sulayayım?"
+2. "Bu yaprakta hastalık var mı?"
+3. "Gübre ne zaman, ne kadar?"
+4. "Komşulara göre durumum nasıl?"
+5. "Bir sorun çıkarsa haberim olacak mı?"
+
+### Faz planı
+
+| Faz | Süre | Çıktı | Kritiklik |
+|:-:|:-:|:--|:-:|
+| 0 | 1g | Branch + plan doc + snapshot | 🟢 |
+| 1 | 3g | 4-rol RBAC (farmer/developer/overseer/admin) + per-user data isolation | 🔴 zorunlu |
+| 2 | 2g | "Çiftliğim" dashboard + hesabım yenile | 🔴 zorunlu |
+| 3 | 2g | Tarla detay sayfası | 🔴 zorunlu |
+| 4 | 2g | Eyleme yönelik CRUD UI | 🟡 önemli |
+| 5 | 1g | Per-user bildirim akışı | 🟡 önemli |
+| 6 | 1g | Onboarding wizard + demo seed | 🟢 cila |
+| 7 | 2g | Doc + sunum metni (FINAL_REPORT framing) | 🔴 zorunlu |
+
+**Geri-dönüş:** `v0.9.0-pre-rebuild` tag'i shiftFinal kapanışında atıldı; pivot başarısız olursa `git checkout v0.9.0-pre-rebuild` ile 5 dakikada Yol A'ya (mevcut bakanlık paneli olarak teslim) dönülür.
+
+### Demo hedefi (Cycle 9 sunumu için)
+
+Ahmet hesabı açar → onboarding demo verisi → dashboard "Tarla A susuz"
+önerisi → onaylar → tarla detayında yaprak fotoğrafı yükler →
+hastalık tanısı → kayıtlara ekler. **~3.5 dakikalık demo akışı.**
+
 ---
 
 ## 🟣 Cycle 9 — Final Rapor, Sunum ve Akademik Teslim
 
-📅 **20 – 31 Mayıs 2026**
+📅 **1 – 7 Haziran 2026** *(Haziran ilk haftası)*
 
-> Tüm teknik geliştirme bittikten sonra projeyi akademik olarak teslim etmek
-> ve kapsamlı şekilde belgelemek için son döngü.
+> Sunum ve akademik teslime özel döngü. **Teknik geliştirme yapılmaz**
+> — backend/frontend kod değişikliği yalnız REBUILD branch'inde
+> (Miraç solo, 18–30 May) yapılır. Ekip bu döngüde **yalnız dokümantasyon,
+> sunum, raporlama** üretir.
+>
+> **31 May:** REBUILD merge + demo prova buffer (1 gün); ekip Cycle 9
+> görevlerine 22 May'dan itibaren paralel başlayabilir.
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
 #### 📌 Proje Dokümantasyonunun Tamamlanması
-Projenin tüm aşamalarını detaylı bir şekilde belgeleyin. Kod açıklamaları, veri işleme adımları, algoritma seçim nedenleri ve karşılaşılan zorluklar gibi bilgileri içeren kapsamlı bir dokümantasyon hazırlayın.
+Projenin tüm aşamalarını detaylı bir şekilde belgele. Kod açıklamaları,
+veri işleme adımları, algoritma seçim nedenleri ve karşılaşılan
+zorlukları içeren kapsamlı bir dokümantasyon hazırla. REBUILD branch'inden
+demo akışı + ekran görüntüleriyle FINAL_REPORT'u zenginleştir.
 
 ### 👤 EMİRHAN GÜNAY
 
-#### 📌 Proje Final Raporu ve Sunum Hazırlığı
-Projenin genel bir özetini, kullanılan veri kümelerini, uygulanan algoritmaları ve elde edilen sonuçları içeren kapsamlı bir final raporu hazırlayın. Raporun tüm teknik detayları içerdiğinden ve kolayca anlaşılabilir olduğundan emin olun.
+#### 📌 Proje Final Raporu Yazımı
+Projenin genel özeti, kullanılan veri kümeleri, uygulanan algoritmalar
+ve elde edilen sonuçları içeren kapsamlı bir final rapor hazırla. Rapor
+tüm teknik detayları içermeli, akademik dil ve kolay anlaşılırlığa sahip
+olmalı.
 
 ### 👤 AYŞE ESLEM ÇEKİCİ
 
-#### 📌 Veri Seti ve Algoritma Optimizasyonu
-Kullanılan veri setlerini ve makine öğrenimi algoritmalarını optimize ederek projenin performansını artırın. Daha iyi sonuçlar elde etmek için farklı parametreler deneyin ve sonuçları karşılaştırın.
+#### 📌 Sunum Slaytları Üretimi
+Projenin temel hedeflerini, kullanılan yöntemleri ve elde edilen
+sonuçları özetleyen sunum slaytlarını hazırla. Görsel materyaller,
+mimari diyagram, demo screenshot ve kapanış sayfası ile destekle.
 
 ### 👤 ECENUR ÜNER
 
-#### 📌 Sunum Materyallerinin Oluşturulması
-Projenin temel hedeflerini, kullanılan yöntemleri ve elde edilen sonuçları özetleyen etkili bir sunum hazırlayın. Görsel materyallerle destekleyerek sunumun anlaşılırlığını artırın.
+#### 📌 Sunum Materyallerinin Görsel Tasarımı
+Sunum slaytlarının görsel tasarımı, ekran görüntüleri, mockup'lar ve
+infografikler. Filiz maskotu sunum boyunca tema unsuru olarak kullanılır.
+Demo videosu hazırlığı (opsiyonel).
 
 ### 👤 MEHMET SAİT TAYŞİ
 
-#### 📌 Test ve Validasyon Süreçlerinin Tamamlanması
-Projenin tüm bileşenlerini kapsamlı bir şekilde test edin ve elde edilen sonuçları doğrulayın. Hata ayıklama süreçlerini tamamlayın ve projenin güvenilirliğini sağlayın.
+#### 📌 Sunum Hazırlık Notları & Q&A Senaryoları
+Sunum öncesi prova notları, jüriye karşı olası sorular ve cevapları,
+teknik derinlik soruları için backup slaytları. Demo prova scripti
+(`docs/demo_script.md`) güncelleme.

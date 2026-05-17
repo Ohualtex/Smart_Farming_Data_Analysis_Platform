@@ -1,7 +1,7 @@
 # 📑 SFDAP — Final Rapor
 
 > **Akıllı Tarım Veri Analizi Platformu** (Smart Farming Data Analysis Platform)
-> **Akademik teslim:** 31 Mayıs 2026
+> **Akademik teslim:** 7 Haziran 2026
 > **Cycle 9 ana çıktısı.** Bu doküman shiftFinal sırasında erken iskelet olarak başlatıldı; Cycle 9'da ekipçe doldurulacak.
 
 ---
@@ -37,21 +37,46 @@
 
 ## 2. Hedefler ve Kapsam
 
-> 🚧 **TODO Cycle 9 — Ayşe:** Gereksinim toplama belgesindeki hedefleri buraya özetle (`docs/research/Hafta_1_Analiz_Raporu.md`).
+### Hedef persona
 
-**İşlevsel hedefler:**
-- 🌍 Ulusal ölçek (81 il) veri toplama ve görselleştirme
-- 💧 ML tabanlı sulama optimizasyonu (RandomForest)
-- 🌱 NPK tabanlı akıllı gübreleme önerisi (17 bitki türü)
-- 🦠 CNN tabanlı bitki sağlığı analizi (heuristic + ONNX-ready)
-- 📊 Dashboard (Chart.js, dark/light tema, Filiz maskotu)
-- 📡 IoT/MQTT sensör stream desteği
+**Çiftçi Ahmet** — 47 yaşında, Konya'da 8 hektarlık çiftliği var, 4 tarlada
+buğday + ayçiçeği, 6 toprak nem sensörü kullanıyor. iPhone'undan tarlada
+bağlanıyor; bilgisayar bilgisi orta. Sistem Ahmet'in 5 sorusuna cevap
+vermeli:
 
-**İşlevsel olmayan hedefler:**
+1. **"Tarlam susuz mu, ne zaman sulayayım?"**
+2. **"Bu yaprakta hastalık var mı?"**
+3. **"Gübre ne zaman, ne kadar?"**
+4. **"Komşulara göre durumum nasıl?"**
+5. **"Bir sorun çıkarsa haberim olacak mı?"**
+
+İkincil persona: **Tarım Bakanlığı analisti** — 81 il düzeyinde toplu
+gözetim için harita + analytics + raporlama panosu (admin rolü).
+
+### İşlevsel hedefler
+
+- 💧 ML tabanlı sulama önerisi (RandomForest) + onaylama akışı (`/api/irrigation/schedules`)
+- 🌱 NPK tabanlı gübreleme önerisi + kayıt (`FertilizerRecommendationLog`)
+- 🦠 CNN tabanlı yaprak hastalığı analizi (heuristic + ONNX-ready) + tarla bağlamlı kayıt
+- 📡 IoT/MQTT sensör stream + 30 günden eski okumaların aylık aggregate'e arşivlenmesi
+- 🔔 Per-user bildirim akışı (toprak nemi düşüklüğü, hastalık kontrolü hatırlatması)
+- 🗺️ Bakanlık panosu: 81 il çiftlik dağılım haritası + bölge bazlı analytics
+
+### İşlevsel olmayan hedefler
+
+- **RBAC**: farmer kendi verisini, admin tüm sistemi görür
 - Coverage ≥ %80 (gerçekleşen: %95+)
 - API yanıt süresi < 500 ms (gerçekleşen: ~12 ms TestClient)
-- Production-grade auth + rate limit + TLS
-- PostgreSQL'e geçiş kapasitesi
+- Defense-in-depth response header'lar (CSP, HSTS, XFO, XCTO, Referrer, Permissions)
+- Production-grade auth (JWT + bcrypt + `jti` blacklist) + rate limit + TLS
+- PostgreSQL'e geçiş kapasitesi (`pool_size`/`max_overflow` env-tunable)
+
+### Kapsam dışı (Cycle 10+ roadmap)
+
+- E-posta/SMS bildirim gönderimi (alerts dashboard'da görünür ama push yok)
+- Mobil native uygulama (PWA roadmap'te)
+- Çoklu-tenant SaaS (cooperatif/bakanlık paylaşımı)
+- Gerçek CNN model eğitimi (PlantVillage dataset)
 
 ## 3. Geliştirme Süreci — 9 Cycle
 
@@ -67,8 +92,9 @@
 | 6 | 28 Nis – 3 May | İleri özellikler | shiftSession bridge, model performans dashboard, drift detection, raporlama (PDF/Excel) |
 | 7 | 3 – 10 May | İzleme + Gelişmiş | Filiz maskotu, Auth UI, Plants UI, Alerts panel, MQTT stream, plant_disease CNN |
 | 8 | 10 – 12 May | Üretim Hazırlığı (core) | Rate limit, N+1 fix, JWT auth, Alembic 14-tablo migration, nginx + Let's Encrypt |
-| shiftFinal | 13 – 19 May | Cila + Gözlemlenebilirlik | Sentry, Prometheus, structured logging, Vite bundling, a11y, backup/restore, edge tests |
-| 9 | 20 – 31 May | Final Rapor | **Bu doküman** + sunum + akademik teslim |
+| shiftFinal | 13 – 17 May | Cila + Gözlemlenebilirlik | Sentry, Prometheus, structured logging, Vite bundling, a11y, backup/restore, edge tests, security headers, farms router, Türkiye haritası, Vitest scaffold |
+| REBUILD | 18 – 30 May | Kullanıcı-Odaklı Yeniden Yapılandırma *(solo, Miraç)* | RBAC + per-user data isolation, "Çiftliğim" dashboard, tarla detay sayfası, eylem akışları, bildirim, onboarding |
+| 9 | 1 – 7 Haz | Final Rapor + Sunum | **Bu doküman** + sunum slaytları + Q&A + akademik teslim |
 
 **Detay:** Her cycle için ayrı retrospective var (Cycle 8: [`CYCLE_8_RETROSPECTIVE.md`](CYCLE_8_RETROSPECTIVE.md)).
 
@@ -231,13 +257,13 @@ Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
 
 | Üye | Cycle 1 | Cycle 2 | Cycle 3 | Cycle 4 | Cycle 5 | Cycle 6 | Cycle 7 | Cycle 8 | shiftFinal | Cycle 9 |
 |:--|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| **Miraç Duran** | Proje temelleri + teknoloji araştırması | DB yapı planı | API tasarım | ML sulama modeli | CI/CD + integration testler | 81 il expand + analytics dashboard + DX cleanup | Filiz maskot + UX cilası | 5 production-core + 6 bonus | Code quality polish (A5/A6/B1 ✅) | Final rapor |
-| **Emirhan Günay** | Proje analizi | (—) | DB şema | Sensör entegrasyon | Alembic + seed data | Veri temizleme iyileştirme | MQTT + (archiving Cycle 8'e kaydı) | (archiving Miraç tarafından) | Backup + DB pool | Final rapor |
-| **Ayşe E. Çekici** | Gereksinim toplama | (—) | UI/UX wireframe | Weather pipeline | Gübre öneri sistemi | ML değerlendirme | CNN bitki sağlığı | (Tier A1 ✅ Miraç bonus) | Edge case tests + auth integration | Veri seti + algoritma optim. |
-| **Ecenur Üner** | Dev ortamı | Veri toplama planı | (—) | Chart.js dashboard | Dashboard modern + responsive | Veri hattı izleme | Auth UI + Plants UI + Alerts panel | (—) | Vite bundling + a11y + skeleton | Sunum materyalleri |
-| **Mehmet S. Tayşi** | Veri seti ön işleme | Veri analizi + model seçim | (—) | Temel veri API | API güvenlik (rate limit + CORS) | Model performans altyapı | Health/Metrics + alerts CRUD | (—) | Sentry + Prometheus + structured logs | Test + validasyon |
+| **Miraç Duran** | Proje temelleri + teknoloji araştırması | DB yapı planı | API tasarım | ML sulama modeli | CI/CD + integration testler | 81 il expand + analytics dashboard + DX cleanup | Filiz maskot + UX cilası | 5 production-core + 6 bonus | Code quality polish + **security hardening + farms router + jti audit fix + Türkiye haritası + Vitest scaffold** | **REBUILD solo refactor** ([REBUILD_ROADMAP](REBUILD_ROADMAP.md)) + final rapor + sunum koordinasyonu |
+| **Emirhan Günay** | Proje analizi | (—) | DB şema | Sensör entegrasyon | Alembic + seed data | Veri temizleme iyileştirme | MQTT + (archiving Cycle 8'e kaydı) | (archiving Miraç tarafından) | Backup + DB pool | Final rapor yazımı |
+| **Ayşe E. Çekici** | Gereksinim toplama | (—) | UI/UX wireframe | Weather pipeline | Gübre öneri sistemi | ML değerlendirme | CNN bitki sağlığı | (Tier A1 ✅ Miraç bonus) | Edge case tests + auth integration | Sunum slaytları üretimi |
+| **Ecenur Üner** | Dev ortamı | Veri toplama planı | (—) | Chart.js dashboard | Dashboard modern + responsive | Veri hattı izleme | Auth UI + Plants UI + Alerts panel | (—) | Vite bundling + a11y + skeleton | Sunum görsel tasarımı |
+| **Mehmet S. Tayşi** | Veri seti ön işleme | Veri analizi + model seçim | (—) | Temel veri API | API güvenlik (rate limit + CORS) | Model performans altyapı | Health/Metrics + alerts CRUD | (—) | Sentry + Prometheus + structured logs | Sunum hazırlık + Q&A senaryoları |
 
-> 🚧 **TODO Cycle 9:** Her hücreye commit hash referansları eklenebilir.
+> **Cycle 9 not:** Ekip yalnız sunum + rapor üretir; teknik geliştirme **REBUILD branch'inde Miraç solo** yürütür. Cycle 9 hücreleri buna göre güncellendi.
 
 ## 13. Karşılaşılan Zorluklar ve Çözümler
 
@@ -380,5 +406,5 @@ fırlatıyor — fail-fast.
 ---
 
 **Yazan:** Miraç Duran (iskelet — Cycle 8 sonu, 11 Mayıs 2026)
-**Tamamlanması beklenen:** 31 Mayıs 2026 (Cycle 9 son günü)
+**Tamamlanması beklenen:** 7 Haziran 2026 (Cycle 9 son günü, akademik teslim)
 **Format:** Bu Markdown kaynağı sunum öncesi PDF'e dönüştürülecek (Pandoc veya `analytics/export?format=pdf`).
