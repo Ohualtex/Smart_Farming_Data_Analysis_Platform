@@ -374,18 +374,65 @@ tarlada bağlanır. 5 sorusuna cevap arar:
 
 ### Faz planı
 
-| Faz | Süre | Çıktı | Kritiklik |
-|:-:|:-:|:--|:-:|
-| 0 | 1g | Branch + plan doc + snapshot | 🟢 |
-| 1 | 3g | 4-rol RBAC (farmer/developer/overseer/admin) + per-user data isolation | 🔴 zorunlu |
-| 2 | 2g | "Çiftliğim" dashboard + hesabım yenile | 🔴 zorunlu |
-| 3 | 2g | Tarla detay sayfası | 🔴 zorunlu |
-| 4 | 2g | Eyleme yönelik CRUD UI | 🟡 önemli |
-| 5 | 1g | Per-user bildirim akışı | 🟡 önemli |
-| 6 | 1g | Onboarding wizard + demo seed | 🟢 cila |
-| 7 | 2g | Doc + sunum metni (FINAL_REPORT framing) | 🔴 zorunlu |
+| Faz | Süre | Çıktı | Kritiklik | Durum |
+|:-:|:-:|:--|:-:|:-:|
+| 0 | 1g | Branch + plan doc + snapshot | 🟢 | ✅ |
+| 1 | 3g | 4-rol RBAC (farmer/developer/overseer/admin) + per-user data isolation | 🔴 zorunlu | ✅ (18 May) |
+| 2 | 2g | "Çiftliğim" dashboard + hesabım yenile | 🔴 zorunlu | ⏳ sırada |
+| 3 | 2g | Tarla detay sayfası | 🔴 zorunlu | ⏳ |
+| 4 | 2g | Eyleme yönelik CRUD UI | 🟡 önemli | ⏳ |
+| 5 | 1g | Per-user bildirim akışı | 🟡 önemli | ⏳ |
+| 6 | 1g | Onboarding wizard + demo seed | 🟢 cila | ⏳ |
+| 7 | 2g | Doc + sunum metni (FINAL_REPORT framing) | 🔴 zorunlu | ⏳ |
 
 **Geri-dönüş:** `v0.9.0-pre-rebuild` tag'i shiftFinal kapanışında atıldı; pivot başarısız olursa `git checkout v0.9.0-pre-rebuild` ile 5 dakikada Yol A'ya (mevcut bakanlık paneli olarak teslim) dönülür.
+
+### Faz 1 kapanışı — 4-rol RBAC + per-user data isolation (18 May 2026)
+
+İki commit ile teslim edildi: `5a48c21` (Adım 1-8: altyapı + farms + sensors)
+ve `c2051c8` (Adım 9-14: kalan 6 router + alerts audit fix).
+**14 adım × 2 commit, 23 dosya, +1.426 / −426 satır.**
+
+**Backend altyapı:**
+- `USER_ROLES = ("farmer", "developer", "overseer", "admin")` + `DEFAULT_USER_ROLE = "farmer"` (models.py).
+- Alembic migration `b1c2d3e4f5a6`: `batch_alter_table` ile SQLite-uyumlu CHECK constraint + `ix_users_role` + backfill.
+- Yeni `app/middleware/rbac.py`: `scope_to_user`, `assert_{farm,field,sensor}_ownership`, `scope_sensors_to_user`, `is_write_allowed`; `_BYPASS_ROLES={admin,overseer,developer}` (okuma bypass) ve `_WRITE_ROLES={admin,farmer}` (yazma yetkili).
+- `auth.py`: `get_current_user_or_403` + `current_user_optional` + `require_role(*)` factory; `PATCH /api/auth/users/{id}/role` admin-only (self-demotion 409 guard); `UserRole = Literal[...]` runtime sync assert; `/me` `+phone +owned_farms_count` tek-query.
+
+**Router'lar (8/8 RBAC-aware):**
+
+| Router | Endpoint | Rol davranışı | Audit fix |
+|:--|:-:|:--|:-:|
+| farms | 3 | scope + farm ownership | — |
+| sensors | 6 | scope + sensor/field ownership; write guard | — |
+| weather | 6 | farm ownership; `/clean` rol-bağımsız | — |
+| irrigation | 4 | field ownership; `POST /predict` public (stateless ML) | — |
+| fertilizer | 3 | public stateless (Faz 4'te `FertilizerRecommendationLog` ile field ownership) | — |
+| plants | 3 | field ownership + write guard | — |
+| alerts | 4 | farm ownership; system-wide alert (`farm_id=None`) admin-only | ✅ `is_resolved=None` 500 fix |
+| analytics | 3 | admin/overseer/developer only; farmer için Faz 2'de ayrı dashboard | — |
+
+`verify_api_key` legacy dependency tüm router'lardan kaldırıldı (JWT + RBAC tek source).
+
+**Test altyapısı:**
+- `conftest.py` 5 rol fixture: `anon_client`, `farmer_client`, `developer_client`, `overseer_client`, `admin_client` (`_make_role_client` helper); base `client` artık default admin user + ön-seed `Farm(id=1)` + `Field(id=1)` (`region="__internal__"`).
+- Yeni `tests/test_rbac_fixtures.py` (7 fixture smoke); `test_farms.py` 23 test (13 admin migration + 10 RBAC behaviour); `test_sensors.py` 18 test `admin_with_field`; `test_auth.py` X-API-Key → JWT yeniden yazıldı (6 test); 6 dolaylı test hardcoded `farm_id/field_id` düzeltmesi.
+
+**Audit fix:** `PATCH /api/alerts/{id}` `is_resolved=None` payload eski kod'da DB'ye NULL yazıp `SystemAlertResponse.is_resolved` (bool) Pydantic validation 500 fırlatıyordu (Schemathesis fuzz yakalamıştı). Fix: `payload.model_dump(exclude_unset=True, exclude_none=True)` — explicit None değerler artık no-op.
+
+**Doğrulama:**
+
+| Kontrol | Sonuç |
+|:--|:-:|
+| pytest | 499 / 499 ✅ |
+| ruff (`check` + `format --check`) | clean ✅ |
+| bandit (`-r app/`) | 0 issue ✅ |
+| Per-rol uvicorn smoke (Adım 17, port 8765) | 23 / 23 effective ✅ |
+| Migration smoke (invalid role insert reject) | CHECK fail-fast ✅ |
+
+> Adım 17 smoke matriks farmer × 23 + developer × 23 + overseer × 23 + admin × 23 + anon × 23 senaryosu koştu; 2 sahte negatif FastAPI body-validation'ın RBAC Depends'ten önce çalışıp 422 döndürmesinden kaynaklıydı (davranış doğru).
+
+**Sıradaki (Faz 2, 19-20 May):** "Çiftliğim" dashboard — farmer için `/api/dashboard/farmer` (4 metric: bugünün toprak nemi ortalaması, son sulama, açık alert, son hastalık tanısı), `/api/auth/me` UI binding, hesabım sayfası (şifre değişikliği + farm sayımı).
 
 ### Demo hedefi (Cycle 9 sunumu için)
 
