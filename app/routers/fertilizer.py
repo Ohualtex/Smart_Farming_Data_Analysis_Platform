@@ -1,11 +1,14 @@
 """
-Fertilizer API Endpoints
-==========================
-Crop-specific fertilizer recommendation and scheduling.
-
----
-
+Fertilizer API Endpoints — REBUILD Faz 1 RBAC (stateless public)
+==================================================================
 Bitki türüne göre gübreleme önerisi + takvim oluşturma uçları.
+
+RBAC kapsamı: **public** — stateless calculator endpoint'leri, DB'ye
+yazmaz (irrigation `/predict` gibi). Demo akışında her kullanıcı
+(anonim dahil) gübre önerisi alabilir.
+
+Faz 4'te (`FertilizerRecommendationLog` ile öneri persist edildiğinde)
+field ownership eklenecek; o ana kadar auth bağımsız.
 """
 
 from fastapi import APIRouter, HTTPException

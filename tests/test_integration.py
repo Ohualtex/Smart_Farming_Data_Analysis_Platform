@@ -70,11 +70,11 @@ class TestWeatherFlow:
         assert len(weather.json()) >= 3
 
     def test_latest_weather(self, client):
-        # Veri ekle
-        client.post("/api/weather/", json={"farm_id": 99, "temperature_c": 25.0, "humidity_percent": 60.0})
+        # RBAC sonrası: farm_id sahip olunan farm olmalı; conftest default farm id=1
+        client.post("/api/weather/", json={"farm_id": 1, "temperature_c": 25.0, "humidity_percent": 60.0})
 
         # En son kaydı al
-        latest = client.get("/api/weather/latest/99")
+        latest = client.get("/api/weather/latest/1")
         assert latest.status_code == 200
         assert latest.json()["temperature_c"] == 25.0
 
