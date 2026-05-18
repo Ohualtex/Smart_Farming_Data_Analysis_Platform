@@ -259,43 +259,41 @@ def seed_database():
 
         # ─── 7. SULAMA PROGRAMLARI (~320) ─────────────────────────────
         logger.info("  💧 Sulama programları oluşturuluyor...")
-        irrigations = []
         statuses = ["completed", "completed", "completed", "pending", "cancelled"]
-        for field in all_fields:
-            for _ in range(2):
-                irrigations.append(
-                    IrrigationSchedule(
-                        field_id=field.id,
-                        scheduled_date=now - timedelta(days=int(rng.integers(1, 25))),
-                        duration_min=int(rng.integers(30, 120)),
-                        water_amount_liters=round(float(rng.uniform(500, 5000)), 0),
-                        source=rng.choice(["model", "manual"]),
-                        status=rng.choice(statuses),
-                    )
-                )
+        irrigations = [
+            IrrigationSchedule(
+                field_id=field.id,
+                scheduled_date=now - timedelta(days=int(rng.integers(1, 25))),
+                duration_min=int(rng.integers(30, 120)),
+                water_amount_liters=round(float(rng.uniform(500, 5000)), 0),
+                source=rng.choice(["model", "manual"]),
+                status=rng.choice(statuses),
+            )
+            for field in all_fields
+            for _ in range(2)
+        ]
         db.add_all(irrigations)
         db.flush()
         logger.info(f"    → {len(irrigations)} sulama programı oluşturuldu")
 
         # ─── 8. TOPRAK ANALİZLERİ (162) ──────────────────────────────
         logger.info("  🧪 Toprak analizleri oluşturuluyor...")
-        soil_analyses = []
-        for field in all_fields:
-            soil_analyses.append(
-                SoilAnalysis(
-                    field_id=field.id,
-                    analysis_date=now - timedelta(days=int(rng.integers(10, 90))),
-                    ph_level=round(float(rng.uniform(5.0, 8.5)), 1),
-                    organic_matter_pct=round(float(rng.uniform(1.0, 5.0)), 1),
-                    nitrogen_mg_kg=round(float(rng.uniform(5, 80)), 1),
-                    phosphorus_mg_kg=round(float(rng.uniform(3, 50)), 1),
-                    potassium_mg_kg=round(float(rng.uniform(50, 300)), 1),
-                    calcium_mg_kg=round(float(rng.uniform(500, 5000)), 0),
-                    magnesium_mg_kg=round(float(rng.uniform(50, 500)), 0),
-                    texture_class=field.soil_type,
-                    notes=f"{field.name} tarlası için lab analiz sonuçları.",
-                )
+        soil_analyses = [
+            SoilAnalysis(
+                field_id=field.id,
+                analysis_date=now - timedelta(days=int(rng.integers(10, 90))),
+                ph_level=round(float(rng.uniform(5.0, 8.5)), 1),
+                organic_matter_pct=round(float(rng.uniform(1.0, 5.0)), 1),
+                nitrogen_mg_kg=round(float(rng.uniform(5, 80)), 1),
+                phosphorus_mg_kg=round(float(rng.uniform(3, 50)), 1),
+                potassium_mg_kg=round(float(rng.uniform(50, 300)), 1),
+                calcium_mg_kg=round(float(rng.uniform(500, 5000)), 0),
+                magnesium_mg_kg=round(float(rng.uniform(50, 500)), 0),
+                texture_class=field.soil_type,
+                notes=f"{field.name} tarlası için lab analiz sonuçları.",
             )
+            for field in all_fields
+        ]
         db.add_all(soil_analyses)
         db.flush()
         logger.info(f"    → {len(soil_analyses)} toprak analizi oluşturuldu")
@@ -351,8 +349,8 @@ def seed_database():
 
         # ─── 11. SİSTEM UYARILARI & MODEL LOGLAR ─────────────────────
         # Az sayıda gerçekçi uyarı: çoğu çözülmüş, sadece 1-2 aktif kritik
+        # alert_seeds tuple şeması: alert_type, severity, message_template, is_resolved, hours_ago
         logger.info("  🚨 Sistem uyarıları ve model logları oluşturuluyor...")
-        # (alert_type, severity, message_template, is_resolved, hours_ago)
         alert_seeds = [
             ("sensor_anomaly", "medium", "Sensör okumalarında geçici anomali", True, 168),  # 1 hafta önce, çözülmüş
             ("system_error", "low", "Sensör bağlantısı geçici olarak kesildi", True, 240),  # 10 gün önce, çözülmüş
@@ -386,17 +384,16 @@ def seed_database():
             )
         db.add_all(alerts)
 
-        perf_logs = []
-        for _i in range(20):
-            perf_logs.append(
-                ModelPerformanceLog(
-                    model_name=rng.choice(["irrigation_rf", "plant_disease_cnn"]),
-                    prediction_data=f'{{"prediction": {round(float(rng.uniform(0.5, 1.0)), 2)}}}',
-                    actual_data=f'{{"actual": {round(float(rng.uniform(0.5, 1.0)), 2)}}}',
-                    accuracy_score=round(float(rng.uniform(0.75, 1.0)), 3),
-                    logged_at=now - timedelta(days=int(rng.integers(1, 30))),
-                )
+        perf_logs = [
+            ModelPerformanceLog(
+                model_name=rng.choice(["irrigation_rf", "plant_disease_cnn"]),
+                prediction_data=f'{{"prediction": {round(float(rng.uniform(0.5, 1.0)), 2)}}}',
+                actual_data=f'{{"actual": {round(float(rng.uniform(0.5, 1.0)), 2)}}}',
+                accuracy_score=round(float(rng.uniform(0.75, 1.0)), 3),
+                logged_at=now - timedelta(days=int(rng.integers(1, 30))),
             )
+            for _ in range(20)
+        ]
         db.add_all(perf_logs)
         db.flush()
 

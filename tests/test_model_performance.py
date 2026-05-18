@@ -1,7 +1,11 @@
 """
-ModelPerformanceLog endpoint testleri
-=======================================
-Mehmet'in Cycle 6 görevi için skeleton testler.
+ModelPerformanceLog Endpoint Tests
+=====================================
+Covers the model performance CRUD and aggregate endpoints.
+
+---
+
+ModelPerformanceLog CRUD ve agregat uçları için testler.
 """
 
 from __future__ import annotations

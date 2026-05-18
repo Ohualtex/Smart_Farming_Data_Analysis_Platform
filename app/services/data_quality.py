@@ -1,19 +1,20 @@
 """
-Veri Kalitesi & Temizleme Yardımcıları
-========================================
-Sensör okumaları ve hava durumu verisi gibi zaman serisi verilerinde
-aykırı değer tespiti, eksik veri doldurma ve sınır kontrolü için
-yeniden kullanılabilir helper'lar.
+Data Quality & Cleaning Utilities
+===================================
+Reusable helpers for outlier detection, missing-value imputation, and
+range checks on time-series data such as sensor readings and weather
+records.
 
-Emirhan Günay — Cycle 6 Görevi (shiftSession): Veri Temizleme ve
-Dönüştürme İşlemlerini İyileştirme
+Possible extensions:
+- multivariate outlier detection via Z-scores
+- ARIMA / Kalman-based interpolation
+- per-sensor calibration-range validation
+- rolling-window time-series statistics
 
-Skeleton: temel statistik tabanlı outlier ve missing-value işleyiciler.
-Genişletme önerileri:
-- Z-score ile çok değişkenli outlier tespiti
-- ARIMA / Kalman tabanlı interpolasyon
-- Sensör bazlı aralık (kalibrasyon) tabanlı validasyon
-- Time series rolling window stats
+---
+
+Sensör/hava verisi gibi zaman serilerinde outlier tespiti, eksik veri
+doldurma ve sınır kontrolü için tekrar kullanılabilir helper'lar.
 """
 
 from __future__ import annotations

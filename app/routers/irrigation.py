@@ -1,9 +1,11 @@
 """
-Sulama Optimizasyonu API Endpoint'leri
-========================================
-ML tabanlı sulama tahmini (RandomForest) ve sulama programı CRUD.
+Irrigation Optimization API Endpoints
+=======================================
+ML-driven irrigation prediction (RandomForest) plus schedule CRUD.
 
-Miraç Duran — Cycle 4 Görevi
+---
+
+ML tabanlı sulama tahmini (RandomForest) + sulama programı CRUD'u.
 """
 
 from __future__ import annotations
@@ -15,7 +17,7 @@ from loguru import logger
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.ml.irrigation_model import irrigation_optimizer
@@ -27,9 +29,13 @@ from app.schemas.schemas import (
     IrrigationResponse,
 )
 
-# Pagination defaults — frontend slider 50'lik sayfalarla çalışıyor
+# Pagination defaults — frontend pages through 50 records at a time.
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 500
+# Same int64 overflow guard as sensors.py — cap skip at 1M offset.
+# ---
+# sensors.py ile aynı int64 overflow koruması — skip 1M ile sınırlanır.
+MAX_SKIP = 1_000_000
 
 router = APIRouter(prefix="/api/irrigation", tags=["Sulama Optimizasyonu"])
 
@@ -61,9 +67,12 @@ def _log_prediction(db: Session, request: IrrigationPredictionRequest, result: d
     description="Toprak nemi, sıcaklık, yağış gibi girdileri alıp önerilen "
     "su miktarını (litre) ve aciliyet seviyesini döndürür. Tahmin sonucu "
     "`ModelPerformanceLog` tablosuna otomatik kaydedilir (model_name='irrigation_rf').",
+    responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
-def predict_irrigation(request: Request, data: IrrigationPredictionRequest, db: Session = Depends(get_db)):
+def predict_irrigation(
+    request: Request, data: IrrigationPredictionRequest, db: Session = Depends(get_db)
+) -> IrrigationPredictionResponse:
     result = irrigation_optimizer.predict(
         soil_moisture=data.soil_moisture,
         soil_temperature=data.soil_temperature,
@@ -81,11 +90,11 @@ def predict_irrigation(request: Request, data: IrrigationPredictionRequest, db: 
     summary="Sulama takvimini listele (skip + limit pagination)",
 )
 def get_schedules(
-    field_id: int | None = Query(default=None, description="Belirli tarla için filtre"),
-    skip: int = Query(default=0, ge=0, description="Atlanacak kayıt sayısı (pagination offset)"),
+    field_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Belirli tarla için filtre"),
+    skip: int = Query(default=0, ge=0, le=MAX_SKIP, description="Atlanacak kayıt sayısı (pagination offset, max 1M)"),
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Sayfa boyutu (max 500)"),
     db: Session = Depends(get_db),
-):
+) -> list[IrrigationSchedule]:
     query = db.query(IrrigationSchedule)
     if field_id:
         query = query.filter(IrrigationSchedule.field_id == field_id)
@@ -99,7 +108,7 @@ def get_schedules(
     "Opsiyonel `field_id` filtresi ile sayım yapılabilir.",
 )
 def count_schedules(
-    field_id: int | None = Query(default=None, description="Belirli tarla için filtre"),
+    field_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Belirli tarla için filtre"),
     db: Session = Depends(get_db),
 ) -> dict:
     query = db.query(func.count(IrrigationSchedule.id))
@@ -114,9 +123,10 @@ def count_schedules(
     status_code=201,
     dependencies=[Depends(verify_api_key)],
     summary="Yeni sulama programı oluştur",
+    responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
-def create_schedule(request: Request, schedule: IrrigationCreate, db: Session = Depends(get_db)):
+def create_schedule(request: Request, schedule: IrrigationCreate, db: Session = Depends(get_db)) -> IrrigationSchedule:
     db_schedule = IrrigationSchedule(**schedule.model_dump())
     db.add(db_schedule)
     db.commit()

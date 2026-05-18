@@ -1,7 +1,5 @@
 # 🚀 SFDAP Production Deploy — nginx + Let's Encrypt
 
-> Cycle 8 — HTTPS / reverse proxy konfigürasyonu (Miraç Duran)
-
 Bu kılavuz, Docker üzerinde SFDAP'i nginx reverse proxy + Let's Encrypt TLS ile prod-hazır şekilde başlatma adımlarını gösterir.
 
 ## 📋 Önkoşullar
@@ -99,7 +97,7 @@ DATABASE_URL=postgresql+psycopg2://sfdap_user:sfdap_password@db:5432/sfdap_db
 # postgres servisini başlat
 docker compose --profile postgres up -d db
 
-# Migration'ları uygula (Cycle 8 #4 ile gelen 14-tablo initial)
+# Migration'ları uygula (14-tablo initial + sensor reading aggregate)
 docker compose exec api alembic upgrade head
 
 # Seed data (opsiyonel — 81 il + 7500+ kayıt)
@@ -116,6 +114,56 @@ Let's Encrypt cert'leri 90 gün geçerli. Otomatik yenileme için crontab'a ekle
 # Her hafta Pazar 03:00 — sadece <30 gün kaldıysa yeniler
 0 3 * * 0  cd /opt/sfdap && docker compose --profile letsencrypt run --rm certbot renew --quiet && docker compose exec nginx nginx -s reload
 ```
+
+---
+
+## 4.5. 💾 Yedekleme (Cron + Manuel)
+
+Veritabanı yedekleri için `scripts/backup.sh` SQLite ve PostgreSQL'i otomatik tanır.
+
+### Manuel yedek
+
+```bash
+make backup
+# veya doğrudan
+DATABASE_URL=$DATABASE_URL ./scripts/backup.sh
+```
+
+Yedekler `./backups/sfdap_YYYYMMDD_HHMMSS.{db,dump}` formatında üretilir; **7 günden eski yedekler otomatik silinir** (rotation).
+
+### Otomatik yedek (cron)
+
+```cron
+# Her gece 02:30 — günlük yedek + 7 günlük rotation
+30 2 * * * cd /opt/sfdap && DATABASE_URL=$DATABASE_URL ./scripts/backup.sh >> /var/log/sfdap_backup.log 2>&1
+```
+
+Docker compose ile:
+
+```cron
+30 2 * * * cd /opt/sfdap && docker compose exec -T api ./scripts/backup.sh >> /var/log/sfdap_backup.log 2>&1
+```
+
+### Restore
+
+```bash
+# Yedekleri listele
+ls -lh ./backups/
+
+# Geri yükle (interaktif onay ister)
+make restore BACKUP=./backups/sfdap_20260520_023000.db
+# veya
+./scripts/restore.sh ./backups/sfdap_20260520_023000.dump
+```
+
+Restore öncesi mevcut DB için **güvenlik yedeği** otomatik alınır (`*.before-restore-*`).
+
+### Ayar değişkenleri
+
+| Env | Default | Açıklama |
+|:--|:--:|:--|
+| `BACKUP_DIR` | `./backups` | Yedek dizini |
+| `RETENTION_DAYS` | `7` | Rotation eşiği (gün) |
 
 ---
 
@@ -163,8 +211,4 @@ ve `volumes:` bölümünde `plant_uploads:` tanımlayın.
 - [`docker-compose.yml`](../../docker-compose.yml) — servis tanımları (api, nginx, certbot, db)
 - [`nginx/conf.d/default.conf.template`](../../nginx/conf.d/default.conf.template) — nginx reverse proxy şablonu
 - [`.env.example`](../../.env.example) — environment variable referansı
-- [`alembic/versions/`](../../alembic/versions/) — DB migration'ları (Cycle 8 #4)
-
----
-
-**Cycle 8 — Üretim Hazırlığı, Güvenlik ve Cila tamamlandı.**
+- [`alembic/versions/`](../../alembic/versions/) — DB migration'ları

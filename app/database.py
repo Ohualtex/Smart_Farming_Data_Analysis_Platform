@@ -1,28 +1,66 @@
 """
-SFDAP Veritabanı Bağlantı Yönetimi
-====================================
-SQLAlchemy engine, sessionmaker ve dependency-injection için `get_db()` helper.
+SFDAP Database Connection Management
+======================================
+SQLAlchemy engine, sessionmaker, and `get_db()` dependency-injection helper.
 
-- Engine `settings.DATABASE_URL` üzerinden yapılandırılır:
+- Engine is configured from `settings.DATABASE_URL`:
   dev → SQLite (`sfdap_dev.db`), prod → PostgreSQL.
-- `naming_convention` ile constraint adlandırma standartlaştırılır
-  (Alembic auto-generate'in tutarlı isim üretmesi için).
-- `init_db()` sadece testlerde / ilk başlangıçta `create_all` ile tabloları
-  yaratır; üretimde Alembic migration kullanılmalıdır.
+- **Connection pool tuning**: for PostgreSQL/MySQL, `pool_size`,
+  `max_overflow`, `pool_pre_ping`, `pool_recycle` are read from env.
+  SQLite is single-connection so these settings are ignored.
+- `naming_convention` standardizes constraint names (so Alembic
+  autogenerate emits consistent identifiers).
+- `init_db()` is only for tests / first boot via `create_all`; production
+  must use Alembic migrations.
 
-Emirhan Günay — Cycle 3/4 Görevi
+---
+
+SQLAlchemy engine, sessionmaker ve `get_db()` dependency helper.
+Dev'de SQLite, production'da PostgreSQL/MySQL kullanılır; pool ayarları
+sadece server DB'lerde aktif, SQLite'ta no-op. Constraint naming
+standartlaştırılır, init_db sadece test/ilk boot içindir.
 """
 
+from collections.abc import Iterator
+
 from sqlalchemy import MetaData, create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.config import settings
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {},
-    echo=settings.API_DEBUG,
-)
+# SQLite INTEGER is 64-bit signed; unbounded int path/query params can
+# overflow the binding and surface as a 500. Cap at 2**63 - 1.
+# ---
+# SQLite INTEGER 64-bit signed; sınırsız int path/query parametreleri
+# binding'de overflow olur ve 500 döner. Routerlar bu sabitle sınırlamalı.
+MAX_SQLITE_INT = 9_223_372_036_854_775_807  # 2**63 - 1
+
+
+def _build_engine_kwargs() -> dict:
+    """`DATABASE_URL`'e bakarak uygun engine argümanlarını üretir.
+
+    SQLite: `check_same_thread=False` (FastAPI multi-thread için)
+    PostgreSQL/MySQL: pool_size, max_overflow, pool_pre_ping, pool_recycle
+
+    EN: Returns the right kwargs for the active DB dialect; SQLite gets
+    multi-thread arg, server DBs get pool tuning.
+    """
+    is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+    kwargs: dict = {"echo": settings.API_DEBUG}
+
+    if is_sqlite:
+        kwargs["connect_args"] = {"check_same_thread": False}
+    else:
+        # Prod-grade pool ayarları (env-driven, settings tarafında default
+        # değerleri var; .env üzerinden override edilebilir).
+        kwargs["pool_size"] = settings.DB_POOL_SIZE
+        kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
+        kwargs["pool_pre_ping"] = settings.DB_POOL_PRE_PING
+        kwargs["pool_recycle"] = settings.DB_POOL_RECYCLE
+    return kwargs
+
+
+engine = create_engine(settings.DATABASE_URL, **_build_engine_kwargs())
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -38,7 +76,7 @@ metadata = MetaData(naming_convention=naming_convention)
 Base = declarative_base(metadata=metadata)
 
 
-def get_db():
+def get_db() -> Iterator[Session]:
     db = SessionLocal()
     try:
         yield db
@@ -46,5 +84,5 @@ def get_db():
         db.close()
 
 
-def init_db():
+def init_db() -> None:
     Base.metadata.create_all(bind=engine)

@@ -1,23 +1,22 @@
 """
-Sistem Uyarı (System Alert) API Endpoint'leri
-==============================================
-Veri hattı izleme ve sistem uyarılarının CRUD işlemleri.
-Sensör anomalisi, hava durumu uyarıları, sistem hataları gibi
-otomatik veya manuel oluşturulan alert'lerin listelenmesi,
-oluşturulması ve resolve edilmesi.
+System Alert API Endpoints
+============================
+CRUD for data-pipeline monitoring and system alerts (sensor anomalies,
+weather warnings, system errors). Supports listing, creation, and
+resolution flows — both automated and manual sources land here.
 
-Ecenur Üner — Cycle 6 Görevi (shiftSession): Veri Hattı İzleme ve Uyarı Sistemi
+---
 
-Bu modül router skeleton + 4 temel endpoint sağlar; Ecenur tarafından
-genişletilebilir (filtreleme, severity bazlı query, batch resolve, vb.).
+Sistem uyarıları için CRUD endpoint'leri: sensör anomalisi, hava
+uyarısı, sistem hatası vb. listele/oluştur/çöz akışları.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import SystemAlert
@@ -38,7 +37,7 @@ def list_alerts(
     is_resolved: bool | None = Query(default=None, description="Filtre: çözüldü mü?"),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
-):
+) -> list[SystemAlert]:
     query = db.query(SystemAlert)
     if severity is not None:
         query = query.filter(SystemAlert.severity == severity)
@@ -51,8 +50,12 @@ def list_alerts(
     "/{alert_id}",
     response_model=SystemAlertResponse,
     summary="Tek bir uyarı getir",
+    responses={404: {"description": "Alert bulunamadı"}},
 )
-def get_alert(alert_id: int, db: Session = Depends(get_db)):
+def get_alert(
+    alert_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Alert ID (max int64)"),
+    db: Session = Depends(get_db),
+) -> SystemAlert:
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if alert is None:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} bulunamadi")
@@ -65,9 +68,10 @@ def get_alert(alert_id: int, db: Session = Depends(get_db)):
     status_code=201,
     dependencies=[Depends(verify_api_key)],
     summary="Yeni uyarı oluştur",
+    responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
-def create_alert(request: Request, payload: SystemAlertCreate, db: Session = Depends(get_db)):
+def create_alert(request: Request, payload: SystemAlertCreate, db: Session = Depends(get_db)) -> SystemAlert:
     alert = SystemAlert(**payload.model_dump())
     db.add(alert)
     db.commit()
@@ -80,9 +84,18 @@ def create_alert(request: Request, payload: SystemAlertCreate, db: Session = Dep
     response_model=SystemAlertResponse,
     dependencies=[Depends(verify_api_key)],
     summary="Uyarıyı güncelle (resolve / severity / mesaj)",
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        404: {"description": "Alert bulunamadı"},
+    },
 )
 @limiter.limit(STRICT_RATE)
-def update_alert(request: Request, alert_id: int, payload: SystemAlertUpdate, db: Session = Depends(get_db)):
+def update_alert(
+    request: Request,
+    payload: SystemAlertUpdate,
+    alert_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Alert ID (max int64)"),
+    db: Session = Depends(get_db),
+) -> SystemAlert:
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if alert is None:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} bulunamadi")

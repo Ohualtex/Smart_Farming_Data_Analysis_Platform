@@ -1,21 +1,26 @@
 """
-SFDAP API — FastAPI Giriş Noktası
-====================================
-Uygulamanın ana giriş noktası: FastAPI app objesini oluşturur, middleware'leri
-(rate limit, CORS, request logger, exception handler) bağlar ve tüm router'ları
-register eder. Lifespan'de scheduler başlatılıp kapatılır.
+SFDAP API — FastAPI Entry Point
+==================================
+Builds the FastAPI app, wires middleware (rate limit, CORS, request
+logger, exception handler, Prometheus, request_id), registers all
+routers, and runs scheduler start/stop inside the lifespan.
 
-Tüm konfigürasyon `app.config.settings` (pydantic-settings) üzerinden gelir.
-Static dashboard SPA `frontend/index.html` dosyası `/dashboard` altında
-mount edilir.
+Configuration is driven by `app.config.settings` (pydantic-settings).
+The static dashboard SPA at `frontend/index.html` is mounted under
+`/dashboard`.
 
-Miraç Duran — Cycle 4/5/6 Görevi
+---
+
+FastAPI ana giriş noktası. Middleware zincirini bağlar, router'ları
+register eder, lifespan içinde scheduler'ı başlatıp kapatır. Tüm
+konfigürasyon settings üzerinden, dashboard SPA `/dashboard` altında.
 """
 
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
@@ -23,14 +28,18 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.core.logger import setup_logging
+from app.core.sentry import init_sentry
 from app.database import init_db
 from app.middleware.exceptions import register_exception_handlers
+from app.middleware.prometheus import PrometheusMiddleware, metrics_response
 from app.middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 from app.middleware.request_logger import RequestLoggerMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.routers import (
     alerts,
     analytics,
     auth,
+    farms,
     fertilizer,
     health,
     irrigation,
@@ -46,9 +55,11 @@ from app.tasks.scheduler import shutdown_scheduler, start_scheduler
 
 # Lifespan event handler (on_event yerine modern yaklaşım)
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Startup
     setup_logging()
+    # Sentry — active when SENTRY_DSN env is set, otherwise no-op.
+    init_sentry()
     init_db()
     start_scheduler()
     if settings.MQTT_ENABLED:
@@ -87,8 +98,7 @@ TAGS_METADATA = [
     },
     {
         "name": "Bitki Sağlığı",
-        "description": "🦠 Bitki yaprak görüntülerinin yüklenmesi. *Cycle 7'de CNN tabanlı hastalık "
-        "tespiti devreye girecek.*",
+        "description": "🦠 Bitki yaprak görüntülerinin yüklenmesi ve CNN tabanlı hastalık tespiti.",
     },
     {
         "name": "Analitik & Görselleştirme",
@@ -171,6 +181,14 @@ Türkiye'nin tüm illerinde geçerli verilerle çalışır.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
+# Prometheus instrumentation — request counter + duration histogram.
+# Added before RequestLoggerMiddleware so every response (including
+# failures) is counted.
+# ---
+# Prometheus instrumentation; request logger'dan önce eklenir ki hata
+# dahil tüm response'lar metrik'e yansısın.
+app.add_middleware(PrometheusMiddleware)
+
 # Request Logger
 app.add_middleware(RequestLoggerMiddleware)
 
@@ -183,6 +201,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Defense-in-depth response header'ları (CSP, HSTS, XFO, XCTO, Referrer-Policy,
+# Permissions-Policy). En son eklendi → tüm middleware/router yanıtlarına
+# yansır. CORS'tan sonra eklenmeli ki preflight OPTIONS'lara da yansısın.
+app.add_middleware(SecurityHeadersMiddleware)
+
 # ─── GLOBAL EXCEPTION HANDLER ───────────────────────────────────
 
 register_exception_handlers(app)
@@ -190,6 +213,7 @@ register_exception_handlers(app)
 # ─── ROUTER'LARI KAYDET ─────────────────────────────────────────
 
 app.include_router(health.router)
+app.include_router(farms.router)
 app.include_router(sensors.router)
 app.include_router(weather.router)
 app.include_router(irrigation.router)
@@ -197,21 +221,29 @@ app.include_router(plants.router)
 app.include_router(fertilizer.router)
 app.include_router(analytics.router)
 
-# Cycle 6 / shiftSession ekipleri tarafindan genisletilecek skeleton router'lar
-app.include_router(alerts.router)  # Ecenur — Sistem Uyarilari (SystemAlert CRUD)
-app.include_router(metrics.router)  # Mehmet — /api/health/deep
-app.include_router(model_performance.router)  # Mehmet — Model Performans Raporlama
-app.include_router(auth.router)  # Cycle 7/8 — JWT auth skeleton (Cycle 8'de bcrypt/JWT'ye yukseltilecek)
+app.include_router(alerts.router)
+app.include_router(metrics.router)
+app.include_router(model_performance.router)
+app.include_router(auth.router)
 
 
 @app.get("/", tags=["Root"])
-def root():
+def root() -> dict:
     return {
         "message": "SFDAP - Akilli Tarim Veri Analizi Platformu API",
         "docs": "/docs",
         "dashboard": "/dashboard",
         "version": settings.API_VERSION,
     }
+
+
+# Prometheus metrics endpoint — text/plain exposition format.
+# Path Prometheus konvansiyonuna uygun olarak prefix'siz `/metrics`.
+# Scrape config örneği: scrape_interval 30s, target 'sfdap_api:8000'.
+# EN: Prometheus scrape endpoint; standard `/metrics` path (no prefix).
+@app.get("/metrics", include_in_schema=False)
+def prometheus_metrics() -> Response:
+    return metrics_response()
 
 
 _dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")

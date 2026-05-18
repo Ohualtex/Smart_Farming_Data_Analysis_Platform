@@ -1,13 +1,19 @@
 """
-Sulama Optimizasyon Modeli (RandomForest)
-===========================================
-Toprak nemi, sıcaklık, hava nemi, dış sıcaklık ve son yağış miktarını alıp
-gereken sulama miktarını (litre) tahmin eden ML servis sınıfı.
+Irrigation Optimization Model (RandomForest)
+==============================================
+ML service class that predicts required irrigation volume (litres) from
+soil moisture, soil temperature, ambient humidity, ambient temperature,
+and recent precipitation.
 
-İlk başlatmada `app/ml/models/` altında pickle dosyası varsa yüklenir;
-yoksa synthetic data ile yeniden eğitilip kaydedilir (deterministic seed=42).
+On first start: if a pickle exists under `app/ml/models/` it is loaded;
+otherwise the model is re-trained on synthetic data with a deterministic
+seed (42) and persisted.
 
-Miraç Duran — Cycle 4 Görevi
+---
+
+Toprak nemi, sıcaklık, hava nemi, dış sıcaklık ve yağışı alıp gereken
+sulama miktarını (litre) tahmin eder. Pickle yoksa deterministic seed
+ile yeniden eğitilir.
 """
 
 import os
@@ -40,13 +46,13 @@ class IrrigationOptimizer:
     RF_N_ESTIMATORS: int = 100
     RF_MAX_DEPTH: int = 10
 
-    def __init__(self, model_path="app/ml/models/"):
+    def __init__(self, model_path: str = "app/ml/models/") -> None:
         self.model_path = model_path
         self.model = None
         self.scaler = StandardScaler()
         self._initialize_model()
 
-    def _initialize_model(self):
+    def _initialize_model(self) -> None:
         model_file = os.path.join(self.model_path, "irrigation_model.pkl")
         if os.path.exists(model_file):
             self.model = joblib.load(model_file)
@@ -54,7 +60,7 @@ class IrrigationOptimizer:
         else:
             self._train_with_synthetic_data()
 
-    def _train_with_synthetic_data(self):
+    def _train_with_synthetic_data(self) -> None:
         np.random.seed(self.RANDOM_SEED)
         n_samples = self.N_TRAINING_SAMPLES
 
@@ -89,7 +95,15 @@ class IrrigationOptimizer:
         joblib.dump(self.model, os.path.join(self.model_path, "irrigation_model.pkl"))
         joblib.dump(self.scaler, os.path.join(self.model_path, "scaler.pkl"))
 
-    def predict(self, soil_moisture, soil_temperature, humidity, temperature, precipitation):
+    def predict(
+        self,
+        soil_moisture: float,
+        soil_temperature: float,
+        humidity: float,
+        temperature: float,
+        precipitation: float,
+    ) -> dict:
+        """Predict required irrigation volume + urgency from current readings."""
         features = np.array([[soil_moisture, soil_temperature, humidity, temperature, precipitation]])
         features_scaled = self.scaler.transform(features)
         predicted_water = float(self.model.predict(features_scaled)[0])

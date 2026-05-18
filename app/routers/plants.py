@@ -1,16 +1,19 @@
 """
-Bitki Sağlığı API Endpoint'leri
-=================================
-Yaprak görüntülerinin yüklenmesi, listelenmesi ve CNN tabanlı hastalık
-teşhisi. Mevcut model şu an stub (deterministic), Cycle 7'de Ayşe Eslem
-Çekici tarafından gerçek ONNX CNN ile değiştirilecek.
+Plant Health API Endpoints
+============================
+Leaf-image upload, listing, and CNN-based disease diagnosis. The model
+runs in heuristic mode by default and switches to ONNX CNN inference
+when a model artifact is present.
 
-Endpoint'ler:
-- GET  /health-images           : Listele (field_id filtre, limit)
-- POST /health-images           : URL ile kayıt (auth)
-- POST /health-images/analyze   : Multipart upload + anında CNN teşhisi (auth)
+Endpoints:
+- GET  /health-images           : list (field_id filter, limit)
+- POST /health-images           : URL-based record (auth)
+- POST /health-images/analyze   : multipart upload + live CNN diagnosis (auth)
 
-Mehmet Sait Tayşi — Cycle 4 (skeleton) / Ayşe Eslem Çekici — Cycle 7 (CNN)
+---
+
+Yaprak görseli yükle/listele + CNN tabanlı hastalık tespiti uçları.
+Default heuristic mod, ONNX model dosyası varsa otomatik geçer.
 """
 
 from __future__ import annotations
@@ -18,10 +21,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.ml.plant_disease_model import plant_disease_model
@@ -44,7 +47,11 @@ MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
     summary="Bitki sağlığı görsellerini listele",
     description="Belirli bir tarla (`field_id`) için kayıtlı görüntüleri en yeniden eskiye sıralar.",
 )
-def get_health_images(field_id: int | None = None, limit: int = 20, db: Session = Depends(get_db)):
+def get_health_images(
+    field_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Belirli tarla filtresi"),
+    limit: int = Query(default=20, ge=1, le=500),
+    db: Session = Depends(get_db),
+) -> list[dict]:
     query = db.query(PlantHealthImage)
     if field_id:
         query = query.filter(PlantHealthImage.field_id == field_id)
@@ -72,7 +79,12 @@ def get_health_images(field_id: int | None = None, limit: int = 20, db: Session 
     "Multipart upload için `/health-images/analyze` kullanın.",
 )
 @limiter.limit(STRICT_RATE)
-def upload_health_image(request: Request, field_id: int, image_url: str, db: Session = Depends(get_db)):
+def upload_health_image(
+    request: Request,
+    field_id: int = Query(..., ge=1, le=MAX_SQLITE_INT, description="Tarla ID"),
+    image_url: str = Query(..., description="CDN/external görsel URL'i"),
+    db: Session = Depends(get_db),
+) -> dict:
     image = PlantHealthImage(field_id=field_id, image_url=image_url)
     db.add(image)
     db.commit()
@@ -91,10 +103,10 @@ def upload_health_image(request: Request, field_id: int, image_url: str, db: Ses
 @limiter.limit(AUTH_RATE)
 async def analyze_plant_image(
     request: Request,
-    field_id: int = Form(..., description="Tarla ID"),
+    field_id: int = Form(..., ge=1, le=MAX_SQLITE_INT, description="Tarla ID"),
     image: UploadFile = File(..., description="Yaprak görseli (JPG/PNG/WebP, max 5 MB)"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     # ─── Validasyon ──────────────────────────────────────────────
     ext = Path(image.filename or "").suffix.lower()
     if ext not in ALLOWED_EXT:

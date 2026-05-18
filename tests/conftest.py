@@ -61,6 +61,13 @@ def client(db):
     previous = limiter.enabled
     limiter.enabled = False
 
+    # JWT logout blacklist — modül-seviyesi `_BLACKLISTED_JTIS` global set;
+    # test izolasyonu için her test öncesi temizleriz (auth_backend logout
+    # testlerinden kalan jti'ler edge-case testlerine sızmasın).
+    from app.routers import auth as _auth_module
+
+    _auth_module._BLACKLISTED_JTIS.clear()
+
     with TestClient(app) as c:
         # Korumalı endpoint'ler için varsayılan API key ekle
         c.headers["X-API-Key"] = "dev-api-key"

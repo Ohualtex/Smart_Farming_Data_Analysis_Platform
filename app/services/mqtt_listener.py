@@ -18,8 +18,6 @@ Konfigurasyon (env / settings):
 - MQTT_BROKER_HOST    — default "localhost"
 - MQTT_BROKER_PORT    — default 1883
 - MQTT_CLIENT_ID      — default "sfdap-listener"
-
-Emirhan Günay — Cycle 7
 """
 
 from __future__ import annotations

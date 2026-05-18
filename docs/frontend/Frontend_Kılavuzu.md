@@ -1,12 +1,13 @@
 # 🖥️ Frontend (Kullanıcı Arayüzü) Kılavuzu
 
-Bu doküman, Ecenur Üner tarafından geliştirilen ve kullanıcıların sistemle etkileşim kurduğu "Veri Görselleştirme Panosu" (Dashboard) hakkında teknik bilgiler içerir.
+Bu doküman, kullanıcıların sistemle etkileşim kurduğu "Veri Görselleştirme Panosu" (Dashboard) hakkında teknik bilgi sağlar.
 
 ## 📁 Dizin Yapısı
 Frontend kodları projenin kök dizinindeki `frontend/` klasörü altında bulunur ve şu an **tek dosyalı SPA** mimarisindedir:
-- `index.html` (≈2 873 satır): Tüm uygulama — HTML iskelet, CSS (inline `<style>`, dark/light tema, glassmorphism), JavaScript (vanilla, asenkron `fetch`, Chart.js render, Filiz mascot logic).
+- `index.html` (~3 100 satır): Tüm uygulama — HTML iskelet, CSS (inline `<style>`, dark/light tema, glassmorphism), JavaScript (vanilla, asenkron `fetch`, Chart.js render, Filiz mascot logic, a11y/skeleton helpers).
+- `package.json` + `vite.config.js`: Vite build scaffold (ES module split ileride yapılacak).
 
-> **shiftFinal planı:** Bu tek dosya Vite/esbuild ile `css/`, `js/` çıktılarına ayrılacak (HMR + minify + cache busting). Bkz. `projeakisi.md` → shiftFinal → Ecenur "Frontend Build Pipeline".
+> Vite scaffold hazır; `index.html` ileride `src/styles/*.css` + `src/main.js`'e bölünüp HMR + minify + cache busting akışına geçirilecek.
 
 ## 🚀 Çalıştırma ve Test
 Frontend dosyaları doğrudan tarayıcıda açılabilir veya FastAPI üzerinden sunulur:

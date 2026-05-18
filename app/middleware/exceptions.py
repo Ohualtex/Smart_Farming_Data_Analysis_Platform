@@ -1,17 +1,19 @@
 """
-Custom Exception Sınıfları ve Global Exception Handler
-=======================================================
-Tutarlı hata response formatı sağlar.
-Tüm API hataları standart bir yapıda döndürülür:
+Custom Exceptions and Global Exception Handler
+================================================
+Returns a uniform error envelope for every API failure:
     {"error_code": "...", "message": "...", "detail": "..."}
 
-Mehmet Sait Tayşi — Cycle 5 Görevi
+---
+
+Tüm API hataları için tutarlı response formatı sağlar.
 """
 
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 
 # ─── CUSTOM EXCEPTION SINIFLARI ─────────────────────────────────
 
@@ -115,6 +117,27 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "error_code": error_code,
                 "message": exc.message,
                 "detail": exc.detail,
+            },
+        )
+
+    @app.exception_handler(IntegrityError)
+    async def integrity_exception_handler(request: Request, exc: IntegrityError):
+        """Map any SQLAlchemy IntegrityError (UNIQUE / FK violation) to 409.
+
+        Without this the constraint violation surfaces as a 500 — the
+        handler turns it into a documented client error.
+
+        ---
+
+        UNIQUE/FK ihlallerini 409 Conflict olarak normalize eder; aksi
+        halde 500 olarak yansır ve client hatası gibi davranmaz.
+        """
+        return JSONResponse(
+            status_code=409,
+            content={
+                "error_code": "CONFLICT",
+                "message": "Veri çakışması: kayıt zaten mevcut veya ilişki kuralı ihlal edildi.",
+                "detail": str(exc.orig) if exc.orig else str(exc),
             },
         )
 

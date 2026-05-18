@@ -1,9 +1,11 @@
 """
-Analytics Endpoint Testleri
-=============================
-/api/analytics/summary endpoint'i için kapsamlı testler.
+Analytics Endpoint Tests
+==========================
+Comprehensive coverage for the `/api/analytics/summary` endpoint.
 
-Miraç Duran — Cycle 6 Görevi
+---
+
+/api/analytics/summary ucu için kapsamlı testler.
 """
 
 from datetime import UTC, datetime, timedelta

@@ -27,6 +27,8 @@ _DEV_SECRET_KEY = "dev-secret-key"  # noqa: S105 — sentinel, gerçek secret de
 
 
 class Settings(BaseSettings):
+    """Pydantic-settings driven application configuration (12-factor)."""
+
     model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # ─── Ortam ─────────────────────────────────────────────────
@@ -34,6 +36,14 @@ class Settings(BaseSettings):
 
     # ─── Veritabanı ────────────────────────────────────────────
     DATABASE_URL: str = "sqlite:///./sfdap_dev.db"
+
+    # Connection pool tuning (sadece PostgreSQL/MySQL'de aktif; SQLite
+    # tek-connection olduğu için bu ayarlar yok sayılır).
+    # EN: Pool tuning applies only when DATABASE_URL is non-SQLite.
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_PRE_PING: bool = True  # ölü connection'ları kullanmadan önce ping
+    DB_POOL_RECYCLE: int = 3600  # 1 saatte connection recycle (MySQL/PG drop koruması)
 
     # ─── HTTP sunucu ───────────────────────────────────────────
     # Default: localhost. Container/prod için env üzerinden 0.0.0.0 verilebilir.
@@ -48,10 +58,23 @@ class Settings(BaseSettings):
     API_KEY: str = _DEV_API_KEY
     SECRET_KEY: str = _DEV_SECRET_KEY
 
-    # JWT (Cycle 8) — kullanıcı bazlı bearer token üretimi
     # JWT user-based bearer token settings.
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_HOURS: int = 24
+
+    # ─── Observability ─────────────────────────────────────────
+    # Sentry: hata raporlama. Boş string ise devre dışı (dev/test default).
+    # Production'da gerçek DSN ile aktif edilir.
+    # EN: Sentry DSN; empty value disables Sentry entirely (dev/test default).
+    SENTRY_DSN: str = ""
+    # Sentry environment etiketi (boş ise ENVIRONMENT ile eşitlenir)
+    SENTRY_ENVIRONMENT: str = ""
+    # Performance transactions sample oranı (0.0 = kapalı, 1.0 = hepsi)
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+
+    # Log formatı: "text" (renkli console default) | "json" (structured,
+    # production observability stack için).
+    LOG_FORMAT: str = "text"
 
     # ─── Dış servisler ─────────────────────────────────────────
     OPENWEATHERMAP_API_KEY: str | None = None
@@ -59,7 +82,7 @@ class Settings(BaseSettings):
     # ─── ML & dosya yolları ────────────────────────────────────
     MODEL_PATH: str = "app/ml/models/"
 
-    # ─── MQTT (Cycle 7 — IoT stream) ──────────────────────────
+    # ─── MQTT (IoT sensor stream) ─────────────────────────────
     # MQTT_ENABLED=false iken listener no-op kalır (test ve dev için).
     MQTT_ENABLED: bool = False
     MQTT_BROKER_HOST: str = "localhost"
@@ -72,7 +95,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate_production(self) -> Settings:
-        """Prod'da default secret kullanımını yasakla (fail-fast)."""
+        """Prod'da güvenlik açıklarını yasakla (fail-fast).
+
+        Kontrol edilenler:
+            * Default API_KEY / SECRET_KEY (dev sentinel'leri)
+            * CORS_ORIGINS içinde wildcard `*` veya `localhost`/`127.0.0.1`
+            * API_HOST=127.0.0.1 (container içinde 0.0.0.0 olmalı — warning)
+        """
         if self.ENVIRONMENT == "production":
             insecure = []
             if self.API_KEY == _DEV_API_KEY:
@@ -83,6 +112,15 @@ class Settings(BaseSettings):
                 raise RuntimeError(
                     f"ENVIRONMENT=production iken default {', '.join(insecure)} kullanilamaz. "
                     f".env dosyasinda override edin."
+                )
+            # CORS allowlist hijack defense: production'da `*` veya local
+            # origin'ler attack surface açar (CSRF, credential exfil).
+            insecure_origins = [o for o in self.cors_origins_list if o == "*" or "localhost" in o or "127.0.0.1" in o]
+            if insecure_origins:
+                raise RuntimeError(
+                    f"ENVIRONMENT=production iken CORS_ORIGINS guvensiz origin'ler "
+                    f"icermemeli: {insecure_origins}. .env dosyasinda gercek "
+                    f"domain'leri set edin (ornek: https://app.ornek.com)."
                 )
             if self.API_HOST == "127.0.0.1":
                 warnings.warn(

@@ -270,85 +270,176 @@ Projenin gerçek kullanıma çıkabilmesi için kritik altyapı eksikliklerini k
 
 ## 🟦 shiftFinal — Cila ve Gözlemlenebilirlik *(bridge sprint)*
 
-📅 **13 – 19 Mayıs 2026**
+📅 **13 – 17 Mayıs 2026** *(✅ kapandı — 17 May)*
 
 > `shiftSession` (Cycle 6) deseninin son hâli — numaralı cycle değil,
 > **adlı bir bridge sprint**. Cycle 8 (üretim çekirdeği) bittikten sonra
-> 7 günlük cila döngüsü: cross-team polish, gözlemlenebilirlik ve UX
-> cilasını kapsar. Final rapor (Cycle 9) öncesi son kullanıcıya/
-> operatöre dönük cila pasajı.
+> 5 günlük cila döngüsü: cross-team polish, gözlemlenebilirlik ve UX
+> cilasını kapsar.
+>
+> **Ara durum (11 Mayıs):** Temel paketler A2 (Mehmet — `e6259ae`), A3 (Ecenur — `02d1359`),
+> A4 (Emirhan — `2a889f8`), Ayşe paketi (`7e49bef` — Schemathesis fuzz + axe-core CI +
+> 6 gerçek int64 overflow bug fix) ve Miraç polish paketi (`cfe752b` + `d011017` — _clean_tr
+> modernize + magic numbers + Pillow 14 prep + bandit/pip-audit CI) tamamlandı.
+> Suite **246 → 425 test** (+%73), 3 CI workflow (ci.yml + security.yml + a11y.yml),
+> 25 fuzz testi, 28 a11y testi.
+> **Kapanış (17 Mayıs):** Miraç audit + cila batch'i ile suite **425 → 485 test**,
+> 4. CI workflow (frontend-test/Vitest) + 6 security header eklendi. Sprint REBUILD
+> pivot kararıyla planlanandan 2 gün önce kapatıldı.
 
-### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
+### 👤 MİRAÇ DURAN *(Scrum Master / Manager)* — ✅ Paket pre-sprint kapandı (`cfe752b` + `d011017`)
 
-#### 📌 Kod Kalitesi Polish ve Sızıntı Kapatma *(shiftFinal)*
-Cycle 8 audit raporundan kalan teknik borçları kapat:
+#### 📌 Kod Kalitesi Polish ve Sızıntı Kapatma *(shiftFinal — Cycle 8 sonunda erken kapandı)*
+Cycle 8 audit raporundan kalan teknik borçlar; shiftFinal'a taşınmadan önce pre-sprint polish batch'inde tamamlandı:
 
-1) **`_clean_tr` 130 satırlık fonksiyonu refactor** — `app/services/report_service.py`'deki Türkçe karakter dönüşümünü modül-seviyesi sözlüğe çıkar; fonksiyon 20-30 satıra düşsün.
-2) **Magic numbers → modül seviyesi sabitler** — token TTL (24h), default page limits (100), drift threshold (10.0) gibi değerleri isimli sabitlere taşı.
-3) **Pillow 14 hazırlığı** — `app/ml/plant_disease_model.py:172` `getdata()` deprecation'ını numpy alternatifine çevir (`np.asarray(hsv).reshape(-1, 3)`).
-4) **Security scan CI entegrasyonu** — `bandit` (Python source security) + `pip-audit` (dependency CVE) GitHub Actions pipeline'ına ekle; weekly run + PR check.
+1) ✅ **`_clean_tr` refactor** (`cfe752b`) — [`app/services/report_service.py:20-42`](app/services/report_service.py:20): 22-satır for-loop → `str.translate` + modül-seviyesi `_TR_ASCII_MAP` (`str.maketrans`). O(n*m) → tek geçişlik O(n).
+2) ✅ **Magic numbers → isimli sabitler** (`cfe752b`) — `model_performance.py`: `DEFAULT_PAGE_LIMIT` (100), `MAX_PAGE_LIMIT` (500), `DEFAULT_RECENT_WINDOW_DAYS` (7), `DEFAULT_BASELINE_WINDOW_DAYS` (30), `DEFAULT_DRIFT_THRESHOLD_PERCENT` (10.0), `ALERT_DEDUP_WINDOW_HOURS` (24). Ayrıca `sensors.py`/`irrigation.py`: `MAX_SKIP` (1_000_000), `DEFAULT_PAGE_SIZE` (50); `plant_disease_model.py`: `HEALTHY_GREEN_HUE`, `YELLOW_HUE`, `BROWN_HUE`, `WHITE_LIGHTNESS_MIN`.
+3) ✅ **Pillow 14 hazırlığı** (`cfe752b`) — [`app/ml/plant_disease_model.py:176`](app/ml/plant_disease_model.py:176): `hsv.getdata()` (Pillow 14'te kaldırılacak, 2027-10-15) → `np.asarray(hsv, dtype=np.uint8).reshape(-1, 3)`. ~3× daha hızlı; `import numpy as np` modül seviyesine çıkarıldı.
+4) ✅ **Security scan CI** (`d011017`) — [`.github/workflows/security.yml`](.github/workflows/security.yml): `bandit -r app/` (severity/confidence ≥ medium, JSON artifact 30 gün) + `pip-audit --strict` (PyPI advisory DB). Tetikleyiciler: PR(main), push(main/cycle_8/shiftFinal), Pzt 06:00 UTC cron, `workflow_dispatch`.
 
-### 👤 EMİRHAN GÜNAY
+**Sonuç:** Test suite 301 → 313 (+12 config testi), TOTAL coverage 94.42% → 95% (Cycle 8 resmî hedef tutturuldu), Ruff 17 rule group temiz.
+
+### 👤 EMİRHAN GÜNAY — ✅ Tamamlandı (`2a889f8`)
 
 #### 📌 Veri Yedekleme & Veritabanı Optimizasyonu *(Cycle 8'den taşındı)*
-1) **Backup/restore script** — PostgreSQL ve SQLite için `pg_dump`/`sqlite3 .backup` tabanlı `scripts/backup.sh` ve `scripts/restore.sh`; cron ile günlük otomatik yedek + 7 günlük rotation. Makefile target'ları (`make backup`, `make restore`).
-2) **DB connection pool tuning** — `app/database.py` engine konfigürasyonuna `pool_size`, `max_overflow`, `pool_pre_ping` ayarları (env-driven). Prod yükü senaryosu için.
-3) **Sensör okumaları arşivleme** — Cycle 7'de IoT stream eklendiğinde tablo hızla şişer; 30 günden eski okumaları aylık özet tabloya taşıyan periyodik görev (APScheduler ile haftalık).
+1) ✅ **Backup/restore script** — `scripts/backup.sh` (SQLite `.backup` + PostgreSQL `pg_dump --format=custom`) ve `scripts/restore.sh` (auto safety backup `*.before-restore-*`, interaktif `EVET` onay). `BACKUP_DIR`/`RETENTION_DAYS` env + 7 günlük rotation. Makefile target'ları (`make backup`, `make restore BACKUP=path`).
+2) ✅ **DB connection pool tuning** — `app/database.py:_build_engine_kwargs()` helper: SQLite için no-op, PostgreSQL/MySQL için `pool_size` (5) / `max_overflow` (10) / `pool_pre_ping` (True) / `pool_recycle` (3600) — `app/config.py`'de `DB_POOL_*` env'leri ile özelleştirilebilir.
+3) ✅ **Sensör okumaları arşivleme** — Cycle 8'de erken kapandı (`fca5e7c`): `SensorReadingMonthlyAggregate` ORM modeli + APScheduler haftalık Sunday 03:30 cron, idempotent merge.
 
-### 👤 AYŞE ESLEM ÇEKİCİ
+Toplam: 7 yeni test (`test_database_pool.py`), `docs/setup/PROD_DEPLOY.md` bölüm 4.5.
+
+### 👤 AYŞE ESLEM ÇEKİCİ — ✅ Temel paket tamamlandı (Step 3 `c0a40b0` + shiftFinal `7e49bef`)
 
 #### 📌 Test Kapsamı Güçlendirme & Edge Case Senaryoları *(Cycle 8'den taşındı)*
 Cycle 8'de yapılan altyapı işlerinin (rate limit, JWT, Alembic) testlerini güçlendir ve coverage'ı resmiyete oturt:
 
-1) **Edge case'ler** — Aşırı büyük payload (1MB JSON), unicode/emoji ile injection denemesi, concurrent insert race, oversized image upload (CNN endpoint'i için), SQL injection deneme stringi.
-2) **Auth flow integration testleri** — register → login → JWT'li protected endpoint çağrısı (Cycle 8'de eklenen JWT backend için).
-3) **Coverage hedefini %95+'da resmî tut** — şu an %94.78; en zayıf kalan `app/routers/metrics.py` (%81) ve `app/services/report_service.py` (%88) kapanacak.
-4) **Rate limit testleri kapsamı** — Cycle 8'de eklenen 3 testin üstüne, header doğrulama (`Retry-After`, `X-RateLimit-*`) ve farklı endpoint'lerdeki limit isabeti.
+1) ✅ **Edge case'ler** — Cycle 8 Step 3'te kapandı (26 yeni test): 1MB JSON, unicode/emoji injection, oversized image upload, SQL injection deneme stringi.
+2) ✅ **Auth flow integration testleri** — register → login → JWT protected çağrısı testleri Cycle 8'de eklenmişti.
+3) ✅ **Coverage %95+ resmî** — `pyproject.toml`'de `--cov-fail-under=80` (CI gerçek hedef %95.04'le çalışıyor).
+4) ✅ **Rate limit testleri kapsamı** — `test_rate_limit.py` `Retry-After`/`X-RateLimit-*` header doğrulamaları.
 
-### 👤 ECENUR ÜNER
+#### 📌 Schemathesis API Fuzz + axe-core CI *(shiftFinal yeni paket)*
+5) ✅ **Schemathesis property-based API fuzz** — `tests/test_schemathesis_fuzz.py`: 25 GET endpoint × ~10 case, deterministik seed, `not_a_server_error` check. **İlk run gerçek bir 500 bug yakaladı:** `GET /api/sensors/?skip=int64_max` SQLite `OverflowError` → 500. Fix: `MAX_SKIP=1_000_000` Query constraint (`sensors.py` + `irrigation.py`); artık 422 graceful.
+6) ✅ **axe-core CI workflow** — `.github/workflows/a11y.yml`: FastAPI bg + `npx @axe-core/cli http://localhost:8000/dashboard/ --tags wcag2a,wcag2aa,wcag21a,wcag21aa`, JSON rapor 30 gün artifact. Tetikleyiciler: PR (main), push (main/cycle_8/shiftFinal), Pazartesi 07:00 cron.
+7) ✅ **CI fuzz job entegrasyonu** — `ci.yml`'a `fuzz` job (needs lint), shiftFinal branch push triggers.
+
+### 👤 ECENUR ÜNER — ✅ Tamamlandı (`02d1359`)
 
 #### 📌 Frontend Build Pipeline ve Erişilebilirlik *(Cycle 8'den taşındı)*
-1) **Frontend bundling** — `frontend/index.html` 2200+ satırlık tek dosya; Vite veya esbuild ile CSS/JS extract, minify, cache busting (hashed filenames). Geliştirme deneyimi için HMR.
-2) **Erişilebilirlik (a11y)** — ARIA labels, keyboard navigation (sidebar nav, modal'lar), focus indicator'ları, screen reader test (axe-core), kontrast oranı (WCAG AA).
-3) **Loading / error UX** — Skeleton placeholder'ları kart/grafik için (Cycle 6 sonu hâlâ toast tabanlı), 5xx hata sayfası, offline durum indikatörü.
+1) ✅ **Frontend bundling scaffold** — Vite 5.x: `frontend/package.json` + `vite.config.js` (dev :5173, FastAPI :8000'e `/api`+`/metrics`+`/static` proxy), `frontend/.gitignore` (node_modules/, dist/), `frontend/README.md`. ES module split Cycle 9 sonrası kademeli.
+2) ✅ **Erişilebilirlik (a11y)** — Skip-to-content link, `<main id="main-content" role="main" tabindex="-1">`, sidebar `<nav aria-label="Ana menü">`, aktif item'a `aria-current="page"`, hamburger `aria-controls`+`aria-expanded` sync, tablolarda `<th scope="col">`+sr-only caption, decorative icon `aria-hidden`, toast container live region, `:focus-visible` outline, sensör satırlarında `tabindex+role=button`+Enter/Space keyboard handler.
+3) ✅ **Loading / error UX** — 4 JS helper (`_skeletonCards`, `_skeletonRows`, `_skeletonBlock`, `_setBusy`); her async `loadXxx()` fetch öncesi iskelet + `aria-busy="true"`, veri hazırlandığında gerçek HTML + `aria-busy="false"`. CSS variant'lar + `@media (prefers-reduced-motion: reduce)` → animation:none.
 
-### 👤 MEHMET SAİT TAYŞİ
+Toplam: 28 yeni test (`test_frontend_a11y.py`).
+
+### 👤 MEHMET SAİT TAYŞİ — ✅ Tamamlandı (`e6259ae`)
 
 #### 📌 Gözlemlenebilirlik: Sentry, Prometheus, Structured Logging *(Cycle 8'den taşındı)*
-1) **Sentry entegrasyonu** — `SENTRY_DSN` env varsa hata raporlamayı aç; FastAPI ve loguru handler'ı ile uncaught exception'ları topla. Production'da kritik.
-2) **Prometheus metrics export** — `/api/metrics` endpoint'i (text/plain), `prometheus-client` ile: `http_requests_total`, `http_request_duration_seconds`, `model_predictions_total{model_name}`, `db_query_duration_seconds`. `app/routers/metrics.py` docstring'inde planlanmıştı.
-3) **Structured logging** — Loguru'ya JSON output formatı opsiyonu (`LOG_FORMAT=json` env), trace_id propagation (request_id middleware'le entegre), log rotation (`log_dir/sfdap.log` günlük rotate).
+1) ✅ **Sentry entegrasyonu** — `app/core/sentry.py:init_sentry()`: `SENTRY_DSN` boşsa no-op, doluysa FastAPI + Starlette + SQLAlchemy + Logging integrations. `send_default_pii=False` (KVKK/GDPR güvenli default). 3 yeni env: `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE` (default 0.1).
+2) ✅ **Prometheus metrics** — `app/middleware/prometheus.py:PrometheusMiddleware` + 4 metric: `sfdap_http_requests_total` (Counter), `sfdap_http_request_duration_seconds` (Histogram), `sfdap_model_predictions_total` (Counter), `sfdap_active_alerts` (Gauge). `_normalize_path()` high-cardinality kontrolü (`/api/sensors/42` → `/api/sensors/{id}`). GET `/metrics` endpoint prefix-siz.
+3) ✅ **Structured logging** — `app/core/logger.py:_json_formatter()` JSON output (ensure_ascii=False — Türkçe + emoji korunur). `LOG_FORMAT` env (text|json). `app/middleware/request_logger.py` UUID `request_id` + `X-Request-ID` response header + `loguru.contextualize()` downstream trace propagation.
+
+Toplam: 15 yeni test (`test_observability.py`), `sentry-sdk[fastapi]>=2.0.0` + `prometheus-client>=0.20.0`.
+
+> **shiftFinal kapanışı (17 Mayıs 2026):** 5 ekip paketi (A2/A3/A4/Ayşe/Miraç polish) ✅, ek olarak shiftFinal'in 13–17 May dilimi içinde Miraç audit + cila batch'i ile 8 production-risk bug daha kapatıldı (int64 #7 + JWT `jti` collision dahil), security headers + CORS production guard + farms router + Türkiye haritası + Vitest scaffold landed. Sprint sonu: **485 backend + 32 frontend test**, %95 coverage, 4 CI workflow (lint+test+migrations+frontend-test, security, a11y). **Branch `shiftFinal` kapatıldı, `v0.9.0-pre-rebuild` tag'i atıldı.**
+
+---
+
+## 🟪 REBUILD — Kullanıcı-Odaklı Yeniden Yapılandırma *(solo, Miraç)*
+
+📅 **18 – 30 Mayıs 2026** *(13 gün, shiftFinal kapanışı sonrası)*
+🌿 **Branch:** `rebuild` *(shiftFinal kapatıldıktan sonra ayrılır)*
+
+> shiftFinal'ın 3. gününde stratejik gözlem: teknik kalite çok yüksek
+> (485 test, %95 coverage, 6 security header) ama **UI hiçbir gerçek
+> kullanıcı persona'sına yetmiyor**. Auth boş vaat (per-user filter
+> yok), tablolar veri dump, eyleme yönelik akış yok. Bu tech debt değil
+> — eksik temel feature.
+>
+> **Karar:** Miraç **solo** bir yeniden yapılandırma yürütüyor —
+> 7 fazlık, **çiftçi-odaklı** saha aracı dönüşümü. Ekip Cycle 9
+> görevlerinden bağımsız çalışır.
+>
+> **Detaylı yol haritası:** [`docs/REBUILD_ROADMAP.md`](docs/REBUILD_ROADMAP.md)
+
+### Hedef persona
+
+**Çiftçi Ahmet** — 47, Konya, 8 ha, 4 tarla, 6 sensör. iPhone'undan
+tarlada bağlanır. 5 sorusuna cevap arar:
+1. "Tarlam susuz mu, ne zaman sulayayım?"
+2. "Bu yaprakta hastalık var mı?"
+3. "Gübre ne zaman, ne kadar?"
+4. "Komşulara göre durumum nasıl?"
+5. "Bir sorun çıkarsa haberim olacak mı?"
+
+### Faz planı
+
+| Faz | Süre | Çıktı | Kritiklik |
+|:-:|:-:|:--|:-:|
+| 0 | 1g | Branch + plan doc + snapshot | 🟢 |
+| 1 | 3g | 4-rol RBAC (farmer/developer/overseer/admin) + per-user data isolation | 🔴 zorunlu |
+| 2 | 2g | "Çiftliğim" dashboard + hesabım yenile | 🔴 zorunlu |
+| 3 | 2g | Tarla detay sayfası | 🔴 zorunlu |
+| 4 | 2g | Eyleme yönelik CRUD UI | 🟡 önemli |
+| 5 | 1g | Per-user bildirim akışı | 🟡 önemli |
+| 6 | 1g | Onboarding wizard + demo seed | 🟢 cila |
+| 7 | 2g | Doc + sunum metni (FINAL_REPORT framing) | 🔴 zorunlu |
+
+**Geri-dönüş:** `v0.9.0-pre-rebuild` tag'i shiftFinal kapanışında atıldı; pivot başarısız olursa `git checkout v0.9.0-pre-rebuild` ile 5 dakikada Yol A'ya (mevcut bakanlık paneli olarak teslim) dönülür.
+
+### Demo hedefi (Cycle 9 sunumu için)
+
+Ahmet hesabı açar → onboarding demo verisi → dashboard "Tarla A susuz"
+önerisi → onaylar → tarla detayında yaprak fotoğrafı yükler →
+hastalık tanısı → kayıtlara ekler. **~3.5 dakikalık demo akışı.**
 
 ---
 
 ## 🟣 Cycle 9 — Final Rapor, Sunum ve Akademik Teslim
 
-📅 **20 – 31 Mayıs 2026**
+📅 **1 – 7 Haziran 2026** *(Haziran ilk haftası)*
 
-> Tüm teknik geliştirme bittikten sonra projeyi akademik olarak teslim etmek
-> ve kapsamlı şekilde belgelemek için son döngü.
+> Sunum ve akademik teslime özel döngü. **Teknik geliştirme yapılmaz**
+> — backend/frontend kod değişikliği yalnız REBUILD branch'inde
+> (Miraç solo, 18–30 May) yapılır. Ekip bu döngüde **yalnız dokümantasyon,
+> sunum, raporlama** üretir.
+>
+> **31 May:** REBUILD merge + demo prova buffer (1 gün); ekip Cycle 9
+> görevlerine 22 May'dan itibaren paralel başlayabilir.
 
 ### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
 
 #### 📌 Proje Dokümantasyonunun Tamamlanması
-Projenin tüm aşamalarını detaylı bir şekilde belgeleyin. Kod açıklamaları, veri işleme adımları, algoritma seçim nedenleri ve karşılaşılan zorluklar gibi bilgileri içeren kapsamlı bir dokümantasyon hazırlayın.
+Projenin tüm aşamalarını detaylı bir şekilde belgele. Kod açıklamaları,
+veri işleme adımları, algoritma seçim nedenleri ve karşılaşılan
+zorlukları içeren kapsamlı bir dokümantasyon hazırla. REBUILD branch'inden
+demo akışı + ekran görüntüleriyle FINAL_REPORT'u zenginleştir.
 
 ### 👤 EMİRHAN GÜNAY
 
-#### 📌 Proje Final Raporu ve Sunum Hazırlığı
-Projenin genel bir özetini, kullanılan veri kümelerini, uygulanan algoritmaları ve elde edilen sonuçları içeren kapsamlı bir final raporu hazırlayın. Raporun tüm teknik detayları içerdiğinden ve kolayca anlaşılabilir olduğundan emin olun.
+#### 📌 Proje Final Raporu Yazımı
+Projenin genel özeti, kullanılan veri kümeleri, uygulanan algoritmalar
+ve elde edilen sonuçları içeren kapsamlı bir final rapor hazırla. Rapor
+tüm teknik detayları içermeli, akademik dil ve kolay anlaşılırlığa sahip
+olmalı.
 
 ### 👤 AYŞE ESLEM ÇEKİCİ
 
-#### 📌 Veri Seti ve Algoritma Optimizasyonu
-Kullanılan veri setlerini ve makine öğrenimi algoritmalarını optimize ederek projenin performansını artırın. Daha iyi sonuçlar elde etmek için farklı parametreler deneyin ve sonuçları karşılaştırın.
+#### 📌 Sunum Slaytları Üretimi
+Projenin temel hedeflerini, kullanılan yöntemleri ve elde edilen
+sonuçları özetleyen sunum slaytlarını hazırla. Görsel materyaller,
+mimari diyagram, demo screenshot ve kapanış sayfası ile destekle.
 
 ### 👤 ECENUR ÜNER
 
-#### 📌 Sunum Materyallerinin Oluşturulması
-Projenin temel hedeflerini, kullanılan yöntemleri ve elde edilen sonuçları özetleyen etkili bir sunum hazırlayın. Görsel materyallerle destekleyerek sunumun anlaşılırlığını artırın.
+#### 📌 Sunum Materyallerinin Görsel Tasarımı
+Sunum slaytlarının görsel tasarımı, ekran görüntüleri, mockup'lar ve
+infografikler. Filiz maskotu sunum boyunca tema unsuru olarak kullanılır.
+Demo videosu hazırlığı (opsiyonel).
 
 ### 👤 MEHMET SAİT TAYŞİ
 
-#### 📌 Test ve Validasyon Süreçlerinin Tamamlanması
-Projenin tüm bileşenlerini kapsamlı bir şekilde test edin ve elde edilen sonuçları doğrulayın. Hata ayıklama süreçlerini tamamlayın ve projenin güvenilirliğini sağlayın.
+#### 📌 Sunum Hazırlık Notları & Q&A Senaryoları
+Sunum öncesi prova notları, jüriye karşı olası sorular ve cevapları,
+teknik derinlik soruları için backup slaytları. Demo prova scripti
+(`docs/demo_script.md`) güncelleme.

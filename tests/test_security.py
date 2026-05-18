@@ -1,9 +1,12 @@
 """
-API Güvenlik Testleri
-======================
-Custom exception handler, CORS, rate limiter ve request logger testleri.
+API Security Tests
+====================
+Tests for custom exception handler, CORS, rate limiter, and request
+logger middleware.
 
-Mehmet Sait Tayşi — Cycle 5 Görevi
+---
+
+Custom exception handler, CORS, rate limiter ve request logger testleri.
 """
 
 from app.middleware.exceptions import (

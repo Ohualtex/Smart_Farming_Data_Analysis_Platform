@@ -1,10 +1,12 @@
 """
-Analytics API Endpoint'leri
-=============================
-Veri görselleştirme panosu için toplu istatistik ve
-içgörü verileri döndüren endpoint'ler.
+Analytics API Endpoints
+=========================
+Aggregate statistics and insight data feeding the visualization
+dashboard.
 
-Miraç Duran — Cycle 6 Görevi
+---
+
+Görselleştirme dashboard'u için toplu istatistik ve içgörü uçları.
 """
 
 from __future__ import annotations
@@ -35,7 +37,7 @@ router = APIRouter(prefix="/api/analytics", tags=["Analitik & Görselleştirme"]
 def get_analytics_summary(
     days: int = Query(default=30, ge=1, le=365, description="Son kaç gün"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """
     Dashboard analitik panosu için toplu istatistik verileri döndürür.
 
@@ -207,7 +209,7 @@ def compare_analytics(
     start_date_2: datetime = Query(..., description="2. Periyot Baslangic"),
     end_date_2: datetime = Query(..., description="2. Periyot Bitis"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """
     Kullanicinin belirledigi iki farkli zaman dilimini kiyaslar.
     Sicaklik, nem, sensor okumasi ve sulama sayisi gibi metrikleri
@@ -248,7 +250,7 @@ def compare_analytics(
     stats_1 = _get_stats(start_date_1, end_date_1)
     stats_2 = _get_stats(start_date_2, end_date_2)
 
-    def _diff(val1, val2):
+    def _diff(val1: float, val2: float) -> float:
         if val1 == 0:
             return 100.0 if val2 > 0 else 0.0
         return round(((val2 - val1) / val1) * 100, 2)
@@ -266,12 +268,27 @@ def compare_analytics(
     }
 
 
-@router.get("/export")
+@router.get(
+    "/export",
+    responses={
+        200: {
+            "content": {
+                "application/pdf": {},
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+            },
+            "description": "Üretilen rapor (`format` query'sine göre PDF veya XLSX).",
+        },
+        400: {"description": "Geçersiz format değeri"},
+    },
+)
 def export_analytics(
     format: str = Query("pdf", description="Export formati (pdf veya xlsx)"),
-    days: int = Query(30, description="Son kac gunluk veri"),
+    # Bound days to 1 year — unbounded values overflow `timedelta`.
+    # ---
+    # `days` 1 yıla sınırlanır; sınırsız değerler `timedelta` overflow eder.
+    days: int = Query(30, ge=1, le=365, description="Son kac gunluk veri (max 365)"),
     db: Session = Depends(get_db),
-):
+) -> StreamingResponse:
     """
     Analitik verilerini PDF veya Excel formati olarak disari aktarir.
     """

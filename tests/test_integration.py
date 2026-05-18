@@ -1,10 +1,11 @@
 """
-Integration (Uçtan Uca) Testler
-=================================
-Birden fazla endpoint'i birlikte test eder.
-Gerçek kullanım senaryolarını simüle eder.
+End-to-End Integration Tests
+==============================
+Exercises several endpoints together to simulate real usage flows.
 
-Miraç Duran — Cycle 5 Görevi
+---
+
+Birden çok ucu birlikte gerçek kullanım senaryolarında test eder.
 """
 
 

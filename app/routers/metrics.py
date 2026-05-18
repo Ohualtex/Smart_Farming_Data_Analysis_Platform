@@ -1,16 +1,15 @@
 """
-Sistem Metrikleri ve Derin Sağlık Kontrolü
-============================================
-Mevcut /api/health basit `{status: healthy}` dönerken /api/health/deep
-DB bağlantısı, scheduler durumu, ML model varlığı ve disk/dosya
-sistemini kontrol eder. Production'da Kubernetes liveness/readiness
-probe'ları için kullanılabilir.
+System Metrics and Deep Health Probe
+======================================
+While `/api/health` returns a shallow `{status: healthy}`,
+`/api/health/deep` checks DB connectivity, scheduler status, ML model
+presence, and disk/file-system. Suitable as a Kubernetes
+liveness/readiness probe.
 
-Mehmet Sait Tayşi — Cycle 6 Görevi (shiftSession): Model Performansını
-İzleme ve Raporlama Altyapısı (deep health varyantı)
+---
 
-Bu modül skeleton — Mehmet tarafından metric endpoint'leri (Prometheus
-exposition format gibi) eklenebilir.
+`/api/health` yüzeysel, `/api/health/deep` ise DB + scheduler + model
++ disk kontrolü yapar. K8s liveness/readiness probe için uygundur.
 """
 
 from __future__ import annotations

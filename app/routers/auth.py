@@ -1,31 +1,33 @@
 """
-Kullanıcı Authentication Endpoint'leri — JWT + bcrypt
-=======================================================
-Cycle 7'de skeleton (sha256+salt + in-memory token dict) olarak başlayan
-auth backend, Cycle 8'de production-grade JWT + bcrypt'e yükseltildi.
+User Authentication Endpoints — JWT + bcrypt
+==============================================
+Production-grade auth: bcrypt password hashing, HS256 JWT tokens, and an
+in-memory blacklist for logout invalidation.
 
-Bileşenler:
-- **Şifre hash'leme**: `passlib[bcrypt]` ile bcrypt; her register'da otomatik salt.
-- **Token üretimi**: `python-jose` ile HS256 imzalı JWT (`SECRET_KEY` ile).
-  Payload: `{sub: user_id, iat, exp}`; varsayılan ömür `JWT_EXPIRE_HOURS` (24h).
-- **Logout**: JWT stateless olduğundan logout'ta token'ı in-memory blacklist'e
-  ekliyoruz; `/me` her istek başında blacklist kontrolü yapıyor. Production'da
-  bu blacklist Redis veya DB'ye taşınmalı (multi-process / restart koruması).
+Components:
+- **Password hashing**: `passlib[bcrypt]`; salt generated per register.
+- **Token issuance**: `python-jose` HS256 JWT signed with `SECRET_KEY`.
+  Payload: `{sub: user_id, iat, exp}`; default TTL `JWT_EXPIRE_HOURS` (24h).
+- **Logout**: since JWT is stateless, logout adds the token to an
+  in-memory blacklist; `/me` checks the blacklist on every request.
+  Production should move this blacklist to Redis or the DB for
+  multi-process / restart safety.
 
-Endpoint'ler:
-    POST /api/auth/register  — yeni hesap (bcrypt hash)
-    POST /api/auth/login     — JWT bearer token al
-    GET  /api/auth/me        — token'la mevcut kullanıcı
-    POST /api/auth/logout    — token'ı blacklist'e ekle (204)
+Endpoints:
+    POST /api/auth/register  — new account (bcrypt hash)
+    POST /api/auth/login     — issue JWT bearer token
+    GET  /api/auth/me        — current user from token
+    POST /api/auth/logout    — blacklist the token (204)
 
-EN: Cycle 8 production-grade auth — bcrypt password hashing + HS256 JWT
-tokens, plus an in-memory blacklist for logout invalidation.
+---
 
-Miraç Duran — Cycle 8
+Production-grade auth: bcrypt + HS256 JWT + in-memory logout blacklist.
+Logout sonrası blacklist üretime alınınca Redis/DB'ye taşınmalı.
 """
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
@@ -34,7 +36,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-# TODO Cycle 8+: pydantic[email] kurulduğunda EmailStr'e geç (email-validator gerekli)
+# TODO: swap to EmailStr once pydantic[email] (email-validator) is installed.
 from app.config import settings
 from app.database import get_db
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
@@ -47,12 +49,18 @@ router = APIRouter(prefix="/api/auth", tags=["Kimlik Doğrulama"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT için stateless logout sağlayan in-memory blacklist.
-# TODO Cycle 8+: production'da Redis (multi-process + restart koruması).
-_BLACKLISTED_TOKENS: set[str] = set()
+# `jti` (JWT ID, RFC 7519 §4.1.7) üzerinden çalışır — aynı kullanıcının aynı
+# saniyede aldığı iki token'ın `sub`+`iat`+`exp` payload'ı identical olabilir
+# ve token-string-eşleşmesi cross-contamination yaratırdı. `jti` her token
+# için benzersiz UUID (`uuid4().hex`).
+# TODO: move to Redis or DB in production (multi-process + restart safe).
+_BLACKLISTED_JTIS: set[str] = set()
 
 
 # ─── Pydantic schemas ────────────────────────────────────────────────
 class UserRegisterRequest(BaseModel):
+    """Registration payload — name, email, password (min 8 chars), optional phone."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -65,12 +73,14 @@ class UserRegisterRequest(BaseModel):
     )
 
     name: str
-    email: str  # TODO Cycle 8+: EmailStr (pydantic[email])
+    email: str  # TODO: switch to EmailStr once pydantic[email] is in.
     password: str  # min 8 karakter (validator alttaki register'da)
     phone: str | None = None
 
 
 class UserLoginRequest(BaseModel):
+    """Login payload — email + password."""
+
     model_config = ConfigDict(
         json_schema_extra={"example": {"email": "ahmet@ornek.com", "password": "GuvenliSifre2026"}}
     )
@@ -80,12 +90,16 @@ class UserLoginRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
+    """JWT bearer token + expiry in seconds."""
+
     access_token: str
     token_type: str = "bearer"
     expires_in: int  # saniye
 
 
 class CurrentUserResponse(BaseModel):
+    """Authenticated user profile — emitted by `/api/auth/me`."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -118,13 +132,16 @@ def _verify_password(password: str, stored_hash: str) -> bool:
 
 
 def _create_token(user_id: int) -> tuple[str, int]:
-    """Yeni JWT üret — payload: sub, iat, exp. (token, expires_in_seconds) döner."""
+    """Yeni JWT üret — payload: sub, iat, exp, jti. (token, expires_in_seconds) döner."""
     expire_delta = timedelta(hours=settings.JWT_EXPIRE_HOURS)
     now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
         "iat": int(now.timestamp()),
         "exp": int((now + expire_delta).timestamp()),
+        # jti: token başına benzersiz ID — blacklist `jti` ile çalışır
+        # (token-string yerine), aynı saniye + aynı user collision'ından korur.
+        "jti": uuid.uuid4().hex,
     }
     token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return token, int(expire_delta.total_seconds())
@@ -132,12 +149,16 @@ def _create_token(user_id: int) -> tuple[str, int]:
 
 def _decode_token(token: str) -> int:
     """JWT decode + sub'ı user_id olarak döndür. Geçersizse 401 fırlat."""
-    if token in _BLACKLISTED_TOKENS:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token iptal edildi")
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
     except JWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gecersiz token") from exc
+    # jti blacklist kontrolü — payload.get çünkü eski (jti'siz) token'lara
+    # tolerans (`jti` yoksa never-blacklisted sayılır; eski client'lar yeni
+    # login alana kadar çalışmaya devam eder).
+    jti = payload.get("jti")
+    if jti is not None and jti in _BLACKLISTED_JTIS:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token iptal edildi")
     sub = payload.get("sub")
     if sub is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token icerigi eksik")
@@ -170,14 +191,23 @@ def _get_current_user(authorization: str = Header(default=""), db: Session = Dep
     response_model=CurrentUserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Yeni kullanıcı oluştur",
-    description="Yeni hesap kaydı. Şifre bcrypt ile hash'lenir (Cycle 8'de sha256'dan bcrypt'e geçildi).",
+    description="Yeni hesap kaydı. Şifre bcrypt ile hash'lenir.",
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        409: {"description": "E-posta zaten kayıtlı"},
+    },
 )
 @limiter.limit(AUTH_RATE)
-def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)):
+def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)) -> User:
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta zaten kayitli")
     if len(payload.password) < 8:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Sifre en az 8 karakter olmali")
+        # 400 — FastAPI'nin auto-generated 422 şeması list[ValidationError]
+        # bekler; düz-string detail uyumsuz olur.
+        # ---
+        # 400 — FastAPI's auto-generated 422 schema expects
+        # list[ValidationError]; a plain-string detail breaks it.
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sifre en az 8 karakter olmali")
     user = User(
         name=payload.name,
         email=payload.email,
@@ -199,9 +229,13 @@ def register(request: Request, payload: UserRegisterRequest, db: Session = Depen
         "Doğru e-posta + şifre ile HS256 imzalı JWT bearer token alınır. "
         "Token varsayılan 24 saat geçerlidir (`JWT_EXPIRE_HOURS` ile ayarlanabilir)."
     ),
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        401: {"description": "E-posta veya şifre hatalı"},
+    },
 )
 @limiter.limit(AUTH_RATE)
-def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)):
+def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     user = db.query(User).filter(User.email == payload.email).first()
     if user is None or not _verify_password(payload.password, user.password_hash or ""):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="E-posta veya sifre hatali")
@@ -214,8 +248,11 @@ def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get
     response_model=CurrentUserResponse,
     summary="Aktif kullanıcı bilgisi",
     description="`Authorization: Bearer <jwt>` header'ı ile çağrılır. JWT signature + exp + blacklist kontrol edilir.",
+    responses={
+        401: {"description": "Token eksik, süresi dolmuş ya da blacklist'te"},
+    },
 )
-def me(user: User = Depends(_get_current_user)):
+def me(user: User = Depends(_get_current_user)) -> User:
     return user
 
 
@@ -229,9 +266,17 @@ def me(user: User = Depends(_get_current_user)):
     ),
 )
 @limiter.limit(STRICT_RATE)
-def logout(request: Request, authorization: str = Header(default="")):
+def logout(request: Request, authorization: str = Header(default="")) -> None:
     if authorization.startswith("Bearer "):
         token = authorization[7:]
         if token:
-            _BLACKLISTED_TOKENS.add(token)
+            # Decode et, jti'yi al, blacklist'e ekle. Decode hatası logout'u
+            # 204 sessiz başarıya çevirmez — best-effort (idempotent kontrat).
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+            except JWTError:
+                return  # Bozuk/expired token zaten geçersiz — ek iş yok.
+            jti = payload.get("jti")
+            if jti:
+                _BLACKLISTED_JTIS.add(jti)
     return

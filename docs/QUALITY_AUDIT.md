@@ -1,10 +1,8 @@
-# 🔍 SFDAP Kalite Denetimi — Cycle 8 Sonu
+# 🔍 SFDAP Kalite Denetimi
 
-> **Tarih:** 10 Mayıs 2026
-> **Yazan:** Miraç Duran (Cycle 8 audit)
-> **Kapsam:** Tüm repo (app/, tests/, alembic/, docs/, scripts/, frontend/, CI)
+> **Kapsam:** Tüm repo (`app/`, `tests/`, `alembic/`, `docs/`, `scripts/`, `frontend/`, CI).
 
-Bu doküman, Cycle 8 sonunda repo'nun kalite durumunu fotoğraflar; iyileştirmeleri ve hâlâ açık olan teknik borçları tier'larla önceliklendirir. shiftFinal bridge sprint planlamasının temeli budur.
+Bu doküman, repo'nun mevcut kalite durumunu fotoğraflar ve hâlâ açık olan teknik borçları tier'larla önceliklendirir. Üretim çekirdeği (auth backend, rate limiting, migration, N+1 fix, HTTPS) tamamlandı; çapraz cila ve gözlemlenebilirlik paketleri (Sentry/Prometheus, frontend a11y/Vite, backup/restore, fuzz/axe-core CI) ardından geldi.
 
 ---
 
@@ -12,19 +10,23 @@ Bu doküman, Cycle 8 sonunda repo'nun kalite durumunu fotoğraflar; iyileştirme
 
 | Boyut | Değer | Hedef | Durum |
 |:--|:--:|:--:|:--:|
-| **Test sayısı** | 350 | — | ✅ |
+| **Test sayısı** | **425** (350 → 365 → 372 → 400 → 425) | — | ✅ |
 | **Coverage** | **%95.04** | %95+ | ✅ Hedef geçildi (pagination test paketiyle) |
 | **Ruff (genişletilmiş kural seti)** | 0 hata | 0 | ✅ |
 | **Bandit (medium+ severity)** | 0 issue | 0 | ✅ |
 | **pip-audit** | (CI) | 0 CVE | ⏳ CI'da koşar |
-| **CI/CD pipeline** | 3 job + security workflow | — | ✅ |
+| **Schemathesis fuzz** | 25 GET endpoint × ~10 case = 250 fuzz çağrısı | 0 server error | ✅ Bug bulundu + fix'lendi |
+| **axe-core CI** | WCAG 2.0 + 2.1 A/AA, weekly cron | 0 critical violation | ⏳ İlk run sonrası kalan warning'lar değerlendirilir |
+| **CI/CD pipeline** | 3 workflow (ci + security + a11y) | — | ✅ |
+| **CI job sayısı** | 4 (lint + test + migrations + fuzz) + 2 security + 1 a11y | — | ✅ |
 | **Endpoint sayısı** | 43 (2× pagination count dahil) | — | ✅ |
 | **ORM tablo sayısı** | 15 (initial 14 + aggregate) | — | ✅ |
 | **Alembic migration zinciri** | 2 revision (initial + aggregate) | — | ✅ |
-| **Frontend SPA satır sayısı** | ~2 972 (`frontend/index.html`, slider pagination) | bundling beklenir | 🟡 shiftFinal'da Vite |
+| **Frontend SPA satır sayısı** | ~3 100 (`frontend/index.html`, pagination + a11y/skeleton) | bundling scaffold | ✅ Vite scaffold + a11y + skeleton |
+| **Vite + axe-core CLI** | `frontend/package.json` scaffolded | — | ✅ |
 | **Dış bağımlılık güncelliği** | 7 minor outdated | major-stable | 🟡 |
 
-## 🛡️ Güvenlik Durumu (Cycle 8 sonu)
+## 🛡️ Güvenlik Durumu
 
 ### Kullanılan tarayıcılar
 | Araç | Kapsam | Tetikleyici |
@@ -39,15 +41,15 @@ Bu doküman, Cycle 8 sonunda repo'nun kalite durumunu fotoğraflar; iyileştirme
 - `S311` — `random.*` kriptografik olmayan kullanımlar (synthetic data)
 
 ### Güvenlik mimarisi
-- `X-API-Key` header — yazma endpoint'leri (Cycle 4)
-- JWT (HS256) + bcrypt — kullanıcı auth backend (Cycle 8 #3)
-- Rate limit (slowapi, 30/min STRICT, 10/min AUTH) — 17 endpoint (Cycle 8 #1)
+- `X-API-Key` header — yazma endpoint'leri
+- JWT (HS256) + bcrypt — kullanıcı auth backend
+- Rate limit (slowapi, 30/min STRICT, 10/min AUTH) — 17 endpoint
 - CORS — env-driven origin listesi
 - `_validate_production` fail-fast — prod'da default secret kullanımı engellendi
 
 ---
 
-## 🟢 Cycle 8'de Kapanan Teknik Borçlar
+## 🟢 Kapatılan Teknik Borçlar
 
 | Borç | Önce | Sonra | Commit |
 |:--|:--|:--|:--|
@@ -57,7 +59,7 @@ Bu doküman, Cycle 8 sonunda repo'nun kalite durumunu fotoğraflar; iyileştirme
 | Analytics N+1 | 1 + 2N WeatherData query | 1 + 1 query (sabit) | `db0b144` |
 | HTTPS termination | yok (port 8000 host'a açık) | nginx reverse proxy + Let's Encrypt | `b139154` |
 | Coverage | %86 (zayıf: scheduler %50, mqtt %54) | %94.78 (90+ yeni test) | `cf35a63` + `15c154e` + Step 1/3 paketleri |
-| Sensor archiving (Cycle 7 slip) | yok | aylık aggregate + haftalık cron | (yeni commit) |
+| Sensor archiving | yok | aylık aggregate + haftalık cron | `fca5e7c` |
 | Audit dokümanı | yok | bu rapor | (yeni commit) |
 | Tier 1 lint (DTZ005, ERA001, D100) | 2 ihlal | 0 | `4c796eb` |
 | Ruff config | 8 kural seti | 17 kural seti (S, DTZ, TRY, vs) | (yeni commit) |
@@ -66,38 +68,42 @@ Bu doküman, Cycle 8 sonunda repo'nun kalite durumunu fotoğraflar; iyileştirme
 
 ---
 
-## 🟡 Hâlâ Açık Teknik Borçlar (shiftFinal hedefi)
+## 🟡 Açık ve Kapatılan Teknik Borçlar
 
-### Tier A — High value, sahibi belli
+### Tier A — Yüksek değer
 
-| # | Konu | Sahip (shiftFinal) | Durum |
-|:--|:--|:--|:--:|
-| A1 | Coverage %95+ resmî tutuş | Ayşe | ✅ Cycle 8 bonus push'unda karşılandı (%94.78); shiftFinal'da fail_under=95 kilidi |
-| A2 | Sentry + Prometheus + structured logging | Mehmet | ⏳ shiftFinal |
-| A3 | Vite bundling + a11y (ARIA, WCAG AA) + skeleton loaders | Ecenur | ⏳ shiftFinal |
-| A4 | DB pool tuning + backup/restore script + cron | Emirhan | ⏳ shiftFinal |
-| A5 | `_clean_tr` refactor + magic numbers → constants | Miraç | ✅ Step 1'de kapatıldı (`str.maketrans` + 5 constant) |
-| A6 | Pillow 14 hazırlığı (`getdata` → numpy) | Miraç | ✅ Step 1'de kapatıldı (`np.asarray().reshape()`) |
+| # | Konu | Durum |
+|:--|:--|:--:|
+| A1 | Coverage %95+ resmî tutuş | ✅ Karşılandı (%95.04); CI'da `fail_under=80` kilidi (gerçek değer %95+). |
+| A2 | Sentry + Prometheus + structured logging | ✅ Tamamlandı (`e6259ae`) — Sentry, 4 Prometheus metric, JSON log + request_id. |
+| A3 | Vite bundling + a11y (ARIA, WCAG AA) + skeleton loaders | ✅ Tamamlandı (`02d1359`) — Vite scaffold, 28 a11y testi, 4 JS skeleton helper, skip-link + landmark. |
+| A4 | DB pool tuning + backup/restore script + cron | ✅ Tamamlandı (`2a889f8`) — pool tuning + `backup.sh`/`restore.sh` + Makefile + 7 test. |
+| A5 | `_clean_tr` refactor + magic numbers → constants | ✅ Tamamlandı — `str.maketrans` + 5 constant. |
+| A6 | Pillow 14 hazırlığı (`getdata` → numpy) | ✅ Tamamlandı — `np.asarray().reshape()`. |
+| A7 | Schemathesis fuzz + axe-core CI + gerçek bug fix | ✅ Tamamlandı (`7e49bef`) — 25 GET endpoint fuzzlandı, `skip=int64_max` 500 bug'ı `MAX_SQLITE_INT`/`MAX_SKIP` ile fix'lendi, `.github/workflows/a11y.yml` eklendi. |
 
 ### Tier B — Orta değer
 
 | # | Konu | Durum |
 |:--|:--|:--:|
-| B1 | `app/config.py` %78 coverage — production fail-fast path test | ✅ Step 1'de kapatıldı (12 yeni test) |
-| B2 | Frontend (`index.html`) — 2 972 satır tek dosya, monolitik | ⏳ shiftFinal A3 |
-| B3 | `ANN001/ANN201` — public API'lerde return/arg type hints eksik (~740 ihlal, kademeli) | ⏳ ileride |
-| B4 | `D101/D102` — public class/method docstring eksik (~265 ihlal) | ⏳ ileride |
-| B5 | Edge case test paketi — 1MB JSON, unicode injection, oversized upload | ✅ Step 3'te kapatıldı (26 yeni test) |
-| B6 | API responses Türkçe karakter normalizasyonu (RUF001/2/3, 1400+ ihlal — büyük çoğunluk false positive) | ⏳ Cycle 9 (akademik rapor) |
+| B1 | `app/config.py` %78 coverage — production fail-fast path test | ✅ Tamamlandı (12 yeni test). |
+| B2 | Frontend (`index.html`) — 2 972 satır tek dosya, monolitik | 🟡 Vite scaffold + a11y/skeleton refactor tamamlandı; ES module split kademeli devam edecek. |
+| B3 | `ANN001/ANN201` — public API'lerde return/arg type hints eksik (~740 ihlal) | ⏳ Kademeli geçiş. |
+| B4 | `D101/D102` — public class/method docstring eksik (~265 ihlal) | ⏳ Kademeli geçiş. |
+| B5 | Edge case test paketi — 1MB JSON, unicode injection, oversized upload | ✅ Tamamlandı (26 yeni test). |
+| B6 | API responses Türkçe karakter normalizasyonu (RUF001/2/3, 1400+ ihlal — büyük çoğunluk false positive) | ⏳ İleride değerlendirilecek. |
+| B7 | Pagination `skip` ve path int parametrelerinde int64 overflow koruması | ✅ Tamamlandı — `MAX_SQLITE_INT` + `Path/Query(..., le=...)` constraint'leri. |
 
 ### Tier C — Düşük öncelik
 
 | # | Konu | Sebep |
 |:--|:--|:--|
-| C1 | mypy / pyright integration | ANN tier B'de değerlendirildikten sonra |
-| C2 | Hadolint (Dockerfile lint) | Dockerfile küçük, manuel review yeterli |
-| C3 | OpenAPI shape contract test (Schemathesis vb) | Manuel Swagger yeterli şu an |
-| C4 | Frontend a11y axe-core CI integration | Ecenur Vite bundling tamamlandıktan sonra |
+| C1 | mypy / pyright integration | ANN tier B'de değerlendirildikten sonra. |
+| C2 | Hadolint (Dockerfile lint) | Dockerfile küçük, manuel review yeterli. |
+| C3 | ~~OpenAPI shape contract test (Schemathesis vb)~~ | ✅ Karşılandı — `tests/test_schemathesis_fuzz.py` + CI `fuzz` job. |
+| C4 | ~~Frontend a11y axe-core CI integration~~ | ✅ Karşılandı — `.github/workflows/a11y.yml`. |
+| C5 | ES module split (`index.html` → `src/*.js` + `src/*.css`) | Vite scaffold hazır; ileride ad-hoc bölünecek. |
+| C6 | Frontend `package-lock.json` commit'i | CI'da `npm install --no-save` ile çalışıyor; ileride lock dosyası commit'lenebilir. |
 
 ---
 
@@ -119,21 +125,22 @@ Bu doküman, Cycle 8 sonunda repo'nun kalite durumunu fotoğraflar; iyileştirme
 ### Geliştirme (`requirements-dev.txt`)
 | Paket | Mevcut | Sebep |
 |:--|:--:|:--|
-| ruff | >=0.13 | Cycle 8'de 0.3 → 0.13 |
-| bandit[toml] | >=1.7.5 | Cycle 8'de eklendi |
-| pip-audit | >=2.7 | Cycle 8'de eklendi |
+| ruff | >=0.13 | Modern kural setleri için 0.13'e yükseltildi |
+| bandit[toml] | >=1.7.5 | Python source security scanner |
+| pip-audit | >=2.7 | Dependency CVE scanner |
 | pre-commit | >=3.6 | Stabil |
 | pytest + pytest-cov | >=8.0 + >=4.1 | Stabil |
 
 ---
 
-## 🤖 CI/CD Ekosistemi (Cycle 8 sonu)
+## 🤖 CI/CD Ekosistemi
 
 ### Workflow inventarı
 | Dosya | Tetikleyiciler | Job'lar |
 |:--|:--|:--|
-| `.github/workflows/ci.yml` | push (main, cycle_8), PR (main), manuel | `lint` (Ruff) → `test` (pytest + coverage) → `migrations` (alembic upgrade) |
-| `.github/workflows/security.yml` | push (main, cycle_8), PR (main), Pazartesi 06:00 cron, manuel | `bandit` + `pip-audit` |
+| `.github/workflows/ci.yml` | push (main, cycle_8, shiftFinal), PR (main), manuel | `lint` (Ruff) → `test` (pytest + coverage) → `migrations` (alembic upgrade) → `fuzz` (Schemathesis property-based) |
+| `.github/workflows/security.yml` | push (main, cycle_8, shiftFinal), PR (main), Pazartesi 06:00 cron, manuel | `bandit` + `pip-audit` |
+| `.github/workflows/a11y.yml` | push (main, cycle_8, shiftFinal), PR (main), Pazartesi 07:00 cron, manuel | `axe` — FastAPI bg + axe-core WCAG 2.0 + 2.1 A/AA tarama; JSON rapor 30 gün artifact |
 
 ### Pre-commit ekosistemi (`.pre-commit-config.yaml`)
 1. **pre-commit-hooks v5.0** — trailing-whitespace, end-of-file-fixer, check-yaml, check-added-large-files, check-merge-conflict, **detect-private-key**
@@ -146,53 +153,59 @@ Bu doküman, Cycle 8 sonunda repo'nun kalite durumunu fotoğraflar; iyileştirme
 - Yerel terminal raporu → `term-missing` ile satır bazlı eksikler
 
 ### Migration smoke test
-Her CI koşusunda boş bir SQLite DB üzerinde `alembic upgrade head` çalıştırılır. Bu, autogenerate'lenmiş migration'ların gerçekten çalışabilir olduğunu garanti eder (Cycle 8 #4 sonrası kritik).
+Her CI koşusunda boş bir SQLite DB üzerinde `alembic upgrade head` çalıştırılır. Bu, autogenerate'lenmiş migration'ların gerçekten çalışabilir olduğunu garanti eder.
 
 ---
 
-## 🎯 shiftFinal Yol Haritası (13–19 Mayıs)
+## 🎯 shiftFinal Sprint Durumu (13–19 Mayıs)
 
-> Miraç'ın görevleri (A1/A5/A6/B1) Cycle 8 erken bitince Step 1-3 paketlerinde kapatıldı; shiftFinal'daki günleri ekibi destekleme + PR review'a ayrılıyor.
+A2 (observability), A3 (frontend), A4 (reliability) ve QA/fuzz paketleri tamamlandı (sırasıyla `e6259ae`, `02d1359`, `2a889f8`, `7e49bef`). Sprint 19 Mayıs'a kadar açık; kalan günler PR review, doc cila ve fırsat çıktığında ek geliştirmeler için kullanılıyor.
 
-| Gün | Sahip | Görev | Tier |
-|:--|:--|:--|:--:|
-| 13 May | Mehmet | Sentry entegrasyon iskelet | A2 |
-| 14 May | Mehmet | Prometheus `/api/metrics` endpoint | A2 |
-| 14 May | Emirhan | Backup/restore script + Makefile target | A4 |
-| 15 May | Mehmet | Structured logging (`LOG_FORMAT=json`) | A2 |
-| 15 May | Ecenur | Vite bundling iskelet | A3 |
-| 16 May | Emirhan | DB pool tuning + cron | A4 |
-| 16 May | Ecenur | a11y deep dive (ARIA + WCAG AA) | A3 |
-| 17 May | Ayşe | Auth-aware fuzz + OpenAPI contract test (Schemathesis) | B5+ |
-| 17 May | Miraç | PR review + ekibi destek + Cycle 9 hazırlığı | — |
-| 18 May | Ecenur | Skeleton loaders + offline UX | A3 |
-| 18 May | Miraç | Final rapor placeholder doldurma başlangıcı | Cycle 9 prep |
-| 19 May | All | shiftFinal kapanış + smoke test + Cycle 9 hazırlığı | — |
+| Paket | Tier | İçerik | Durum |
+|:--|:--:|:--|:--:|
+| Observability | A2 | Sentry init, Prometheus middleware + 4 metric, JSON log formatter, request_id middleware | ✅ `e6259ae` |
+| Frontend | A3 | Vite scaffold, a11y landmarks/ARIA/skeleton loaders, 28 yeni a11y testi | ✅ `02d1359` |
+| Reliability | A4 | DB pool tuning, `backup.sh`/`restore.sh`, Makefile target'ları, 7 yeni test | ✅ `2a889f8` |
+| QA / Fuzz | A7 | Schemathesis property-based fuzz (25 GET endpoint), axe-core CI workflow, 6 int64 overflow bug fix | ✅ `7e49bef` |
+
+### 📂 Açık alanlar (kalan kapasite)
+
+Temel paketler tamamlandıktan sonra ele alınabilecek iyileştirmeler:
+
+- **Schemathesis fuzz genişletme** — POST/PATCH/DELETE write operasyonlarına auth-aware fuzz (şu an sadece GET coverage'da)
+- **axe-core CI sertleştirme** — ilk run sonrası kalan WCAG warning'leri temizlenip `continue-on-error: false`'a alınması
+- **Frontend ES module split** — Vite scaffold hazır; `index.html` inline CSS/JS'in `src/styles/*.css` + `src/main.js`'e bölünmesi
+- **OpenAPI shape contract test** — şu an Schemathesis fuzz'ı server-error odaklı; response shape conformance ayrı kontrol olarak eklenebilir
+- **Tier B3/B4** — public API'lerde `ANN001/ANN201` type hints + `D101/D102` docstring kademeli geçiş
+- **Tier C5/C6** — frontend `package-lock.json` commit + module split adımları
 
 ---
 
 ## 📈 Repo Büyüme Trendi
 
 ```
-Cycle başı  →  Şu an (Cycle 8 + shiftFinal pre-work)
-─────────────────────────────────────────────────────
-Test         246    →  350     (+104 / +42%)
-Coverage     %86    →  %95.04  (+9.0 pp, resmi hedef ✅)
-LOC (app/)  ~3,300  →  ~4,803  (+~46%)
-Endpoint     41     →  43      (+2 pagination count)
-ORM tablo    14     →  15      (+1 aggregate)
-Migration    0      →  2       (initial + aggregate)
-CI workflow  1      →  2       (+ security)
-Pre-commit   2 hook →  3 hook  (+ bandit)
-Ruff kural   8      →  17      (+ DTZ/ERA/PT/RET/C4/PIE/PERF/TRY/S)
-Frontend     2,200  →  2,972   (+ slider pagination UI)
+Başlangıç  →  Üretim Çekirdeği  →  Cila & QA (mevcut)
+─────────────────────────────────────────────────────────────────
+Test         246    →  350               →  425     (+179 / +73%)
+Coverage     %86    →  %95.04            →  %95.04  (+9.0 pp, hedef ✅)
+LOC (app/)  ~3,300  →  ~4,803            →  ~5,400  (+~64%)
+Endpoint     41     →  43                →  43      (+2 pagination)
+ORM tablo    14     →  15                →  15      (+1 aggregate)
+Migration    0      →  2                 →  2       (initial + aggregate)
+CI workflow  1      →  2                 →  3       (+ security, + a11y)
+CI job       2      →  3 + 2 sec         →  4 + 2 sec + 1 a11y  (fuzz + axe job)
+Pre-commit   2 hook →  3 hook            →  3 hook  (+ bandit)
+Ruff kural   8      →  17                →  17      (DTZ/ERA/PT/RET/C4/PIE/PERF/TRY/S)
+Frontend     2,200  →  2,972             →  ~3,100  (+ a11y/skeleton, Vite scaffold)
+Fuzz test    0      →  0                 →  25      (Schemathesis GET endpoint coverage)
+A11y test    0      →  0                 →  28      (skip-link, landmarks, scope, aria-busy)
 ```
 
 ---
 
 ## 📚 İlgili Dosyalar
 
-- [`projeakisi.md`](../projeakisi.md) — Cycle 8 / shiftFinal / Cycle 9 görev dağılımı
+- [`projeakisi.md`](../projeakisi.md) — Cycle bazlı görev dağılımı
 - [`docs/setup/PROD_DEPLOY.md`](setup/PROD_DEPLOY.md) — nginx + Let's Encrypt deploy
 - [`docs/architecture.md`](architecture.md) — sistem mimarisi
 - [`pyproject.toml`](../pyproject.toml) — Ruff + pytest + coverage config

@@ -1,6 +1,11 @@
 """
-Analitik verilerin disariya aktarilmasini (export) saglayan servis modulu.
-Miraç Duran tarafindan Cycle 6 kapsaminda eklendi.
+Analytics Export Service
+==========================
+Exports analytics data to PDF (FPDF) and Excel (pandas).
+
+---
+
+Analitik verilerin PDF/Excel olarak dışarı aktarılması için servis modülü.
 """
 
 import io

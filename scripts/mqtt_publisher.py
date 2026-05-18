@@ -17,8 +17,6 @@ API tarafı:
     2. .env'e: `MQTT_ENABLED=true`, `MQTT_BROKER_HOST=localhost`.
     3. `make run` → listener `app.main:lifespan`'da otomatik bağlanır.
     4. Bu script'i çalıştır → DB'de okumaların biriktiğini gör.
-
-Emirhan Günay — Cycle 7
 """
 
 from __future__ import annotations

@@ -1,7 +1,12 @@
 """
-ML Eval helper testleri
-========================
-Ayşe'nin Cycle 6 görevi için skeleton testler.
+ML Eval Helper Tests
+======================
+Covers regression and classification metric calculators plus the
+cross-validation wrapper in `app.ml.eval`.
+
+---
+
+`app.ml.eval` içindeki metrik hesaplayıcıları ve CV wrapper testleri.
 """
 
 from __future__ import annotations

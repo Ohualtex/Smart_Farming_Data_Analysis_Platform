@@ -1,7 +1,6 @@
-# Hafta 1 - Kurulum ve Hazırlık Raporu
+# Hafta 1 — Kurulum ve Hazırlık Raporu
 
-> ⚠️ **TARİHSEL DOKÜMAN — Cycle 1 (Hafta 1) çıktısı.**
-> Bu rapor ekip üyesinin (Ecenur) kişisel kurulum sürecini belgeler.
+> ⚠️ **TARİHSEL DOKÜMAN.** Bu rapor projenin ilk haftasındaki kişisel geliştirme ortamı kurulum sürecini belgeler.
 > **Güncel kurulum talimatları için** [`README.md`](../../README.md) → "Hızlı Başlangıç" bölümüne bakınız (Python 3.12+, .venv, Docker, Makefile, pre-commit dahil).
 
 ---

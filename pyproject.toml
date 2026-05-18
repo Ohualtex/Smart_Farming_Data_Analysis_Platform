@@ -78,6 +78,9 @@ ignore = [
 "alembic/versions/*" = ["UP", "I", "D"]
 # scripts/: standalone CLI script'ler — print + esneklik
 "scripts/*"         = ["T201", "S101", "S311"]
+# docs/testing/: Cycle 6 arşivlenmiş test referansları — modern `app.main:app`
+# yerine eski `app import app` API'sini kullanır; çalışmaz, sadece tarihi kayıt.
+"docs/testing/*"    = ["S101", "F401", "I", "W293", "ERA", "UP", "B", "SIM", "ANN", "D"]
 
 [tool.ruff.format]
 quote-style = "double"

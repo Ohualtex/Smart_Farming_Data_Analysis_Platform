@@ -43,14 +43,12 @@ Geliştirme aşamasında tespit edilen ve sisteme entegre edilen iyileştirmeler
 
 Sistemin kararlılığını ölçmek için yapılan stres testlerinde şu veriler elde edilmiştir:
 - **Test Suite:** 301 test (23 dosya) `pytest` üzerinde yeşil; CI pipeline'da Ruff + Pytest + Alembic migration smoke + bandit/pip-audit sürekli koşuyor.
-- **Coverage:** %94.42 (eşik %80; shiftFinal hedefi %95+ resmî tutuş — kalan zayıf modüller `app/routers/metrics.py` ve `app/services/report_service.py`).
-- **Eşzamanlı İstek:** TestClient üzerinden ardışık atılan 10 istekte veri kaybı yaşanmadı; concurrent insert race testi shiftFinal edge-case paketinde planlı.
+- **Coverage:** %94.42 (eşik %80; sonradan %95+'a yükseldi — kalan zayıf modüller `app/routers/metrics.py` ve `app/services/report_service.py`).
+- **Eşzamanlı İstek:** TestClient üzerinden ardışık atılan 10 istekte veri kaybı yaşanmadı.
 - **Güvenlik Duvarı:** API Key koruması FastAPI Dependency Injection katmanında çalıştığı için yetkisiz erişim handler fonksiyonlarına erişemeden 401/403 ile reddedilir.
-- **Hata Mesajı Standardizasyonu:** Tüm hatalar (`401`, `403`, `404`, `422`, `5xx`) Cycle 5 global exception handler'ı üzerinden tutarlı `{error_code, message, detail}` formatında döner.
+- **Hata Mesajı Standardizasyonu:** Tüm hatalar (`401`, `403`, `404`, `422`, `5xx`) global exception handler üzerinden tutarlı `{error_code, message, detail}` formatında döner.
 
 ---
 
 ## 4. 🏁 Genel Değerlendirme
-Hafta 6 görevleri kapsamında projenin tüm "Kritik" ve "Yüksek" öncelikli maddeleri doğrulanmıştır. Proje, teknik dökümantasyon ve çalışma kararlılığı açısından **31 Mayıs 2026** teslim tarihine tam hazır durumdadır.
-
-*Geliştirici: Mehmet Sait Taysi*
+Hafta 6 görevleri kapsamında projenin tüm "Kritik" ve "Yüksek" öncelikli maddeleri doğrulanmıştır. Proje, teknik dokümantasyon ve çalışma kararlılığı açısından **31 Mayıs 2026** teslim tarihine tam hazır durumdadır.

@@ -1,19 +1,21 @@
 """
-Hava Durumu API Endpoint'leri
-================================
-Çiftlik bazlı hava durumu kayıtlarının CRUD işlemleri, dış API'den
-(OpenWeatherMap) veri çekme ve veri temizleme pipeline'ı için endpoint'ler.
+Weather API Endpoints
+=======================
+Farm-level weather records: CRUD, external fetch (OpenWeatherMap), and
+the data-cleaning pipeline.
 
-Ayşe Eslem Çekici & Mehmet Sait Tayşi — Cycle 4/5 Görevi
+---
+
+Çiftlik bazlı hava durumu CRUD'u + OpenWeatherMap fetch + temizleme.
 """
 
 from __future__ import annotations
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.models.models import WeatherData
@@ -24,16 +26,26 @@ router = APIRouter(prefix="/api/weather", tags=["Hava Durumu"])
 
 
 @router.get("/", response_model=list[WeatherDataResponse])
-def get_weather_data(farm_id: int = None, limit: int = 50, db: Session = Depends(get_db)):
+def get_weather_data(
+    farm_id: int | None = Query(default=None, ge=1, le=MAX_SQLITE_INT, description="Farm ID filtresi"),
+    limit: int = Query(default=50, ge=1, le=500),
+    db: Session = Depends(get_db),
+) -> list[WeatherData]:
     query = db.query(WeatherData)
     if farm_id:
         query = query.filter(WeatherData.farm_id == farm_id)
     return query.order_by(WeatherData.recorded_at.desc()).limit(limit).all()
 
 
-@router.post("/", response_model=WeatherDataResponse, status_code=201, dependencies=[Depends(verify_api_key)])
+@router.post(
+    "/",
+    response_model=WeatherDataResponse,
+    status_code=201,
+    dependencies=[Depends(verify_api_key)],
+    responses={400: {"description": "Geçersiz JSON body"}},
+)
 @limiter.limit(STRICT_RATE)
-def create_weather_data(request: Request, data: WeatherDataCreate, db: Session = Depends(get_db)):
+def create_weather_data(request: Request, data: WeatherDataCreate, db: Session = Depends(get_db)) -> WeatherData:
     db_weather = WeatherData(**data.model_dump())
     db.add(db_weather)
     db.commit()
@@ -41,8 +53,15 @@ def create_weather_data(request: Request, data: WeatherDataCreate, db: Session =
     return db_weather
 
 
-@router.get("/latest/{farm_id}", response_model=WeatherDataResponse)
-def get_latest_weather(farm_id: int, db: Session = Depends(get_db)):
+@router.get(
+    "/latest/{farm_id}",
+    response_model=WeatherDataResponse,
+    responses={404: {"description": "Hava durumu verisi bulunamadı"}},
+)
+def get_latest_weather(
+    farm_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Farm ID (max int64)"),
+    db: Session = Depends(get_db),
+) -> WeatherData:
     weather = (
         db.query(WeatherData).filter(WeatherData.farm_id == farm_id).order_by(WeatherData.recorded_at.desc()).first()
     )
@@ -55,11 +74,11 @@ def get_latest_weather(farm_id: int, db: Session = Depends(get_db)):
 @limiter.limit(AUTH_RATE)
 async def fetch_weather_from_api(
     request: Request,
-    farm_id: int,
+    farm_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Farm ID (max int64)"),
     lat: float = Query(..., description="Enlem"),
     lon: float = Query(..., description="Boylam"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """
     OpenWeatherMap API'den anlık hava durumu verisini çeker,
     temizler ve veritabanına kaydeder.
@@ -85,10 +104,10 @@ async def fetch_weather_from_api(
 
 @router.get("/stats/{farm_id}")
 def get_weather_stats(
-    farm_id: int,
+    farm_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Farm ID (max int64)"),
     days: int = Query(default=7, ge=1, le=90, description="Son kac gun"),
     db: Session = Depends(get_db),
-):
+) -> dict:
     """
     Belirli bir çiftliğin son N günlük hava durumu istatistiklerini döndürür.
     Ortalama, min, max sıcaklık, nem ve toplam yağış bilgilerini içerir.
@@ -98,7 +117,7 @@ def get_weather_stats(
 
 @router.post("/clean")
 @limiter.limit(STRICT_RATE)
-def clean_weather_record(request: Request, data: dict):
+def clean_weather_record(request: Request, data: dict) -> dict:
     """
     Gönderilen hava durumu verisini temizler ve eksik alanları doldurur.
     Veri pipeline'ı test etmek için kullanılır.

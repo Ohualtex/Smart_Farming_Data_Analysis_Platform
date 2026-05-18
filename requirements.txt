@@ -54,3 +54,10 @@ paho-mqtt>=2.1.0
 # Ayşe: CNN bitki sağlığı modeli (lightweight inference; tensorflow yerine)
 onnxruntime>=1.18.0
 pillow>=10.3.0
+
+# shiftFinal — Observability (Sentry + Prometheus + structured logging)
+# Mehmet'in A2 paketi: production gözlemlenebilirliği
+# - Sentry: SENTRY_DSN env varsa uncaught exception toplama (FastAPI integration)
+# - Prometheus: /metrics endpoint + request counter/histogram metrikleri
+sentry-sdk[fastapi]>=2.0.0
+prometheus-client>=0.20.0

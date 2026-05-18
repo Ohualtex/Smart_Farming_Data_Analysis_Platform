@@ -1,12 +1,15 @@
 """
-Gübreleme Öneri Servisi
-========================
-Bitki türüne göre NPK (Azot-Fosfor-Potasyum) ihtiyacını hesaplar
-ve toprak analizi verilerine göre gübreleme takvimi önerir.
+Fertilizer Recommendation Service
+===================================
+Computes per-crop NPK (nitrogen-phosphorus-potassium) needs and
+proposes a fertilizer schedule from soil-analysis data.
 
-Kural tabanlı model: Bitki ihtiyacı - topraktaki mevcut değerler = eklenmesi gereken miktar.
+Rule-based model: `crop need - current soil value = amount to apply`.
 
-Ayşe Eslem Çekici — Cycle 5 Görevi
+---
+
+Bitki türüne göre NPK ihtiyacını hesaplar ve toprak analizine göre
+gübre takvimi önerir. Kural: `bitki ihtiyacı - mevcut toprak = uygulama`.
 """
 
 from __future__ import annotations
@@ -20,9 +23,12 @@ class FertilizerService:
     NPK hesaplaması ve gübreleme takvimi oluşturma.
     """
 
-    # Bitki türüne göre ideal NPK ihtiyacı (mg/kg toprak)
-    # Cycle 6: Türkiye'nin 7 coğrafi bölgesinde yetiştirilen 15 bitki türü
-    # ile uyumlu olacak şekilde genişletildi (database/turkey_data.py)
+    # Per-crop ideal NPK demand (mg/kg soil). Covers 15 crop species
+    # spanning the 7 geographic regions of Türkiye (see
+    # `database/turkey_data.py`).
+    # ---
+    # Bitki türüne göre ideal NPK ihtiyacı (mg/kg toprak). Türkiye'nin
+    # 7 bölgesinde yetiştirilen 15 bitki türünü kapsar.
     CROP_NPK_REQUIREMENTS: dict[str, dict[str, float]] = {
         # ─── Tahıllar ──────────────────────────────────────────
         "wheat": {"N": 120.0, "P": 60.0, "K": 40.0, "name_tr": "Buğday"},

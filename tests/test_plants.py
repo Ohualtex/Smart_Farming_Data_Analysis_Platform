@@ -1,8 +1,13 @@
 """
-Bitki Sağlığı (PlantHealthImage) endpoint testleri
-====================================================
-Cycle 7'de heuristic CNN modeli ile entegre edildi; URL upload, multipart
-analyze ve liste endpoint'lerini kapsar.
+PlantHealthImage Endpoint Tests
+=================================
+Covers URL-based upload, multipart `/analyze`, and the listing endpoint
+backed by the heuristic / ONNX disease model.
+
+---
+
+URL upload, multipart analyze ve listeleme uçlarını heuristic/ONNX
+model üzerinden doğrular.
 """
 
 from __future__ import annotations

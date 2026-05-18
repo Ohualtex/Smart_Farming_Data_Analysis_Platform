@@ -17,13 +17,50 @@ health, analytics and system alerts. Auth schemas live in app/routers/auth.py.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
+
+
+def _serialize_utc(value: datetime) -> str:
+    """Always emit RFC 3339 `date-time` with a UTC suffix.
+
+    SQLAlchemy returns naive datetimes from SQLite; without this
+    serializer the JSON output ("2026-05-02T22:48:07.191981") fails
+    OpenAPI `format: date-time` validation (no timezone offset).
+    Naive values are interpreted as UTC.
+
+    ---
+
+    SQLAlchemy SQLite'tan tz'siz datetime döndürür; bu serializer hep
+    UTC suffix'li ISO 8601 üretip OpenAPI `date-time` kontratıyla uyumlu
+    JSON çıkarır.
+    """
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.isoformat()
+
+
+UtcDateTime = Annotated[
+    datetime,
+    PlainSerializer(_serialize_utc, return_type=str, when_used="json"),
+]
+
+# SQLite INTEGER is signed 64-bit: max = 2**63 - 1 = 9_223_372_036_854_775_807.
+# Without this bound Schemathesis / hand-crafted clients can submit ints
+# beyond that and trip an OverflowError → 500 inside SQLAlchemy's
+# `do_execute`. With the bound Pydantic returns 422 cleanly.
+# Mirrors the Query-side `MAX_SKIP` guard added in `7e49bef` for skip/limit;
+# this is the body-side companion (caught by POST /api/weather/ fuzz).
+SQLITE_INT_MAX = 9_223_372_036_854_775_807
+SqliteSafeInt = Annotated[int, Field(le=SQLITE_INT_MAX, ge=-SQLITE_INT_MAX - 1)]
 
 
 # ========== SENSOR ==========
 class SensorCreate(BaseModel):
+    """Create payload for Sensor."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -37,7 +74,7 @@ class SensorCreate(BaseModel):
         }
     )
 
-    field_id: int
+    field_id: SqliteSafeInt
     sensor_type: str  # 'soil_moisture' | 'soil_temperature' | 'humidity' | ...
     serial_number: str
     depth_cm: float | None = None
@@ -46,6 +83,8 @@ class SensorCreate(BaseModel):
 
 
 class SensorResponse(BaseModel):
+    """Sensor serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -57,7 +96,9 @@ class SensorResponse(BaseModel):
 
 # ========== SENSOR READING ==========
 class SensorReadingCreate(BaseModel):
-    sensor_id: int
+    """Create payload for SensorReading."""
+
+    sensor_id: SqliteSafeInt
     moisture_percent: float
     depth_cm: float | None = None
     soil_temperature_c: float | None = None
@@ -65,18 +106,22 @@ class SensorReadingCreate(BaseModel):
 
 
 class SensorReadingResponse(BaseModel):
+    """SensorReading serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     sensor_id: int
-    reading_timestamp: datetime
+    reading_timestamp: UtcDateTime
     moisture_percent: float
     soil_temperature_c: float | None
 
 
 # ========== WEATHER ==========
 class WeatherDataCreate(BaseModel):
-    farm_id: int
+    """Create payload for WeatherData."""
+
+    farm_id: SqliteSafeInt
     temperature_c: float | None = None
     humidity_percent: float | None = None
     precipitation_mm: float | None = None
@@ -84,11 +129,13 @@ class WeatherDataCreate(BaseModel):
 
 
 class WeatherDataResponse(BaseModel):
+    """WeatherData serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     farm_id: int | None
-    recorded_at: datetime
+    recorded_at: UtcDateTime
     temperature_c: float | None
     humidity_percent: float | None
     precipitation_mm: float | None
@@ -96,23 +143,29 @@ class WeatherDataResponse(BaseModel):
 
 # ========== IRRIGATION ==========
 class IrrigationCreate(BaseModel):
-    field_id: int
+    """Create payload for Irrigation."""
+
+    field_id: SqliteSafeInt
     scheduled_date: datetime
     duration_min: int | None = None
     water_amount_liters: float | None = None
 
 
 class IrrigationResponse(BaseModel):
+    """Irrigation serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     field_id: int
-    scheduled_date: datetime
+    scheduled_date: UtcDateTime
     water_amount_liters: float | None
     status: str
 
 
 class IrrigationPredictionRequest(BaseModel):
+    """IrrigationPrediction endpoint request body."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -125,14 +178,21 @@ class IrrigationPredictionRequest(BaseModel):
         }
     )
 
-    soil_moisture: float  # %0-100 toprak nemi
-    soil_temperature: float  # °C
-    humidity: float  # %0-100 hava nemi
-    temperature: float  # °C hava sıcaklığı
-    precipitation: float  # son 24 saat yağış (mm)
+    # Range constraints prevent numerical overflow in the downstream
+    # RandomForest predict step (extreme floats blow up numpy ops).
+    # ---
+    # Aralık kısıtları RandomForest predict adımında sayısal overflow'u
+    # engeller; uç değerler numpy işlemlerini patlatır.
+    soil_moisture: float = Field(..., ge=0.0, le=100.0)  # %0-100 toprak nemi
+    soil_temperature: float = Field(..., ge=-50.0, le=80.0)  # °C
+    humidity: float = Field(..., ge=0.0, le=100.0)  # %0-100 hava nemi
+    temperature: float = Field(..., ge=-60.0, le=70.0)  # °C hava sıcaklığı
+    precipitation: float = Field(..., ge=0.0, le=1000.0)  # 24 saat yağış (mm)
 
 
 class IrrigationPredictionResponse(BaseModel):
+    """IrrigationPrediction serializer (response shape)."""
+
     recommended_water_liters: float
     irrigation_needed: bool
     confidence: float
@@ -141,6 +201,8 @@ class IrrigationPredictionResponse(BaseModel):
 
 # ========== FERTILIZER (Gübreleme) ==========
 class FertilizerRecommendRequest(BaseModel):
+    """FertilizerRecommend endpoint request body."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -163,6 +225,8 @@ class FertilizerRecommendRequest(BaseModel):
 
 
 class FertilizerRecommendResponse(BaseModel):
+    """FertilizerRecommend serializer (response shape)."""
+
     crop_type: str
     crop_name_tr: str
     area_hectares: float
@@ -176,6 +240,8 @@ class FertilizerRecommendResponse(BaseModel):
 
 
 class FertilizerScheduleRequest(BaseModel):
+    """FertilizerSchedule endpoint request body."""
+
     crop_type: str
     planting_date: str  # YYYY-MM-DD
     area_hectares: float
@@ -185,6 +251,8 @@ class FertilizerScheduleRequest(BaseModel):
 
 
 class FertilizerScheduleResponse(BaseModel):
+    """FertilizerSchedule serializer (response shape)."""
+
     phase: str
     timing: str
     target_date: str
@@ -194,8 +262,10 @@ class FertilizerScheduleResponse(BaseModel):
     notes: str
 
 
-# ========== SYSTEM ALERT (Ecenur — Cycle 6: Veri hatti izleme & uyari) ==========
+# ========== SYSTEM ALERT (data pipeline monitoring + alerts) ==========
 class SystemAlertCreate(BaseModel):
+    """Create payload for SystemAlert."""
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -208,14 +278,16 @@ class SystemAlertCreate(BaseModel):
         }
     )
 
-    farm_id: int | None = None
-    field_id: int | None = None
+    farm_id: SqliteSafeInt | None = None
+    field_id: SqliteSafeInt | None = None
     alert_type: str  # 'sensor_anomaly' | 'weather_warning' | 'system_error' | ...
     severity: str = "low"  # 'low' | 'medium' | 'critical'
     message: str
 
 
 class SystemAlertResponse(BaseModel):
+    """SystemAlert serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -225,7 +297,7 @@ class SystemAlertResponse(BaseModel):
     severity: str
     message: str
     is_resolved: bool
-    created_at: datetime
+    created_at: UtcDateTime
 
 
 class SystemAlertUpdate(BaseModel):
@@ -236,8 +308,10 @@ class SystemAlertUpdate(BaseModel):
     message: str | None = None
 
 
-# ========== MODEL PERFORMANCE LOG (Mehmet — Cycle 6: Model perf izleme) ==========
+# ========== MODEL PERFORMANCE LOG (ML model performance tracking) ==========
 class ModelPerformanceLogCreate(BaseModel):
+    """Create payload for ModelPerformanceLog."""
+
     model_name: str  # 'irrigation_rf' | 'plant_disease_cnn' | ...
     prediction_data: str  # JSON serialized
     actual_data: str | None = None
@@ -245,6 +319,8 @@ class ModelPerformanceLogCreate(BaseModel):
 
 
 class ModelPerformanceLogResponse(BaseModel):
+    """ModelPerformanceLog serializer (response shape)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -252,7 +328,7 @@ class ModelPerformanceLogResponse(BaseModel):
     prediction_data: str
     actual_data: str | None
     accuracy_score: float | None
-    logged_at: datetime
+    logged_at: UtcDateTime
 
 
 class ModelPerformanceSummary(BaseModel):
@@ -261,7 +337,7 @@ class ModelPerformanceSummary(BaseModel):
     model_name: str
     total_predictions: int
     avg_accuracy: float | None
-    last_logged: datetime | None
+    last_logged: UtcDateTime | None
 
 
 class ModelPerformanceLogUpdate(BaseModel):
@@ -310,10 +386,64 @@ class ModelPerformanceCompareItem(BaseModel):
     avg_accuracy: float | None
     min_accuracy: float | None
     max_accuracy: float | None
-    last_logged: datetime | None
+    last_logged: UtcDateTime | None
 
 
-# ========== HEALTH (Mehmet — Cycle 6: deep health check) ==========
+# ========== FARM / FIELD / SOIL (Cycle 9 GET endpoint'leri) ==========
+class FieldSummary(BaseModel):
+    """Field özet — `FarmDetailResponse.fields` içinde nested olarak döner."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    area_hectares: float | None = None
+    soil_type: str | None = None
+    elevation_m: float | None = None
+    crop_id: int | None = None
+
+
+class FarmResponse(BaseModel):
+    """Farm liste yanıtı (`GET /api/farms/`)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    name: str
+    city: str | None = None
+    region: str | None = None
+    area_hectares: float | None = None
+    location_lat: float | None = None
+    location_lng: float | None = None
+
+
+class FarmDetailResponse(FarmResponse):
+    """Farm detay yanıtı (`GET /api/farms/{farm_id}`) — `fields` nested."""
+
+    fields: list[FieldSummary]
+
+
+class SoilAnalysisResponse(BaseModel):
+    """SoilAnalysis serializer (`GET /api/farms/{farm_id}/soil`)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    field_id: int
+    analysis_date: UtcDateTime
+    ph_level: float | None = None
+    organic_matter_pct: float | None = None
+    nitrogen_mg_kg: float | None = None
+    phosphorus_mg_kg: float | None = None
+    potassium_mg_kg: float | None = None
+    calcium_mg_kg: float | None = None
+    magnesium_mg_kg: float | None = None
+    texture_class: str | None = None
+    notes: str | None = None
+
+
+# ========== HEALTH (deep health check) ==========
 class HealthCheckResponse(BaseModel):
     """Detayli sistem sagligi raporu."""
 
@@ -321,4 +451,4 @@ class HealthCheckResponse(BaseModel):
     service: str
     version: str
     components: dict  # {db: ok, scheduler: ok, ml_model: ok, ...}
-    timestamp: datetime
+    timestamp: UtcDateTime

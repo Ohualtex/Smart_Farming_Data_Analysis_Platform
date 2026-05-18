@@ -3,18 +3,20 @@
 # ============================================================
 # Her push ve Pull Request'te otomatik olarak:
 #   1. Kod kalitesi kontrolü (Ruff lint + format)
-#   2. Testleri çalıştırma (pytest, 301+ test)
+#   2. Testleri çalıştırma (pytest, 400+ test)
 #   3. Test coverage raporu (HTML + XML artifact)
 #   4. Alembic migration smoke test (boş DB → upgrade head)
+#   5. Schemathesis property-based API fuzz (shiftFinal Ayşe paketi)
 #
 # Security taramaları için: bkz. .github/workflows/security.yml
+# A11y taramaları için: bkz. .github/workflows/a11y.yml
 # ============================================================
 
 name: SFDAP CI Pipeline
 
 on:
   push:
-    branches: [main, cycle_8]
+    branches: [main, cycle_8, shiftFinal]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -123,3 +125,60 @@ jobs:
         run: |
           alembic upgrade head
           alembic current
+
+  frontend-test:
+    name: 🧩 Frontend Birim Testleri (Vitest)
+    runs-on: ubuntu-latest
+    # shiftFinal cila — `frontend/src/lib/skeleton.js` (main.js'in 4 a11y
+    # helper'ının ESM mirror'ı) için Vitest birim testleri. Drift TODO
+    # `frontend/src/lib/skeleton.js` header'ında; Cycle 9 frontend split
+    # tamamlanınca main.js doğrudan lib'den import edecek.
+
+    steps:
+      - name: 📥 Kodu indir
+        uses: actions/checkout@v4
+
+      - name: 🟢 Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 npm ci (frontend)
+        working-directory: frontend
+        run: npm ci
+
+      - name: 🧪 Vitest (skeleton + aria-busy helper'ları)
+        working-directory: frontend
+        run: npm test
+
+  fuzz:
+    name: 🎲 Schemathesis API Fuzz (shiftFinal Ayşe)
+    runs-on: ubuntu-latest
+    needs: lint
+    # shiftFinal — Ayşe paketi. OpenAPI schema'sından property-based test
+    # üretip her GET endpoint'i random param'larla denedik; 500 server-error
+    # contract'ını koruruz. Modul tests/test_schemathesis_fuzz.py'de.
+
+    steps:
+      - name: 📥 Kodu indir
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: 📦 Bağımlılıkları kur
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      # NOT: test_schemathesis_fuzz.py icinde Hypothesis profile derandomize=True
+      # ile flake'siz; max_examples=10 ile CI sure bütçesi düşük (~30s).
+      # EN: deterministic seed + low example budget keeps the CI run flake-free.
+      - name: 🎲 Schemathesis fuzz testleri
+        run: pytest tests/test_schemathesis_fuzz.py -v --no-cov

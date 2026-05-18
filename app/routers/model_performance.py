@@ -1,30 +1,32 @@
 """
-Model Performans Raporlama API'si
-===================================
-ML modellerin tahmin / gerçekleşen sapmalarını ve doğruluk skorlarını
-saklayan ModelPerformanceLog tablosu için CRUD + agregat raporlama.
+Model Performance Reporting API
+=================================
+CRUD plus aggregate reporting on the `ModelPerformanceLog` table, which
+stores ML prediction vs. observed deltas and accuracy scores.
 
-Mehmet Sait Tayşi — Cycle 6 Görevi (shiftSession): Model Performansını
-İzleme ve Raporlama Altyapısı
+Endpoints:
+- GET /              list (model_name + limit filter)
+- POST /             new log (auth)
+- PATCH /{id}        fill observed value + accuracy (auth)
+- GET /summary/{m}   per-model aggregate summary
+- GET /timeseries/{m} daily accuracy time series
+- GET /compare       compare several models
 
-Endpoint'ler:
-- GET /              listele (model_name + limit filtre)
-- POST /             yeni log (auth)
-- PATCH /{id}        gerçek değer + accuracy doldur (auth)
-- GET /summary/{m}   model bazlı agregat özet
-- GET /timeseries/{m} günlük accuracy zaman serisi
-- GET /compare       birden fazla modeli karşılaştır
+---
+
+ML modellerin tahmin/gerçekleşen sapma ve doğruluk skorlarını tutan
+ModelPerformanceLog tablosu üstünde CRUD + agregat raporlama uçları.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import ModelPerformanceLog, SystemAlert
@@ -64,7 +66,7 @@ def list_logs(
     model_name: str | None = Query(default=None, description="Filtre: belirli bir model"),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
-):
+) -> list[ModelPerformanceLog]:
     query = db.query(ModelPerformanceLog)
     if model_name:
         query = query.filter(ModelPerformanceLog.model_name == model_name)
@@ -77,9 +79,12 @@ def list_logs(
     status_code=201,
     dependencies=[Depends(verify_api_key)],
     summary="Yeni performans logu kaydet",
+    responses={400: {"description": "Geçersiz JSON body"}},
 )
 @limiter.limit(STRICT_RATE)
-def create_log(request: Request, payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)):
+def create_log(
+    request: Request, payload: ModelPerformanceLogCreate, db: Session = Depends(get_db)
+) -> ModelPerformanceLog:
     log = ModelPerformanceLog(**payload.model_dump())
     db.add(log)
     db.commit()
@@ -95,9 +100,18 @@ def create_log(request: Request, payload: ModelPerformanceLogCreate, db: Session
     description="Tahmin sonradan gerçekleştiğinde `actual_data` ve `accuracy_score` alanlarını "
     "günceller. Tipik akış: önce POST ile log yaratılır, gerçek sonuç bilindiğinde bu PATCH "
     "ile doldurulur.",
+    responses={
+        400: {"description": "Geçersiz JSON body"},
+        404: {"description": "Log kaydı bulunamadı"},
+    },
 )
 @limiter.limit(STRICT_RATE)
-def update_log(request: Request, log_id: int, payload: ModelPerformanceLogUpdate, db: Session = Depends(get_db)):
+def update_log(
+    request: Request,
+    payload: ModelPerformanceLogUpdate,
+    log_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Log ID (max int64)"),
+    db: Session = Depends(get_db),
+) -> ModelPerformanceLog:
     log = db.query(ModelPerformanceLog).filter(ModelPerformanceLog.id == log_id).first()
     if log is None:
         raise HTTPException(status_code=404, detail=f"Log {log_id} bulunamadi")
@@ -113,8 +127,9 @@ def update_log(request: Request, log_id: int, payload: ModelPerformanceLogUpdate
     response_model=ModelPerformanceSummary,
     summary="Model bazlı agregat performans özeti",
     description="Belirtilen model için toplam tahmin sayısı, ortalama doğruluk skoru ve son log zamanını döndürür.",
+    responses={404: {"description": "Belirtilen model için log bulunamadı"}},
 )
-def model_summary(model_name: str, db: Session = Depends(get_db)):
+def model_summary(model_name: str, db: Session = Depends(get_db)) -> ModelPerformanceSummary:
     rows = (
         db.query(
             func.count(ModelPerformanceLog.id).label("total"),
@@ -145,7 +160,7 @@ def model_timeseries(
     model_name: str,
     days: int = Query(default=30, ge=1, le=365, description="Son kaç gün"),
     db: Session = Depends(get_db),
-):
+) -> list[ModelPerformanceTimeseriesPoint]:
     since = datetime.now(UTC) - timedelta(days=days)
     # SQLite ve PostgreSQL'de date() farklı çalışıyor — func.date() ile tarih bazlı gruplama
     rows = (
@@ -178,15 +193,21 @@ def model_timeseries(
     summary="Birden fazla modeli karşılaştır",
     description="Virgülle ayrılmış model isimleri için yan-yana metrikler (toplam tahmin, "
     "ortalama / min / max accuracy, son log zamanı). Örnek: `?models=irrigation_rf,plant_disease_cnn`",
+    responses={400: {"description": "Geçerli model adı sağlanmadı"}},
 )
 def compare_models(
     models: str = Query(..., description="Virgülle ayrılmış model isimleri"),
     days: int = Query(default=30, ge=1, le=365),
     db: Session = Depends(get_db),
-):
+) -> list[ModelPerformanceCompareItem]:
     model_names = [m.strip() for m in models.split(",") if m.strip()]
     if not model_names:
-        raise HTTPException(status_code=422, detail="En az bir model adi gerekli")
+        # 400 (not 422) — 422'nin FastAPI auto-üretilen şeması Pydantic
+        # ValidationError listesi bekler; düz-string detail uyumsuz olur.
+        # ---
+        # 400 is correct here; FastAPI's auto-generated 422 schema requires
+        # a list-of-ValidationError shape that a plain-string detail breaks.
+        raise HTTPException(status_code=400, detail="En az bir model adı gerekli")
 
     since = datetime.now(UTC) - timedelta(days=days)
     results: list[ModelPerformanceCompareItem] = []
@@ -232,7 +253,7 @@ def detect_drift(
     baseline_days: int = Query(default=30, ge=2, le=365, description="Önceki baz periyot pencere"),
     threshold_percent: float = Query(default=10.0, gt=0, le=100, description="Drift eşik yüzdesi"),
     db: Session = Depends(get_db),
-):
+) -> ModelPerformanceDriftReport:
     now = datetime.now(UTC)
     recent_start = now - timedelta(days=recent_days)
     baseline_start = recent_start - timedelta(days=baseline_days)

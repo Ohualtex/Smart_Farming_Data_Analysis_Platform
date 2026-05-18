@@ -1,11 +1,13 @@
 """
 Rate Limiting Middleware
-=========================
-SlowAPI kullanarak API isteklerini sınırlandırır.
-- Genel endpoint'ler: 100 istek/dakika
-- Auth gerektiren endpoint'ler: 30 istek/dakika
+==========================
+SlowAPI-based request throttling.
+- General endpoints: 100 req/min
+- Auth endpoints: 30 req/min
 
-Mehmet Sait Tayşi — Cycle 5 Görevi
+---
+
+SlowAPI tabanlı istek hız sınırlaması; genel uçlar 100/dk, auth 30/dk.
 """
 
 from slowapi import Limiter
@@ -23,7 +25,7 @@ STRICT_RATE = "30/minute"
 AUTH_RATE = "10/minute"
 
 
-async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
     """
     Rate limit aşıldığında tutarlı hata formatı döndürür.
     HTTP 429 Too Many Requests.

@@ -1,7 +1,6 @@
-# Akilli Tarim Veri Analizi Platformu (SFDAP) - Hafta 1 Analiz Raporu
+# Akıllı Tarım Veri Analizi Platformu (SFDAP) — Hafta 1 Analiz Raporu
 
-**Hazirlayan:** Emirhan Gunay
-**Gorev:** Proje Amaci, Kapsami ve Veri Kaynaklari Analizi
+**Görev:** Proje Amacı, Kapsamı ve Veri Kaynakları Analizi
 **Tarih:** 08.03.2026
 
 ---

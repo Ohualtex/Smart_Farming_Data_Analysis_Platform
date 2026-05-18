@@ -1,7 +1,7 @@
 # 📑 SFDAP — Final Rapor
 
 > **Akıllı Tarım Veri Analizi Platformu** (Smart Farming Data Analysis Platform)
-> **Akademik teslim:** 31 Mayıs 2026
+> **Akademik teslim:** 7 Haziran 2026
 > **Cycle 9 ana çıktısı.** Bu doküman shiftFinal sırasında erken iskelet olarak başlatıldı; Cycle 9'da ekipçe doldurulacak.
 
 ---
@@ -37,21 +37,46 @@
 
 ## 2. Hedefler ve Kapsam
 
-> 🚧 **TODO Cycle 9 — Ayşe:** Gereksinim toplama belgesindeki hedefleri buraya özetle (`docs/research/Hafta_1_Analiz_Raporu.md`).
+### Hedef persona
 
-**İşlevsel hedefler:**
-- 🌍 Ulusal ölçek (81 il) veri toplama ve görselleştirme
-- 💧 ML tabanlı sulama optimizasyonu (RandomForest)
-- 🌱 NPK tabanlı akıllı gübreleme önerisi (17 bitki türü)
-- 🦠 CNN tabanlı bitki sağlığı analizi (heuristic + ONNX-ready)
-- 📊 Dashboard (Chart.js, dark/light tema, Filiz maskotu)
-- 📡 IoT/MQTT sensör stream desteği
+**Çiftçi Ahmet** — 47 yaşında, Konya'da 8 hektarlık çiftliği var, 4 tarlada
+buğday + ayçiçeği, 6 toprak nem sensörü kullanıyor. iPhone'undan tarlada
+bağlanıyor; bilgisayar bilgisi orta. Sistem Ahmet'in 5 sorusuna cevap
+vermeli:
 
-**İşlevsel olmayan hedefler:**
+1. **"Tarlam susuz mu, ne zaman sulayayım?"**
+2. **"Bu yaprakta hastalık var mı?"**
+3. **"Gübre ne zaman, ne kadar?"**
+4. **"Komşulara göre durumum nasıl?"**
+5. **"Bir sorun çıkarsa haberim olacak mı?"**
+
+İkincil persona: **Tarım Bakanlığı analisti** — 81 il düzeyinde toplu
+gözetim için harita + analytics + raporlama panosu (admin rolü).
+
+### İşlevsel hedefler
+
+- 💧 ML tabanlı sulama önerisi (RandomForest) + onaylama akışı (`/api/irrigation/schedules`)
+- 🌱 NPK tabanlı gübreleme önerisi + kayıt (`FertilizerRecommendationLog`)
+- 🦠 CNN tabanlı yaprak hastalığı analizi (heuristic + ONNX-ready) + tarla bağlamlı kayıt
+- 📡 IoT/MQTT sensör stream + 30 günden eski okumaların aylık aggregate'e arşivlenmesi
+- 🔔 Per-user bildirim akışı (toprak nemi düşüklüğü, hastalık kontrolü hatırlatması)
+- 🗺️ Bakanlık panosu: 81 il çiftlik dağılım haritası + bölge bazlı analytics
+
+### İşlevsel olmayan hedefler
+
+- **RBAC**: farmer kendi verisini, admin tüm sistemi görür
 - Coverage ≥ %80 (gerçekleşen: %95+)
 - API yanıt süresi < 500 ms (gerçekleşen: ~12 ms TestClient)
-- Production-grade auth + rate limit + TLS
-- PostgreSQL'e geçiş kapasitesi
+- Defense-in-depth response header'lar (CSP, HSTS, XFO, XCTO, Referrer, Permissions)
+- Production-grade auth (JWT + bcrypt + `jti` blacklist) + rate limit + TLS
+- PostgreSQL'e geçiş kapasitesi (`pool_size`/`max_overflow` env-tunable)
+
+### Kapsam dışı (Cycle 10+ roadmap)
+
+- E-posta/SMS bildirim gönderimi (alerts dashboard'da görünür ama push yok)
+- Mobil native uygulama (PWA roadmap'te)
+- Çoklu-tenant SaaS (cooperatif/bakanlık paylaşımı)
+- Gerçek CNN model eğitimi (PlantVillage dataset)
 
 ## 3. Geliştirme Süreci — 9 Cycle
 
@@ -67,8 +92,9 @@
 | 6 | 28 Nis – 3 May | İleri özellikler | shiftSession bridge, model performans dashboard, drift detection, raporlama (PDF/Excel) |
 | 7 | 3 – 10 May | İzleme + Gelişmiş | Filiz maskotu, Auth UI, Plants UI, Alerts panel, MQTT stream, plant_disease CNN |
 | 8 | 10 – 12 May | Üretim Hazırlığı (core) | Rate limit, N+1 fix, JWT auth, Alembic 14-tablo migration, nginx + Let's Encrypt |
-| shiftFinal | 13 – 19 May | Cila + Gözlemlenebilirlik | Sentry, Prometheus, structured logging, Vite bundling, a11y, backup/restore, edge tests |
-| 9 | 20 – 31 May | Final Rapor | **Bu doküman** + sunum + akademik teslim |
+| shiftFinal | 13 – 17 May | Cila + Gözlemlenebilirlik | Sentry, Prometheus, structured logging, Vite bundling, a11y, backup/restore, edge tests, security headers, farms router, Türkiye haritası, Vitest scaffold |
+| REBUILD | 18 – 30 May | Kullanıcı-Odaklı Yeniden Yapılandırma *(solo, Miraç)* | RBAC + per-user data isolation, "Çiftliğim" dashboard, tarla detay sayfası, eylem akışları, bildirim, onboarding |
+| 9 | 1 – 7 Haz | Final Rapor + Sunum | **Bu doküman** + sunum slaytları + Q&A + akademik teslim |
 
 **Detay:** Her cycle için ayrı retrospective var (Cycle 8: [`CYCLE_8_RETROSPECTIVE.md`](CYCLE_8_RETROSPECTIVE.md)).
 
@@ -77,7 +103,7 @@
 > 🚧 **TODO Cycle 9 — Miraç:** `docs/architecture.md`'den Mermaid diyagramları + açıklama paragrafları aktar.
 
 **Üst düzey:**
-- **Frontend katmanı:** Tek dosyalı SPA (`frontend/index.html` ≈ 2 873 satır) → Vite ile shiftFinal'da modülerleşecek
+- **Frontend katmanı:** Tek dosyalı SPA (`frontend/index.html` ≈ 3 100 satır + Vite scaffold) — shiftFinal A3'te a11y/skeleton refactor + Vite build pipeline iskeleti eklendi; ES module split Cycle 9 sonrası kademeli
 - **API katmanı:** FastAPI Gateway → 11 router × 43 endpoint (pagination count endpoint'leri dahil)
 - **İş katmanı:** Servisler (`weather_service`, `fertilizer_service`, `mqtt_listener`, `sensor_archiver`, `report_service`, `data_quality`)
 - **ML katmanı:** RandomForest (sulama) + heuristic+ONNX (bitki hastalığı) + APScheduler periyodik görevler
@@ -100,11 +126,12 @@
 
 ## 6. API Endpoint'leri
 
-**43 endpoint × 11 router:**
+**~47 endpoint × 12 router:**
 
 | Router | Endpoint | Anahtar Yetenek |
 |:--|:--:|:--|
-| `auth` | 4 | JWT bearer + bcrypt (Cycle 8 #3) |
+| `auth` | 4 | JWT bearer + bcrypt (Cycle 8 #3); `jti` blacklist (shiftFinal `dec2e82`) |
+| `farms` | 3 | **Cycle 9 prep:** list/detail + nested fields + per-farm soil analyses |
 | `sensors` | 7 | CRUD + readings + **count (pagination)** |
 | `weather` | 6 | CRUD + OpenWeatherMap fetch + clean |
 | `irrigation` | 4 | ML predict + schedule CRUD + **count (pagination)** |
@@ -144,7 +171,7 @@
 
 > 🚧 **TODO Cycle 9 — Ecenur:** Ekran görüntüleri + sayfa-sayfa anlatım.
 
-**Mevcut yapı:** Tek dosya SPA, 2 873 satır, 9 sayfa, dark/light tema, Chart.js, vanilla JS.
+**Mevcut yapı:** Tek dosya SPA, ~3 100 satır, 9 sayfa, dark/light tema, Chart.js, vanilla JS.
 
 **Filiz maskotu** (Cycle 7 — Miraç):
 - Inline SVG, idle/blink/mood animasyonları
@@ -152,7 +179,13 @@
 - Gündüz happy / gece sleepy mood
 - Tıklama tepkileri (kalp + sinirli)
 
-**shiftFinal'da gelecek:** Vite bundling + a11y (ARIA, WCAG AA) + skeleton loaders.
+**shiftFinal A3 (Ecenur — `02d1359`):**
+- **Vite scaffold:** `package.json` + `vite.config.js` (dev :5173, FastAPI :8000 proxy); ES module split Cycle 9 sonrası
+- **A11y:** skip-to-content link, `<main id="main-content" role="main" tabindex="-1">`, sidebar `<nav aria-label="Ana menü">`, `aria-current="page"`, hamburger `aria-controls`+`aria-expanded`, `<th scope="col">`+sr-only caption, decorative icon `aria-hidden`, toast container live region, `:focus-visible` outline
+- **Skeleton loaders:** 4 JS helper (`_skeletonCards`, `_skeletonRows`, `_skeletonBlock`, `_setBusy`); 8 hedef element için fetch öncesi iskelet + `aria-busy`. `@media (prefers-reduced-motion: reduce)` → animation:none
+- **Tests:** 28 yeni a11y testi (`test_frontend_a11y.py`)
+
+**axe-core CI (Ayşe — shiftFinal `7e49bef`):** `.github/workflows/a11y.yml`, WCAG 2.0 + 2.1 A/AA tarama, haftalık cron.
 
 ## 9. Güvenlik
 
@@ -163,32 +196,47 @@
 | Yetkilendirme | JWT bearer (HS256) + bcrypt | 8 |
 | Hız sınırlama | slowapi 30/min STRICT + 10/min AUTH (17 endpoint) | 8 |
 | TLS | nginx reverse proxy + Let's Encrypt | 8 |
-| CORS | env-driven origin listesi | 5 |
-| Production fail-fast | default secret kullanımı engellenir | 5 |
+| **Response header'lar** | **CSP + HSTS (prod) + XFO + XCTO + Referrer-Policy + Permissions-Policy** | **shiftFinal** |
+| CORS | env-driven origin listesi + production guard (`*`/localhost yasak) | 5 + shiftFinal |
+| Production fail-fast | default secret + güvensiz CORS engellenir | 5 + shiftFinal |
 | Source taraması | bandit medium+ severity (0 issue) | 8 |
 | Dependency taraması | pip-audit (CI, haftalık cron) | 8 |
-| Logout | JWT in-memory blacklist | 8 |
+| Logout | JWT `jti` blacklist (RFC 7519 §4.1.7) | 8 + shiftFinal |
+| `/metrics` discovery | `X-Robots-Tag: noindex, nofollow` | shiftFinal |
 
 ## 10. Test, Coverage ve CI/CD
 
 ```
-Test sayısı:        313 (23 dosya)
-Coverage:           %95
+Test sayısı:        462 backend (29 dosya) + 14 frontend (Vitest)
+                    246 → 313 → 350 → 365 (A2) → 372 (A4) → 400 (A3)
+                    → 425 (Ayşe ilk paket) → 446 (auth-aware POST/PATCH/
+                    DELETE fuzz `61c64e4` + 7. int64 fix `4a0308a`)
+                    → 462 (Cycle 9 prep: `farms` router 13 test)
+Coverage:           %95.04
 Linter:             Ruff (17 kural grubu) — All checks passed
-Source security:    Bandit medium+ — 0 issue (3,783 LOC)
-CI workflows:       2 (.github/workflows/ci.yml + security.yml)
+Source security:    Bandit medium+ — 0 issue
+API fuzz:           Schemathesis property-based — 25 GET + auth-aware
+                    POST/PATCH/DELETE write endpoints (`61c64e4`),
+                    strict OpenAPI contract conformance (`c683da0`)
+A11y:               axe-core CLI WCAG 2.0 + 2.1 A/AA — strict mode
+                    (`f2e9bf8`), CI haftalık + PR tarama
+CI workflows:       3 (.github/workflows/ci.yml + security.yml + a11y.yml)
 Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
                     merge-conflict, detect-private-key
 ```
 
-**CI pipeline:**
+**CI pipeline (`ci.yml`):**
 1. **Lint** (Ruff check + format)
 2. **Test** (pytest + HTML + XML coverage)
 3. **Migrations** (alembic upgrade head smoke)
+4. **Fuzz** (Schemathesis property-based API fuzz, shiftFinal Ayşe)
 
-**Security pipeline (haftalık + PR):**
+**Security pipeline (`security.yml`, haftalık + PR):**
 1. **Bandit** (Python source security)
 2. **pip-audit** (dependency CVE)
+
+**A11y pipeline (`a11y.yml`, haftalık + PR — shiftFinal Ayşe):**
+1. **axe** — FastAPI bg + `@axe-core/cli` WCAG 2.0 + 2.1 A/AA tarama; JSON rapor 30 gün artifact
 
 **Detay:** [`docs/QUALITY_AUDIT.md`](QUALITY_AUDIT.md)
 
@@ -209,17 +257,15 @@ Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
 
 | Üye | Cycle 1 | Cycle 2 | Cycle 3 | Cycle 4 | Cycle 5 | Cycle 6 | Cycle 7 | Cycle 8 | shiftFinal | Cycle 9 |
 |:--|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| **Miraç Duran** | Proje temelleri + teknoloji araştırması | DB yapı planı | API tasarım | ML sulama modeli | CI/CD + integration testler | 81 il expand + analytics dashboard + DX cleanup | Filiz maskot + UX cilası | 5 production-core + 6 bonus | Code quality polish (A5/A6/B1 ✅) | Final rapor |
-| **Emirhan Günay** | Proje analizi | (—) | DB şema | Sensör entegrasyon | Alembic + seed data | Veri temizleme iyileştirme | MQTT + (archiving Cycle 8'e kaydı) | (archiving Miraç tarafından) | Backup + DB pool | Final rapor |
-| **Ayşe E. Çekici** | Gereksinim toplama | (—) | UI/UX wireframe | Weather pipeline | Gübre öneri sistemi | ML değerlendirme | CNN bitki sağlığı | (Tier A1 ✅ Miraç bonus) | Edge case tests + auth integration | Veri seti + algoritma optim. |
-| **Ecenur Üner** | Dev ortamı | Veri toplama planı | (—) | Chart.js dashboard | Dashboard modern + responsive | Veri hattı izleme | Auth UI + Plants UI + Alerts panel | (—) | Vite bundling + a11y + skeleton | Sunum materyalleri |
-| **Mehmet S. Tayşi** | Veri seti ön işleme | Veri analizi + model seçim | (—) | Temel veri API | API güvenlik (rate limit + CORS) | Model performans altyapı | Health/Metrics + alerts CRUD | (—) | Sentry + Prometheus + structured logs | Test + validasyon |
+| **Miraç Duran** | Proje temelleri + teknoloji araştırması | DB yapı planı | API tasarım | ML sulama modeli | CI/CD + integration testler | 81 il expand + analytics dashboard + DX cleanup | Filiz maskot + UX cilası | 5 production-core + 6 bonus | Code quality polish + **security hardening + farms router + jti audit fix + Türkiye haritası + Vitest scaffold** | **REBUILD solo refactor** ([REBUILD_ROADMAP](REBUILD_ROADMAP.md)) + final rapor + sunum koordinasyonu |
+| **Emirhan Günay** | Proje analizi | (—) | DB şema | Sensör entegrasyon | Alembic + seed data | Veri temizleme iyileştirme | MQTT + (archiving Cycle 8'e kaydı) | (archiving Miraç tarafından) | Backup + DB pool | Final rapor yazımı |
+| **Ayşe E. Çekici** | Gereksinim toplama | (—) | UI/UX wireframe | Weather pipeline | Gübre öneri sistemi | ML değerlendirme | CNN bitki sağlığı | (Tier A1 ✅ Miraç bonus) | Edge case tests + auth integration | Sunum slaytları üretimi |
+| **Ecenur Üner** | Dev ortamı | Veri toplama planı | (—) | Chart.js dashboard | Dashboard modern + responsive | Veri hattı izleme | Auth UI + Plants UI + Alerts panel | (—) | Vite bundling + a11y + skeleton | Sunum görsel tasarımı |
+| **Mehmet S. Tayşi** | Veri seti ön işleme | Veri analizi + model seçim | (—) | Temel veri API | API güvenlik (rate limit + CORS) | Model performans altyapı | Health/Metrics + alerts CRUD | (—) | Sentry + Prometheus + structured logs | Sunum hazırlık + Q&A senaryoları |
 
-> 🚧 **TODO Cycle 9:** Her hücreye commit hash referansları eklenebilir.
+> **Cycle 9 not:** Ekip yalnız sunum + rapor üretir; teknik geliştirme **REBUILD branch'inde Miraç solo** yürütür. Cycle 9 hücreleri buna göre güncellendi.
 
 ## 13. Karşılaşılan Zorluklar ve Çözümler
-
-> 🚧 **TODO Cycle 9:** Her cycle'ın retrospective'inden anahtar zorlukları topla. Şimdilik Cycle 8 detayları için bkz. [`CYCLE_8_RETROSPECTIVE.md`](CYCLE_8_RETROSPECTIVE.md) §4.
 
 **Cycle bazlı kısa liste:**
 - **Cycle 4:** Pydantic v1 → v2 geçişi, FastAPI lifespan API'si
@@ -227,15 +273,111 @@ Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
 - **Cycle 6:** 81 il mega seed data — gerçekçi diurnal pattern üretme
 - **Cycle 7:** Filiz maskot inline SVG kompozisyonu — animasyon timing
 - **Cycle 8:** bcrypt 5↔passlib 1.7.4 uyumsuzluğu, alembic versions/ git-tracking sorunu, naming refactor (8.5 → shiftFinal)
+- **shiftFinal:** 4 ayrı production-risk bug yakalanıp düzeltildi (aşağıda detayı).
+
+### shiftFinal sprintinde yakalanan bug'lar
+
+**1. `int64` overflow ailesi (8 ayrı bug, 2 dalga)**
+
+*Belirti:* Schemathesis fuzz testleri rastgele `2^63`'e yakın int değerleri
+üretiyor; backend bunları SQLite INTEGER (signed-64bit) sütunlarına yazmaya
+çalıştığında `OverflowError: Python int too large to convert to SQLite
+INTEGER` fırlatıyor → 500 server error.
+
+*Kök neden:* Pydantic v2 default `int` türü Python'un sınırsız integer'ına
+karşılık geliyor; SQLite (PostgreSQL `BIGINT` de aynı sınırı paylaşır)
+2^63-1 üstünü kabul etmiyor.
+
+*Düzeltme:*
+- **6 bug** (Ayşe, `7e49bef`): GET sorgu parametrelerinde `MAX_SKIP =
+  1_000_000` Query constraint'i (`sensors.py`, `irrigation.py`); >1M skip
+  artık 422 graceful dönüyor.
+- **7. bug** (`4a0308a`): POST body'lerdeki FK int alanları için ortak
+  `SqliteSafeInt = Annotated[int, Field(le=2^63-1, ge=-2^63)]` alias
+  (`app/schemas/schemas.py`) — 6 Create schema'ya uygulandı.
+- **8. bug — JWT `jti` collision** (`dec2e82`): `_create_token` `iat`'i
+  saniye-precision integer yazıyor; aynı `sub` + aynı saniyede iki token
+  payload'ı byte-identical → encode edilince *aynı JWT string*'i veriyor.
+  Test suite'inde `TestLogout` ve `test_full_auth_lifecycle` ardışık
+  koştuğunda ilk logout ikinci login'in token'ını da blacklist'liyor (production'da düşük olasılık ama mümkün edge).
+  Fix: token payload'a `uuid.uuid4().hex` ile `jti` claim'i (RFC 7519
+  §4.1.7); blacklist token-string yerine `jti` ile çalışıyor. Geriye
+  uyumluluk: `jti`'siz eski token'lar "never-blacklisted" sayılır.
+
+**2. Trackpad inertia: kontrolsüz harita zoom (`8ff0234`)**
+
+*Belirti:* Türkiye haritası sayfasında trackpad ile büyütüp küçültürken
+"3-4 atlama" oluyordu; tek iki-parmak swipe = 3+ zoom adımı, kullanım
+"öldürücü" hale geliyordu.
+
+*Kök neden:* macOS trackpad bir iki-parmak swipe için 1-2 saniyelik
+inertia kuyruğunda 30+ wheel event ateşliyor. Leaflet'in built-in
+`scrollWheelZoom` handler'ı `wheelDebounceTime=100ms` ile bunları ~10
+burst'e indiriyordu — yine de yetersiz, her burst bir zoom adımı
+demek.
+
+*Düzeltme:* `scrollWheelZoom: false` ile Leaflet'in kendi handler'ı
+tamamen kapatıldı; yerine custom `wheel` listener: tek event = ±1 zoom
+step + 250ms cooldown. Bir trackpad jesti artık tek zoom step yapıyor,
+inertia kuyruğundaki geri kalan 30 event sessiz drop ediliyor.
+
+**3. JWT blacklist test sızıntısı (`2950672` — conftest fix)**
+
+*Belirti:* `test_full_auth_lifecycle` tam suite'te 401, tek başına 200.
+Random test ordering altında flaky.
+
+*Kök neden:* `_BLACKLISTED_JTIS` modül-seviyesi global; `TestLogout`
+test'lerinden kalan jti'ler edge-case test'lerine sızıyordu (özellikle
+jti'siz iki test arası).
+
+*Düzeltme:* `tests/conftest.py` `client` fixture'ı her test öncesi
+`_BLACKLISTED_JTIS.clear()` çağırıyor — test isolation hijyeni.
+
+**4. Production CORS allowlist (`2950672`)**
+
+*Belirti:* Dev ortamı için ayarlı `CORS_ORIGINS="http://localhost:..."`
+production deploy'a kayarsa attacker-controlled localhost iframe credential
+exfil yapabilir; mevcut `_validate_production` sadece API_KEY/SECRET_KEY
+default sentinel'lerini kontrol ediyordu.
+
+*Düzeltme:* `_validate_production` artık `CORS_ORIGINS` listesinde
+wildcard `*` veya `localhost`/`127.0.0.1` görünce `RuntimeError`
+fırlatıyor — fail-fast.
+
+> Tüm 4 maddenin kapsamlı testleri `tests/test_jti_blacklist.py`,
+> `tests/test_security_headers.py` ve `tests/test_edge_cases.py` içinde
+> yaşıyor (toplam **475+ pytest** + **32 Vitest** test).
 
 ## 14. Gelecek Çalışmalar
 
-**Bilinen teknik borçlar (shiftFinal sonrası):**
+**Bilinen teknik borçlar (Cycle 9 ve sonrası için):**
 - `bcrypt 5.0` geçişi (passlib yeni sürümünü bekliyoruz)
-- Frontend monolit modülerleştirme (Vite bundling Cycle 9 sonu)
 - RBAC (role-based access control) — kullanıcı bazlı izolasyon
 - Refresh token + JWT blacklist Redis'e taşıma
-- OpenAPI shape contract test (Schemathesis)
+- Frontend Vitest birim test scaffold'u — şu an sadece axe-core E2E var
+- pip-audit lokal venv subprocess hatası (CI'da temiz, dev makine env sorunu)
+- `.venv` recreate yardımcısı — eski mutlak path shebang'leri kaldıktan
+  sonra Python script'leri (`bandit`, `pip-audit`) `python -m` üzerinden
+  çağrılmak zorunda
+
+**shiftFinal sırasında kapatılanlar:**
+- ✅ Frontend ES module split — `frontend/index.html`'in inline CSS/JS'i
+  `src/styles/main.css` + `src/main.js`'e ayrıldı (`8f5920e`)
+- ✅ axe-core CI strict mode — `continue-on-error: false`'a alındı +
+  WCAG AA kontrast hataları düzeltildi (`f2e9bf8`)
+- ✅ Schemathesis fuzz POST/PATCH/DELETE genişletme — auth-aware (`61c64e4`)
+- ✅ Strict OpenAPI contract conformance — schema/status/content-type/
+  no-5xx (`c683da0`)
+- ✅ `SqliteSafeInt` Create-schema FK bound'u — fuzz 7. int64 bug (`4a0308a`)
+- ✅ JWT `jti` blacklist — `_create_token` `iat` saniye-precision
+  collision'ı; logout 8. audit bug (`dec2e82`)
+- ✅ Frontend Vitest scaffold — 14 birim test, jsdom env, CI'da
+  `frontend-test` job (`466dfab`)
+- ✅ Cycle 9 prep: `farms` router (list + detail + per-farm soil) —
+  schema-only kalan `Farm`/`Field`/`SoilAnalysis` modelleri için GET
+  endpoint'leri (commit pending bu batch'te)
+- ✅ `database/sfdap_schema.sql` Alembic head'den regenerate; drift
+  kaldı (`make schema-dump` target eklendi)
 
 **Olası ileri özellikler:**
 - Gerçek CNN dataset eğitimi (PlantVillage)
@@ -264,5 +406,5 @@ Pre-commit hooks:   ruff v0.13, bandit 1.8, trim/EOF/yaml/large-files,
 ---
 
 **Yazan:** Miraç Duran (iskelet — Cycle 8 sonu, 11 Mayıs 2026)
-**Tamamlanması beklenen:** 31 Mayıs 2026 (Cycle 9 son günü)
+**Tamamlanması beklenen:** 7 Haziran 2026 (Cycle 9 son günü, akademik teslim)
 **Format:** Bu Markdown kaynağı sunum öncesi PDF'e dönüştürülecek (Pandoc veya `analytics/export?format=pdf`).
