@@ -28,19 +28,32 @@ Logout sonrası blacklist üretime alınınca Redis/DB'ye taşınmalı.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 # TODO: swap to EmailStr once pydantic[email] (email-validator) is installed.
 from app.config import settings
-from app.database import get_db
+from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
-from app.models.models import User
+from app.models.models import USER_ROLES, Farm, User  # USER_ROLES: tek kaynak referansı
+
+# Pydantic Literal alias — USER_ROLES (models.py) ile birebir eşleşmek zorunda.
+# Schema validation ile DB CHECK constraint iki-katlı koruma: invalid rol
+# 422 (Pydantic) veya 400 (HTTPException) ile reddedilir; DB seviyesine
+# asla ulaşmaz.
+UserRole = Literal["farmer", "developer", "overseer", "admin"]
+# Runtime sanity-check: Literal değerleri USER_ROLES tuple'ı ile aynı kalmalı.
+assert set(UserRole.__args__) == set(USER_ROLES), (  # noqa: S101
+    "UserRole Literal ↔ USER_ROLES tuple sync bozuldu; iki tarafı da güncelle."
+)
 
 router = APIRouter(prefix="/api/auth", tags=["Kimlik Doğrulama"])
 
@@ -98,7 +111,11 @@ class TokenResponse(BaseModel):
 
 
 class CurrentUserResponse(BaseModel):
-    """Authenticated user profile — emitted by `/api/auth/me`."""
+    """Authenticated user profile — emitted by `/api/auth/me` ve role promotion.
+
+    REBUILD Faz 1 / Adım 5: `phone` + `owned_farms_count` eklendi. Frontend
+    "Hesabım" sayfası bu sayıyı kart başlığında gösterecek.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -106,6 +123,19 @@ class CurrentUserResponse(BaseModel):
     name: str
     email: str
     role: str
+    phone: str | None = None
+    # Caller'a ait `Farm` sayısı — `/me` endpoint'inde hesaplanır.
+    # Role promotion endpoint'i (`PATCH /users/{id}/role`) hedef
+    # kullanıcının çiftliklerini sayar (admin için bilgi amaçlı).
+    owned_farms_count: int = 0
+
+
+class UserRoleUpdateRequest(BaseModel):
+    """Admin-only PATCH /users/{id}/role body — REBUILD Faz 1 / Adım 4."""
+
+    model_config = ConfigDict(json_schema_extra={"example": {"role": "overseer"}})
+
+    role: UserRole
 
 
 # ─── Yardımcılar ─────────────────────────────────────────────────────
@@ -185,6 +215,63 @@ def _get_current_user(authorization: str = Header(default=""), db: Session = Dep
     return user
 
 
+# ─── Public dependency aliases (REBUILD Faz 1 / Adım 3) ─────────────
+# Diğer router'lar (`farms`, `sensors`, ...) bunları import edip
+# `Depends(get_current_user_or_403)` / `Depends(require_role('admin'))`
+# şeklinde kullanır. `_get_current_user` private alias olarak modül-içi
+# kullanım için bırakıldı (mevcut /me, /logout endpoint'leri ona bağlı).
+
+get_current_user_or_403 = _get_current_user
+"""Bearer JWT zorunlu — write endpoint'ler için. Geçersizse 401."""
+
+
+def current_user_optional(
+    authorization: str = Header(default=""),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Bearer JWT varsa user döner, yoksa `None` — public read endpoint'ler için.
+
+    Token geçersiz/expired/blacklisted ise sessizce `None` döner;
+    endpoint'e "anonim erişim" semantiği verir (örn. dashboard public
+    sayfaları).
+    """
+    if not authorization.startswith("Bearer "):
+        return None
+    try:
+        return _get_current_user(authorization=authorization, db=db)
+    except HTTPException:
+        return None
+
+
+def require_role(*allowed_roles: str) -> Callable[..., User]:
+    """Endpoint'i belirtilen rollere kısıtlayan dependency factory.
+
+    Kullanım:
+        # tek rol — admin-only endpoint
+        @router.delete(..., dependencies=[Depends(require_role("admin"))])
+
+        # birden fazla rol — farmer veya admin
+        def endpoint(user: User = Depends(require_role("farmer", "admin"))):
+            ...
+
+    Geçersiz token → 401 (get_current_user_or_403'ten).
+    Yetersiz rol → 403 (`{allowed_roles}` listesi error detail'inde).
+    """
+    if not allowed_roles:
+        raise ValueError("require_role en az bir rol almak zorunda")
+    allowed_set = set(allowed_roles)
+
+    def _dep(user: User = Depends(_get_current_user)) -> User:
+        if user.role not in allowed_set:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Bu islem icin yetki yok — gerekli rol(ler): {', '.join(sorted(allowed_set))}",
+            )
+        return user
+
+    return _dep
+
+
 # ─── Endpoint'ler ────────────────────────────────────────────────────
 @router.post(
     "/register",
@@ -247,13 +334,29 @@ def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get
     "/me",
     response_model=CurrentUserResponse,
     summary="Aktif kullanıcı bilgisi",
-    description="`Authorization: Bearer <jwt>` header'ı ile çağrılır. JWT signature + exp + blacklist kontrol edilir.",
+    description=(
+        "`Authorization: Bearer <jwt>` header'ı ile çağrılır. JWT signature + exp + "
+        "blacklist kontrol edilir. Yanıt `owned_farms_count` (caller'a ait çiftlik "
+        "sayısı) içerir — frontend 'Hesabım' sayfası için (REBUILD Faz 1 / Adım 5)."
+    ),
     responses={
         401: {"description": "Token eksik, süresi dolmuş ya da blacklist'te"},
     },
 )
-def me(user: User = Depends(_get_current_user)) -> User:
-    return user
+def me(
+    user: User = Depends(_get_current_user),
+    db: Session = Depends(get_db),
+) -> CurrentUserResponse:
+    """Caller'ın profil bilgisi + sahip olunan çiftlik sayısı."""
+    owned = db.query(func.count(Farm.id)).filter(Farm.user_id == user.id).scalar() or 0
+    return CurrentUserResponse(
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role,
+        phone=user.phone,
+        owned_farms_count=owned,
+    )
 
 
 @router.post(
@@ -280,3 +383,51 @@ def logout(request: Request, authorization: str = Header(default="")) -> None:
             if jti:
                 _BLACKLISTED_JTIS.add(jti)
     return
+
+
+@router.patch(
+    "/users/{user_id}/role",
+    response_model=CurrentUserResponse,
+    summary="Kullanıcı rolünü değiştir (admin-only)",
+    description=(
+        "Belirtilen kullanıcının `role`'ünü 4 değerli RBAC enum'undan birine çeker "
+        "(`farmer` | `developer` | `overseer` | `admin`). Yalnız `admin` rolü çağırabilir. "
+        "Admin kendi rolünü değiştiremez (lock-out koruması)."
+    ),
+    responses={
+        400: {"description": "Geçersiz role değeri (Pydantic Literal validation)"},
+        401: {"description": "Token eksik veya geçersiz"},
+        403: {"description": "Caller admin değil"},
+        404: {"description": "Hedef kullanıcı bulunamadı"},
+        409: {"description": "Admin kendi rolünü değiştiremez (lock-out koruması)"},
+    },
+)
+def update_user_role(
+    payload: UserRoleUpdateRequest,
+    user_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Hedef kullanıcı ID"),
+    caller: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+) -> CurrentUserResponse:
+    """Hedef kullanıcının rolünü `payload.role` değerine çek."""
+    if user_id == caller.id:
+        # Admin self-demotion → potansiyel lock-out (son admin kendini farmer
+        # yaparsa promotion endpoint'i çağıracak admin kalmaz).
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Admin kendi rolünü değiştiremez (lock-out koruması). Başka bir admin promote/demote etmeli.",
+        )
+    target = db.query(User).filter(User.id == user_id).first()
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanici bulunamadi")
+    target.role = payload.role
+    db.commit()
+    db.refresh(target)
+    owned = db.query(func.count(Farm.id)).filter(Farm.user_id == target.id).scalar() or 0
+    return CurrentUserResponse(
+        id=target.id,
+        name=target.name,
+        email=target.email,
+        role=target.role,
+        phone=target.phone,
+        owned_farms_count=owned,
+    )

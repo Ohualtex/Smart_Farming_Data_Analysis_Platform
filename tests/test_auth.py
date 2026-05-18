@@ -1,110 +1,94 @@
 """
-API Key Authentication Testleri
-=================================
-API Key doğrulama mekanizması test edilir.
+Auth & Public Endpoint Erişim Testleri — REBUILD Faz 1 RBAC paradigm.
+
+Eski `test_auth.py` (X-API-Key tabanlı) bu RBAC pivot'unda yeniden yazıldı.
+Artık asıl auth mekanizması Bearer JWT + 4-rol RBAC; ayrıntılı behaviour
+testleri için `test_auth_backend.py` (JWT lifecycle) ve `test_farms.py`
+(rol bazlı scope) referans.
+
+Bu dosyada kalan kapsam: hangi endpoint'lerin **anonim erişime açık**
+olduğunu ve hangi temel write akışlarının **admin Bearer ile** çalıştığını
+sabitler.
 """
 
+from __future__ import annotations
 
-# ───── API KEY OLMADAN ERİŞİM ────────────────────────────────────────────────
-class TestUnauthorizedAccess:
-    def test_post_sensor_without_key_returns_401(self, client):
-        """API key olmadan sensör ekleme 401 döndürmeli."""
-        # Geçici olarak header'ı kaldır
-        original_headers = client.headers.copy()
-        client.headers.pop("X-API-Key", None)
+import pytest
 
-        response = client.post("/api/sensors/", json={"field_id": 1, "sensor_type": "test", "serial_number": "T-001"})
+from app.models.models import Farm, Field
+
+
+@pytest.fixture
+def admin_with_field(admin_client, db):
+    """admin + 1 farm + 1 field — sensors/weather/irrigation POST testleri için."""
+    client, user = admin_client
+    farm = Farm(user_id=user.id, name="Auth Test Farm", region="Marmara", city="İstanbul")
+    db.add(farm)
+    db.flush()
+    field = Field(farm_id=farm.id, name="Auth Test Field", soil_type="killi")
+    db.add(field)
+    db.commit()
+    return client, farm.id, field.id
+
+
+# ───── Bearer JWT olmadan erişim — sensors/farms write 401 ─────────────────────
+class TestUnauthenticatedWriteBlocked:
+    def test_anon_post_sensor_returns_401(self, anon_client):
+        """Bearer yok → sensors POST 401."""
+        response = anon_client.post(
+            "/api/sensors/",
+            json={"field_id": 1, "sensor_type": "test", "serial_number": "T-001"},
+        )
         assert response.status_code == 401
 
-        # Header'ı geri koy
-        client.headers.update(original_headers)
-
-    def test_delete_sensor_without_key_returns_401(self, client):
-        """API key olmadan sensör silme 401 döndürmeli."""
-        original_headers = client.headers.copy()
-        client.headers.pop("X-API-Key", None)
-
-        response = client.delete("/api/sensors/1")
+    def test_anon_delete_sensor_returns_401(self, anon_client):
+        """Bearer yok → sensors DELETE 401."""
+        response = anon_client.delete("/api/sensors/1")
         assert response.status_code == 401
 
-        client.headers.update(original_headers)
 
-
-# ───── YANLIŞ API KEY İLE ERİŞİM ────────────────────────────────────────────
-class TestForbiddenAccess:
-    def test_post_sensor_with_wrong_key_returns_403(self, client):
-        """Yanlış API key ile 403 döndürmeli."""
+# ───── Admin Bearer ile write OK ─────────────────────────────────────────────
+class TestAdminWriteAuthorized:
+    def test_admin_post_sensor_returns_201(self, admin_with_field):
+        client, _, field_id = admin_with_field
         response = client.post(
             "/api/sensors/",
-            json={"field_id": 1, "sensor_type": "test", "serial_number": "T-002"},
-            headers={"X-API-Key": "wrong-key-12345"},
+            json={"field_id": field_id, "sensor_type": "test", "serial_number": "T-004"},
         )
-        assert response.status_code == 403
-
-    def test_error_message_turkish(self, client):
-        """Hata mesajı Türkçe olmalı."""
-        response = client.post(
-            "/api/sensors/",
-            json={"field_id": 1, "sensor_type": "test", "serial_number": "T-003"},
-            headers={"X-API-Key": "wrong-key"},
-        )
-        assert "gecersiz" in response.json()["detail"].lower()
-
-
-# ───── DOĞRU API KEY İLE ERİŞİM ─────────────────────────────────────────────
-class TestAuthorizedAccess:
-    def test_post_sensor_with_valid_key_returns_201(self, client):
-        """Doğru API key ile sensör ekleme çalışmalı."""
-        response = client.post("/api/sensors/", json={"field_id": 1, "sensor_type": "test", "serial_number": "T-004"})
         assert response.status_code == 201
 
-    def test_post_weather_with_valid_key_returns_201(self, client):
-        """Doğru API key ile hava verisi ekleme çalışmalı."""
-        response = client.post("/api/weather/", json={"farm_id": 1, "temperature_c": 25.0, "humidity_percent": 55.0})
+    def test_admin_post_weather_returns_201(self, admin_with_field):
+        client, farm_id, _ = admin_with_field
+        response = client.post(
+            "/api/weather/",
+            json={"farm_id": farm_id, "temperature_c": 25.0, "humidity_percent": 55.0},
+        )
         assert response.status_code == 201
 
 
-# ───── GET ENDPOINT'LERİ AÇIK KALMALI ───────────────────────────────────────
-class TestPublicEndpoints:
-    def test_get_sensors_no_key_needed(self, client):
-        """GET sensör listesi API key gerektirmemeli."""
-        original_headers = client.headers.copy()
-        client.headers.pop("X-API-Key", None)
+# ───── Anon erişimine kalan public endpoint'ler ──────────────────────────────
+class TestStillPublicEndpoints:
+    """Bearer olmadan erişilebilir kalan endpoint'ler.
 
-        response = client.get("/api/sensors/")
+    REBUILD Faz 1 sonrası `farms`/`sensors`/`alerts`/`analytics`/`weather`
+    GET'leri auth ister; sadece health probe + ML prediction stateless
+    endpoint'leri Bearer'sız erişilebilir.
+    """
+
+    def test_health_no_auth_needed(self, anon_client):
+        response = anon_client.get("/api/health")
         assert response.status_code == 200
 
-        client.headers.update(original_headers)
-
-    def test_get_weather_no_key_needed(self, client):
-        """GET hava durumu API key gerektirmemeli."""
-        original_headers = client.headers.copy()
-        client.headers.pop("X-API-Key", None)
-
-        response = client.get("/api/weather/")
-        assert response.status_code == 200
-
-        client.headers.update(original_headers)
-
-    def test_health_no_key_needed(self, client):
-        """Health check API key gerektirmemeli."""
-        original_headers = client.headers.copy()
-        client.headers.pop("X-API-Key", None)
-
-        response = client.get("/api/health")
-        assert response.status_code == 200
-
-        client.headers.update(original_headers)
-
-    def test_irrigation_predict_no_key_needed(self, client):
-        """ML prediction API key gerektirmemeli."""
-        original_headers = client.headers.copy()
-        client.headers.pop("X-API-Key", None)
-
-        response = client.post(
+    def test_irrigation_predict_no_auth_needed(self, anon_client):
+        """ML predict stateless — DB'ye yazmaz, public kalır (Faz 1 sonu)."""
+        response = anon_client.post(
             "/api/irrigation/predict",
-            json={"soil_moisture": 35, "soil_temperature": 22, "humidity": 45, "temperature": 28, "precipitation": 0},
+            json={
+                "soil_moisture": 35,
+                "soil_temperature": 22,
+                "humidity": 45,
+                "temperature": 28,
+                "precipitation": 0,
+            },
         )
         assert response.status_code == 200
-
-        client.headers.update(original_headers)

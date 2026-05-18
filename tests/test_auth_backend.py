@@ -107,9 +107,9 @@ class TestMe:
         assert resp.status_code == 200
         assert resp.json()["email"] == email
 
-    def test_me_without_token_401(self, client):
-        # client fixture X-API-Key gönderiyor ama Authorization header'ı yok
-        resp = client.get("/api/auth/me")
+    def test_me_without_token_401(self, anon_client):
+        # anon_client tamamen header'sız — Authorization yok → 401
+        resp = anon_client.get("/api/auth/me")
         assert resp.status_code == 401
 
     def test_me_with_invalid_token_401(self, client):

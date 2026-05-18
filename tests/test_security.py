@@ -85,8 +85,9 @@ class TestCORSHeaders:
 class TestErrorResponseFormat:
     """API hata response'larının tutarlı formatta olduğunu test eder."""
 
-    def test_404_response_has_detail(self, client):
+    def test_404_response_has_detail(self, admin_client):
         """Mevcut olmayan sensor sorgusu tutarlı hata döndürmeli."""
+        client, _ = admin_client
         response = client.get("/api/sensors/99999")
         assert response.status_code == 404
 
