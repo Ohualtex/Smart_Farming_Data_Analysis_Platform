@@ -39,6 +39,7 @@ from app.routers import (
     alerts,
     analytics,
     auth,
+    dashboard,
     farms,
     fertilizer,
     health,
@@ -104,6 +105,12 @@ TAGS_METADATA = [
         "name": "Analitik & Görselleştirme",
         "description": "📊 **Toplu istatistik, dönem karşılaştırma ve PDF/Excel rapor üretimi.** "
         "81 il × 7 bölge bazlı kırılımlar, dashboard'un veri kaynağıdır.",
+    },
+    {
+        "name": "Çiftliğim",
+        "description": "🏠 **Rol-aware tek-ekran özet** — çiftçi için kendi farm zinciri, "
+        "admin/overseer/developer için sistem-geneli toplam. 4 metrik: toprak nemi, "
+        "son sulama, açık uyarı, son hastalık tanısı.",
     },
     {
         "name": "Sistem Uyarıları",
@@ -220,6 +227,7 @@ app.include_router(irrigation.router)
 app.include_router(plants.router)
 app.include_router(fertilizer.router)
 app.include_router(analytics.router)
+app.include_router(dashboard.router)
 
 app.include_router(alerts.router)
 app.include_router(metrics.router)
