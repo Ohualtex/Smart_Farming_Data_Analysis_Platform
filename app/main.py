@@ -42,6 +42,7 @@ from app.routers import (
     dashboard,
     farms,
     fertilizer,
+    fields,
     health,
     irrigation,
     metrics,
@@ -111,6 +112,12 @@ TAGS_METADATA = [
         "description": "🏠 **Rol-aware tek-ekran özet** — çiftçi için kendi farm zinciri, "
         "admin/overseer/developer için sistem-geneli toplam. 4 metrik: toprak nemi, "
         "son sulama, açık uyarı, son hastalık tanısı.",
+    },
+    {
+        "name": "Tarla Detayı",
+        "description": "🌱 **Tek tarlanın tüm bağlamı** — sensörler (son okumalarıyla), sulama "
+        "geçmişi, hastalık tanı geçmişi, toprak analizleri ve açık uyarılar. Yaprak foto "
+        "upload → tanı demo akışının merkezi. Farmer yalnız kendi tarlasını görür.",
     },
     {
         "name": "Sistem Uyarıları",
@@ -221,6 +228,7 @@ register_exception_handlers(app)
 
 app.include_router(health.router)
 app.include_router(farms.router)
+app.include_router(fields.router)
 app.include_router(sensors.router)
 app.include_router(weather.router)
 app.include_router(irrigation.router)
