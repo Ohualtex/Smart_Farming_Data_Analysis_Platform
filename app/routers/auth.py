@@ -138,6 +138,32 @@ class UserRoleUpdateRequest(BaseModel):
     role: UserRole
 
 
+class PasswordChangeRequest(BaseModel):
+    """PATCH /me/password body — REBUILD Faz 2 / Adım 9.
+
+    Mevcut şifre doğrulaması zorunlu (saldırgan ele geçirdiği bir token'la
+    yeni şifre koyamasın). `new_password` 8 char min (register ile aynı kural).
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "current_password": "EskiSifre2026",  # noqa: S105 — örnek, gerçek secret değil
+                "new_password": "YeniSifre2026",  # noqa: S105
+            }
+        }
+    )
+
+    current_password: str
+    new_password: str
+
+
+class PasswordChangeResponse(BaseModel):
+    """Şifre değişikliği başarı yanıtı."""
+
+    detail: str = "Sifre guncellendi"
+
+
 # ─── Yardımcılar ─────────────────────────────────────────────────────
 def _hash_password(password: str) -> str:
     """bcrypt hash üret — `pwd_context` her seferinde yeni salt kullanır.
@@ -431,3 +457,46 @@ def update_user_role(
         phone=target.phone,
         owned_farms_count=owned,
     )
+
+
+@router.patch(
+    "/me/password",
+    response_model=PasswordChangeResponse,
+    summary="Kendi şifreni değiştir",
+    description=(
+        "Authenticated kullanıcının şifresini günceller. `current_password` doğrulanır "
+        "(saldırgan ele geçirdiği token'la yeni şifre koyamasın). `new_password` minimum "
+        "8 karakter. Mevcut tüm aktif token'lar yine geçerli kalır (logout yapılmaz); "
+        "frontend bir sonraki adımda kullanıcıdan re-login isteyebilir."
+    ),
+    responses={
+        400: {"description": "Yeni şifre 8 karakterden kısa"},
+        401: {"description": "Token eksik veya current_password hatalı"},
+    },
+)
+@limiter.limit(AUTH_RATE)
+def change_password(
+    request: Request,
+    payload: PasswordChangeRequest,
+    user: User = Depends(_get_current_user),
+    db: Session = Depends(get_db),
+) -> PasswordChangeResponse:
+    """Mevcut şifreyi doğrula, yenisini bcrypt ile hash'le, DB'ye kaydet."""
+    if not _verify_password(payload.current_password, user.password_hash or ""):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Mevcut sifre hatali",
+        )
+    if len(payload.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Yeni sifre en az 8 karakter olmali",
+        )
+    if payload.new_password == payload.current_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Yeni sifre mevcut sifreyle ayni olamaz",
+        )
+    user.password_hash = _hash_password(payload.new_password)
+    db.commit()
+    return PasswordChangeResponse(detail="Sifre guncellendi")

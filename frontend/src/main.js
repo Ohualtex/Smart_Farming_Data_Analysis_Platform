@@ -14,21 +14,76 @@ import { _skeletonBlock, _skeletonCards, _skeletonRows, _setBusy } from "./lib/s
 import { loadMap as _loadMapImpl } from "./lib/map.js";
 
 const API_BASE = window.location.origin;
+const AUTH_TOKEN_KEY = 'sfdap_auth_token';
 let refreshInterval = null;
 let charts = {};
 let apiOnline = false;
+// Son /me snapshot — header badge + role-aware UI guard'ları için.
+// Login/logout sırasında refreshAuthState() bu objeyi güncelliyor.
+let currentUser = null;
 
 // ─── API SERVICE ──────────────────────────────────────────────
+
+/**
+ * Auth header builder — Bearer token varsa Authorization, yoksa X-API-Key.
+ * REBUILD Faz 2 / Adım 7: tek noktadan auth header bind'i; rol-aware
+ * endpoint'ler (`/api/dashboard/summary`, `/api/auth/me` vb) Bearer ister.
+ */
+function _authHeaders() {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    return token
+        ? { 'Authorization': `Bearer ${token}` }
+        : { 'X-API-Key': 'dev-api-key' };  // anonim fallback (eski endpoint'ler)
+}
+
 async function api(endpoint, options = {}) {
     try {
         const res = await fetch(`${API_BASE}${endpoint}`, {
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': 'dev-api-key', ...options.headers },
+            headers: { 'Content-Type': 'application/json', ..._authHeaders(), ...options.headers },
             ...options
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
     } catch (e) {
         console.warn(`API Error: ${endpoint}`, e);
+        return null;
+    }
+}
+
+/**
+ * Bearer-zorunlu API çağrısı — token yoksa null + auth sayfasına yönlendirir.
+ * Dashboard summary, sensors, alerts gibi RBAC'lı endpoint'ler için kullanılır.
+ * 401/403 dönerse token temizler ve toast gösterir.
+ */
+async function apiAuth(endpoint, options = {}) {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+        // Login formuna yumuşak yönlendirme; hard reload yok.
+        if (location.hash !== '#auth') location.hash = '#auth';
+        return null;
+    }
+    try {
+        const res = await fetch(`${API_BASE}${endpoint}`, {
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options.headers },
+            ...options
+        });
+        if (res.status === 401) {
+            // Token expire ya da revoke
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            currentUser = null;
+            _renderUserBadge(null);
+            showToast('Oturum süresi doldu, tekrar giriş yap', 'warning');
+            location.hash = '#auth';
+            return null;
+        }
+        if (res.status === 403) {
+            showToast('Bu işlem için yetkin yok', 'warning');
+            return null;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    } catch (e) {
+        console.warn(`API Auth Error: ${endpoint}`, e);
         return null;
     }
 }
@@ -98,30 +153,154 @@ window.addEventListener('hashchange', () => {
 });
 
 // ─── DASHBOARD ────────────────────────────────────────────────
-async function loadDashboard() {
-    // Insert skeleton placeholders before the fetch starts.
-    document.getElementById('dashboardCards').innerHTML = _skeletonCards(5);
-    _setBusy('dashboardCards', true);
-    const [sensors, weather, schedules] = await Promise.all([
-        api('/api/sensors/'), api('/api/weather/?limit=30'), api('/api/irrigation/schedules?limit=20')
-    ]);
-    apiOnline = sensors !== null;
-    updateStatus(apiOnline);
-    const s = sensors || []; const w = weather || []; const sc = schedules || [];
-    // Summary cards
-    const avgMoisture = w.length ? (w.reduce((a,d) => a + (d.humidity_percent||0), 0) / w.length).toFixed(1) : '—';
-    const avgTemp = w.length ? (w.reduce((a,d) => a + (d.temperature_c||0), 0) / w.length).toFixed(1) : '—';
-    const totalPrecip = w.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1);
-    document.getElementById('dashboardCards').innerHTML = `
-        <div class="card"><div class="card-icon" aria-hidden="true">📡</div><div class="card-value">${s.length}</div><div class="card-label">Aktif Sensör</div></div>
-        <div class="card"><div class="card-icon" aria-hidden="true">🌡️</div><div class="card-value">${avgTemp}°C</div><div class="card-label">Ort. Sıcaklık</div></div>
-        <div class="card"><div class="card-icon" aria-hidden="true">💧</div><div class="card-value">%${avgMoisture}</div><div class="card-label">Ort. Nem</div></div>
-        <div class="card"><div class="card-icon" aria-hidden="true">🌧️</div><div class="card-value">${totalPrecip}mm</div><div class="card-label">Toplam Yağış</div></div>
-        <div class="card"><div class="card-icon" aria-hidden="true">📋</div><div class="card-value">${sc.length}</div><div class="card-label">Sulama Kaydı</div></div>
+// REBUILD Faz 2 / Adım 8: "Çiftliğim" rol-aware kartlar
+// /api/dashboard/summary tek endpoint'inden 4 metrik card + hero stats
+// + trend chart'ları (Bearer-aware api() üzerinden).
+
+const _STATUS_LABEL = { dry: 'Susuz', optimal: 'Uygun', wet: 'Aşırı sulu', no_data: 'Veri yok' };
+const _STATUS_EMOJI = { dry: '🥵', optimal: '👌', wet: '💧', no_data: '—' };
+
+function _fmtDate(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }); }
+    catch { return iso; }
+}
+function _fmtNumber(v, decimals = 1) {
+    if (v === null || v === undefined) return '—';
+    return Number(v).toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function _escAttr(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _renderSummaryCards(summary) {
+    const moist = summary.soil_moisture_today || {};
+    const irr = summary.last_irrigation || {};
+    const alerts = summary.open_alerts || { by_severity: {} };
+    const disease = summary.last_disease || {};
+    const scopeNote = summary.scope === 'system'
+        ? 'Sistem geneli'
+        : 'Senin tarlalarından';
+    const moistValue = moist.avg_moisture_percent !== null && moist.avg_moisture_percent !== undefined
+        ? `%${_fmtNumber(moist.avg_moisture_percent)}`
+        : '—';
+    const moistStatus = moist.status || 'no_data';
+    const irrAmount = irr.water_amount_liters !== null && irr.water_amount_liters !== undefined
+        ? `${_fmtNumber(irr.water_amount_liters, 0)} L`
+        : '—';
+    const irrTitle = irr.field_name ? `${irr.field_name} · ${_fmtDate(irr.scheduled_date)}` : 'Sulama kaydı yok';
+    const sev = alerts.by_severity || {};
+    const severityChips = [
+        { key: 'critical', label: 'kritik', cls: 'critical' },
+        { key: 'medium', label: 'orta', cls: 'medium' },
+        { key: 'low', label: 'düşük', cls: 'low' },
+    ].map(({ key, label, cls }) => {
+        const cnt = sev[key] || 0;
+        return cnt > 0
+            ? `<span class="severity-chip severity-${cls}">${cnt} ${label}</span>`
+            : '';
+    }).join(' ');
+    const diseaseDx = disease.diagnosis || '—';
+    const diseaseDetail = disease.diagnosis
+        ? `${disease.field_name || 'Tarla'} · ${_fmtDate(disease.captured_at)} · güven %${_fmtNumber((disease.confidence_score || 0) * 100, 0)}`
+        : 'Henüz yaprak görseli analiz edilmedi';
+    return `
+        <div class="metric-card metric-moisture metric-status-${moistStatus}">
+            <div class="metric-head">
+                <span class="metric-icon" aria-hidden="true">💧</span>
+                <span class="metric-title">Bugün toprak nemi</span>
+            </div>
+            <div class="metric-value">${moistValue}</div>
+            <div class="metric-status">
+                <span class="metric-status-pill">${_STATUS_EMOJI[moistStatus]} ${_STATUS_LABEL[moistStatus]}</span>
+            </div>
+            <div class="metric-context">${moist.sensor_count || 0} sensör · ${moist.reading_count || 0} okuma · son 24 sa.</div>
+            <div class="metric-scope">${scopeNote}</div>
+        </div>
+
+        <div class="metric-card metric-irrigation">
+            <div class="metric-head">
+                <span class="metric-icon" aria-hidden="true">🚿</span>
+                <span class="metric-title">Son sulama</span>
+            </div>
+            <div class="metric-value">${irrAmount}</div>
+            <div class="metric-context"><strong>${_escAttr(irr.field_name || '—')}</strong> · ${_fmtDate(irr.scheduled_date)}</div>
+            <div class="metric-context">${_escAttr(irr.status || (irr.irrigation_id ? '—' : 'Sulama kaydı yok'))}</div>
+            <div class="metric-scope">${scopeNote}</div>
+        </div>
+
+        <div class="metric-card metric-alerts ${alerts.total > 0 ? 'has-alerts' : ''}">
+            <div class="metric-head">
+                <span class="metric-icon" aria-hidden="true">🚨</span>
+                <span class="metric-title">Açık uyarılar</span>
+            </div>
+            <div class="metric-value">${alerts.total || 0}</div>
+            <div class="metric-context metric-severities">${severityChips || '<span class="metric-status-pill">Açık uyarı yok ✅</span>'}</div>
+            <div class="metric-context metric-latest">${alerts.latest_message ? _escAttr(alerts.latest_message) : ''}</div>
+            <div class="metric-scope">${scopeNote}</div>
+        </div>
+
+        <div class="metric-card metric-disease metric-severity-${disease.severity || 'none'}">
+            <div class="metric-head">
+                <span class="metric-icon" aria-hidden="true">🦠</span>
+                <span class="metric-title">Son hastalık tanısı</span>
+            </div>
+            <div class="metric-value metric-value-text">${_escAttr(diseaseDx)}</div>
+            <div class="metric-context">${_escAttr(diseaseDetail)}</div>
+            <div class="metric-scope">${scopeNote}</div>
+        </div>
     `;
+}
+
+async function loadDashboard() {
+    const cards = document.getElementById('dashboardCards');
+    cards.innerHTML = _skeletonCards(4);
+    _setBusy('dashboardCards', true);
+
+    // Token yoksa rol-aware özet çekilmez; kullanıcıyı auth sayfasına yönlendir.
+    const token = getAuthToken();
+    if (!token) {
+        cards.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <p>🔐 "Çiftliğim" özetini görmek için <a href="#auth">giriş yap</a>.</p>
+            </div>
+        `;
+        _setBusy('dashboardCards', false);
+        updateStatus(apiOnline);
+        return;
+    }
+
+    const [summary, weather] = await Promise.all([
+        apiAuth('/api/dashboard/summary'),
+        api('/api/weather/?limit=30'),
+    ]);
+    apiOnline = summary !== null;
+    updateStatus(apiOnline);
+
+    if (summary) {
+        cards.innerHTML = _renderSummaryCards(summary);
+        // Hero stats — rol-aware sayım. Farmer için "kendi" çiftlik/sensör;
+        // admin için sistem geneli.
+        const heroFarms = document.getElementById('heroFarms');
+        const heroSensors = document.getElementById('heroSensors');
+        const heroReadings = document.getElementById('heroReadings');
+        if (heroFarms) heroFarms.textContent = summary.farm_count;
+        if (heroSensors) heroSensors.textContent = summary.sensor_count;
+        if (heroReadings) heroReadings.textContent = (summary.soil_moisture_today || {}).reading_count || 0;
+    } else {
+        cards.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <p>⚠️ Özet alınamadı. <button class="btn-link" onclick="loadDashboard()">Tekrar dene</button></p>
+            </div>
+        `;
+    }
     _setBusy('dashboardCards', false);
-    // Charts
-    renderMoistureChart(w); renderTempHumChart(w); renderPrecipChart(w);
+
+    // Trend chart'lar — weather Bearer üzerinden gelir (api() artık _authHeaders kullanıyor).
+    const w = weather || [];
+    renderMoistureChart(w);
+    renderTempHumChart(w);
+    renderPrecipChart(w);
 }
 
 function renderMoistureChart(data) {
@@ -784,17 +963,47 @@ async function resolveAlert(id) {
 }
 
 // ─── AUTH (KULLANICI GİRİŞİ) ──────────────────────────────────
-const AUTH_TOKEN_KEY = 'sfdap_auth_token';
+// `AUTH_TOKEN_KEY` constant'ı dosyanın başında tanımlı (top-level state ile birlikte).
 
 function getAuthToken() { return localStorage.getItem(AUTH_TOKEN_KEY); }
 function setAuthToken(t) { localStorage.setItem(AUTH_TOKEN_KEY, t); }
 function clearAuthToken() { localStorage.removeItem(AUTH_TOKEN_KEY); }
+
+// Rol → kullanıcı dostu Türkçe etiket
+const ROLE_LABELS = {
+    farmer: 'çiftçi',
+    developer: 'geliştirici',
+    overseer: 'gözetmen',
+    admin: 'yönetici',
+};
+
+/**
+ * Header user badge'ini doldur veya gizle. `user` null ise badge gizlenir
+ * (anonim akış). Login/logout sonrası ve refreshAuthState içinde çağırılır.
+ */
+function _renderUserBadge(user) {
+    const badge = document.getElementById('userBadge');
+    if (!badge) return;
+    if (!user) {
+        badge.style.display = 'none';
+        return;
+    }
+    badge.style.display = 'inline-flex';
+    document.getElementById('userBadgeName').textContent = user.name || 'kullanıcı';
+    const roleEl = document.getElementById('userBadgeRole');
+    roleEl.textContent = ROLE_LABELS[user.role] || user.role;
+    roleEl.dataset.role = user.role;
+    const farmCount = user.owned_farms_count ?? 0;
+    document.getElementById('userBadgeFarms').textContent = `🚜 ${farmCount}`;
+}
 
 async function refreshAuthState() {
     const token = getAuthToken();
     const loggedOut = document.getElementById('authLoggedOut');
     const loggedIn = document.getElementById('authLoggedIn');
     if (!token) {
+        currentUser = null;
+        _renderUserBadge(null);
         loggedOut.style.display = 'block';
         loggedIn.style.display = 'none';
         return;
@@ -805,12 +1014,21 @@ async function refreshAuthState() {
         });
         if (!resp.ok) { clearAuthToken(); refreshAuthState(); return; }
         const me = await resp.json();
+        currentUser = me;
+        _renderUserBadge(me);
         document.getElementById('authName').textContent = me.name;
         document.getElementById('authEmail').textContent = me.email;
-        document.getElementById('authRole').textContent = me.role;
+        document.getElementById('authRole').textContent = ROLE_LABELS[me.role] || me.role;
+        // Faz 2: hesabım sayfasında detay alanları (varsa) doldur — null-safe.
+        const phoneEl = document.getElementById('authPhone');
+        if (phoneEl) phoneEl.textContent = me.phone || '—';
+        const farmsEl = document.getElementById('authOwnedFarms');
+        if (farmsEl) farmsEl.textContent = me.owned_farms_count ?? 0;
         loggedOut.style.display = 'none';
         loggedIn.style.display = 'block';
     } catch (e) {
+        currentUser = null;
+        _renderUserBadge(null);
         loggedOut.style.display = 'block';
         loggedIn.style.display = 'none';
     }
@@ -862,6 +1080,52 @@ async function doRegister() {
         document.getElementById('loginEmail').value = email;
         document.getElementById('loginPassword').value = password;
         doLogin();
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    }
+}
+
+async function doChangePassword() {
+    const current = document.getElementById('pwCurrent').value;
+    const next = document.getElementById('pwNew').value;
+    const confirm = document.getElementById('pwConfirm').value;
+    if (!current || !next || !confirm) {
+        showToast('Tüm alanlar gerekli', 'warning');
+        return;
+    }
+    if (next.length < 8) {
+        showToast('Yeni şifre en az 8 karakter olmalı', 'warning');
+        return;
+    }
+    if (next !== confirm) {
+        showToast('Yeni şifreler eşleşmiyor', 'warning');
+        return;
+    }
+    if (next === current) {
+        showToast('Yeni şifre mevcuttan farklı olmalı', 'warning');
+        return;
+    }
+    const token = getAuthToken();
+    if (!token) { showToast('Giriş yapman gerekiyor', 'warning'); location.hash = '#auth'; return; }
+    try {
+        const resp = await fetch(`${API_BASE}/api/auth/me/password`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ current_password: current, new_password: next }),
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || 'Şifre güncellenemedi', 'error');
+            return;
+        }
+        showToast('Şifre güncellendi ✅', 'success');
+        // Form temizliği
+        document.getElementById('pwCurrent').value = '';
+        document.getElementById('pwNew').value = '';
+        document.getElementById('pwConfirm').value = '';
     } catch (e) {
         showToast('Sunucuya ulaşılamadı', 'error');
     }
@@ -924,6 +1188,11 @@ async function init() {
     updateStatus(apiOnline);
     if (apiOnline) showToast('Sistem aktif — veriler güncel', 'success');
     else showToast('Bağlantı yok — son kayıtlı veriler gösteriliyor', 'error');
+
+    // Auth state ilk yükleme — header user badge + currentUser cache'i kurulur.
+    // navigate('dashboard')'tan önce çağrılır; dashboard role-aware UI guard'lar
+    // currentUser snapshot'ına bakacak.
+    await refreshAuthState();
 
     // Load initial page
     const page = location.hash.slice(1) || 'dashboard';
@@ -1246,9 +1515,11 @@ Object.assign(window, {
     fertilizerSchedule,
     analyzePlantImage,
     loadAlerts,
+    loadDashboard,
     doLogin,
     doRegister,
     doLogout,
+    doChangePassword,
     // Status panel ve alerts bridge için (showToast başka modüllerden çağrılıyor)
     showToast,
     resolveAlert,

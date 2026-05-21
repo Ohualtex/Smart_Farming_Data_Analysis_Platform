@@ -142,3 +142,67 @@ class TestLogout:
         # Token olmadan logout — error vermesin
         resp = client.post("/api/auth/logout")
         assert resp.status_code == 204
+
+
+class TestChangePassword:
+    """PATCH /api/auth/me/password — REBUILD Faz 2 / Adım 9."""
+
+    def _register_and_login(self, client, password: str = "oldpass1234"):  # noqa: S107 — test fixture, sentinel
+        email = _new_email()
+        client.post(
+            "/api/auth/register",
+            json={"name": "PW User", "email": email, "password": password},
+        )
+        token = client.post(
+            "/api/auth/login",
+            json={"email": email, "password": password},
+        ).json()["access_token"]
+        return email, token
+
+    def test_change_password_success_200(self, client):
+        email, token = self._register_and_login(client)
+        resp = client.patch(
+            "/api/auth/me/password",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"current_password": "oldpass1234", "new_password": "newpass5678"},
+        )
+        assert resp.status_code == 200
+        # Eski şifre artık geçmez, yeni şifre geçer
+        old_login = client.post("/api/auth/login", json={"email": email, "password": "oldpass1234"})
+        assert old_login.status_code == 401
+        new_login = client.post("/api/auth/login", json={"email": email, "password": "newpass5678"})
+        assert new_login.status_code == 200
+
+    def test_change_password_wrong_current_401(self, client):
+        _email, token = self._register_and_login(client)
+        resp = client.patch(
+            "/api/auth/me/password",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"current_password": "yanlış", "new_password": "yenisifre1234"},
+        )
+        assert resp.status_code == 401
+
+    def test_change_password_too_short_400(self, client):
+        _email, token = self._register_and_login(client)
+        resp = client.patch(
+            "/api/auth/me/password",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"current_password": "oldpass1234", "new_password": "kisa"},
+        )
+        assert resp.status_code == 400
+
+    def test_change_password_same_as_current_400(self, client):
+        _email, token = self._register_and_login(client)
+        resp = client.patch(
+            "/api/auth/me/password",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"current_password": "oldpass1234", "new_password": "oldpass1234"},
+        )
+        assert resp.status_code == 400
+
+    def test_change_password_without_token_401(self, anon_client):
+        resp = anon_client.patch(
+            "/api/auth/me/password",
+            json={"current_password": "x", "new_password": "yenisifre1234"},
+        )
+        assert resp.status_code == 401

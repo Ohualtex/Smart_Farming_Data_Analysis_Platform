@@ -88,6 +88,16 @@
                 </div>
             </div>
             <div class="header-right">
+                <!-- Kullanıcı rozeti — login sonrası refreshAuthState() doldurur.
+                     REBUILD Faz 2 / Adım 7: rol-aware badge. Tıklayınca Hesabım. -->
+                <a class="user-badge" id="userBadge" href="#auth" style="display:none;"
+                   aria-label="Hesap özeti — tıkla Hesabım sayfasına git"
+                   title="Hesabım">
+                    <span class="user-badge-role" id="userBadgeRole" data-role="farmer">çiftçi</span>
+                    <span class="user-badge-name" id="userBadgeName">—</span>
+                    <span class="user-badge-farms" id="userBadgeFarms"
+                          aria-label="Sahip olunan çiftlik sayısı" title="Çiftlikler">🚜&nbsp;0</span>
+                </a>
                 <a class="dev-link" href="/docs" target="_blank" rel="noopener"
                    aria-label="API Rehberi (Geliştiriciler için)"
                    title="API Rehberi · Geliştiriciler için (Swagger /docs)">&lt;/&gt;</a>
@@ -445,11 +455,45 @@
                     </div>
                 </div>
                 <div id="authLoggedIn" style="display:none;">
-                    <div class="form-box">
-                        <h3 style="margin-top:0;">👋 Hoş geldin, <span id="authName">çiftçi</span>!</h3>
-                        <p><strong>E-posta:</strong> <span id="authEmail">—</span></p>
-                        <p><strong>Rol:</strong> <span id="authRole">—</span></p>
-                        <button class="btn-primary" onclick="doLogout()">Çıkış Yap</button>
+                    <div class="charts-row" style="grid-template-columns: 1fr 1fr;">
+                        <div class="form-box">
+                            <h3 style="margin-top:0;">👋 Hoş geldin, <span id="authName">çiftçi</span>!</h3>
+                            <div class="account-summary">
+                                <div class="account-row">
+                                    <span class="account-label">E-posta</span>
+                                    <span id="authEmail" class="account-value">—</span>
+                                </div>
+                                <div class="account-row">
+                                    <span class="account-label">Rol</span>
+                                    <span id="authRole" class="account-value">—</span>
+                                </div>
+                                <div class="account-row">
+                                    <span class="account-label">Telefon</span>
+                                    <span id="authPhone" class="account-value">—</span>
+                                </div>
+                                <div class="account-row">
+                                    <span class="account-label">Sahip olunan çiftlik</span>
+                                    <span id="authOwnedFarms" class="account-value">0</span>
+                                </div>
+                            </div>
+                            <button class="btn-primary" onclick="doLogout()">Çıkış Yap</button>
+                        </div>
+                        <div class="form-box">
+                            <h3 style="margin-top:0;">🔒 Şifre Değiştir</h3>
+                            <div class="form-group">
+                                <label for="pwCurrent">Mevcut şifre</label>
+                                <input type="password" id="pwCurrent" placeholder="••••••••" autocomplete="current-password" />
+                            </div>
+                            <div class="form-group">
+                                <label for="pwNew">Yeni şifre</label>
+                                <input type="password" id="pwNew" placeholder="En az 8 karakter" autocomplete="new-password" />
+                            </div>
+                            <div class="form-group">
+                                <label for="pwConfirm">Yeni şifre (tekrar)</label>
+                                <input type="password" id="pwConfirm" placeholder="Tekrar gir" autocomplete="new-password" />
+                            </div>
+                            <button class="btn-primary" onclick="doChangePassword()">Şifreyi Güncelle</button>
+                        </div>
                     </div>
                 </div>
             </section>
