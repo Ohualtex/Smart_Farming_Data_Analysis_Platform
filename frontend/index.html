@@ -40,6 +40,9 @@
             <a class="nav-item active" href="#dashboard" onclick="navigate('dashboard')" aria-current="page">
                 <span class="icon" aria-hidden="true">📊</span> Genel Bakış
             </a>
+            <a class="nav-item" href="#fields" onclick="navigate('fields')">
+                <span class="icon" aria-hidden="true">🌱</span> Tarlalarım
+            </a>
             <a class="nav-item" href="#weather" onclick="navigate('weather')">
                 <span class="icon" aria-hidden="true">🌤️</span> Hava Durumu
             </a>
@@ -169,6 +172,22 @@
                     <div class="chart-box"><h3>🌡️ Sıcaklık & Nem</h3><canvas id="tempHumChart"></canvas></div>
                 </div>
                 <div class="chart-box"><h3>🌧️ Yağış (Son 30 Gün)</h3><canvas id="precipChart"></canvas></div>
+            </section>
+
+            <!-- ═══ TARLALARIM (FIELD LIST) PAGE ═══ -->
+            <section class="page" id="page-fields">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">🌱</span> Tarlalarım</h1>
+                    <p>Çiftliklerine bağlı tüm tarlalar. Bir tarlaya tıkla; sensör, sulama, hastalık ve toprak detayını gör, yaprak fotoğrafı yükle.</p>
+                </div>
+                <div class="section-header">🚜 Çiftlik &amp; Tarlalar</div>
+                <div id="fieldsListContainer" aria-busy="true" aria-live="polite"></div>
+            </section>
+
+            <!-- ═══ TARLA DETAYI (FIELD DETAIL) PAGE ═══ -->
+            <section class="page" id="page-field-detail">
+                <a class="back-link" href="#fields" onclick="navigate('fields')">← Tarlalarıma dön</a>
+                <div id="fieldDetailContainer" aria-busy="true" aria-live="polite"></div>
             </section>
 
             <!-- ═══ SENSORS PAGE ═══ -->

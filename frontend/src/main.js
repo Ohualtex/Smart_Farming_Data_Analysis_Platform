@@ -91,6 +91,8 @@ async function apiAuth(endpoint, options = {}) {
 // ─── NAVIGATION ───────────────────────────────────────────────
 const pageTitles = {
     dashboard: ['Genel Bakış', 'Tarlanın özeti'],
+    fields: ['Tarlalarım', 'Çiftliklerine bağlı tarlalar'],
+    'field-detail': ['Tarla Detayı', 'Sensör, sulama, hastalık ve toprak'],
     weather: ['Hava Durumu', 'Sıcaklık, nem ve yağış'],
     irrigation: ['Sulama', 'Önerilen su miktarı ve geçmiş'],
     fertilizer: ['Gübreleme', 'NPK önerisi ve takvim'],
@@ -123,6 +125,7 @@ function navigate(page) {
     if (main) main.focus({ preventScroll: false });
     // Load page data
     if (page === 'dashboard') loadDashboard();
+    else if (page === 'fields') loadFields();
     else if (page === 'sensors') loadSensors();
     else if (page === 'weather') loadWeather();
     else if (page === 'irrigation') loadIrrigation();
@@ -131,6 +134,7 @@ function navigate(page) {
     else if (page === 'plants') loadPlants();
     else if (page === 'alerts') loadAlerts();
     else if (page === 'auth') refreshAuthState();
+    // 'field-detail' navigate() ile değil openFieldDetail(id) ile yüklenir.
     // Close sidebar on mobile (a11y: hamburger aria-expanded sync)
     const sidebar = document.getElementById('sidebar');
     sidebar.classList.remove('open');
@@ -148,8 +152,14 @@ function toggleSidebar() {
 
 // ─── HASH ROUTER ──────────────────────────────────────────────
 window.addEventListener('hashchange', () => {
-    const page = location.hash.slice(1) || 'dashboard';
-    if (pageTitles[page]) navigate(page);
+    const raw = location.hash.slice(1) || 'dashboard';
+    // Parametrik route: #field/{id} → tarla detayı
+    if (raw.startsWith('field/')) {
+        const id = parseInt(raw.split('/')[1], 10);
+        if (Number.isFinite(id)) openFieldDetail(id);
+        return;
+    }
+    if (pageTitles[raw]) navigate(raw);
 });
 
 // ─── DASHBOARD ────────────────────────────────────────────────
@@ -301,6 +311,248 @@ async function loadDashboard() {
     renderMoistureChart(w);
     renderTempHumChart(w);
     renderPrecipChart(w);
+}
+
+// ─── TARLALARIM (FIELD LIST) ──────────────────────────────────
+// REBUILD Faz 3 / Adım 6: çiftlik bazlı tarla listesi.
+// /api/farms/ → her farm için /api/farms/{id} (nested fields).
+async function loadFields() {
+    const container = document.getElementById('fieldsListContainer');
+    container.innerHTML = _skeletonBlock(3);
+    _setBusy('fieldsListContainer', true);
+
+    const token = getAuthToken();
+    if (!token) {
+        container.innerHTML = '<div class="empty-state"><p>🔐 Tarlalarını görmek için <a href="#auth">giriş yap</a>.</p></div>';
+        _setBusy('fieldsListContainer', false);
+        return;
+    }
+
+    const farms = await apiAuth('/api/farms/?limit=100');
+    if (!farms || farms.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>🌱 Henüz çiftliğin yok. Çiftlik/tarla ekleme Faz 4\'te gelecek.</p></div>';
+        _setBusy('fieldsListContainer', false);
+        return;
+    }
+
+    // Her çiftliğin detayını çek (nested fields için). Küçük N (farmer 1-4 farm).
+    const details = await Promise.all(farms.map(f => apiAuth(`/api/farms/${f.id}`)));
+    let html = '';
+    let totalFields = 0;
+    for (const farm of details) {
+        if (!farm) continue;
+        const fields = farm.fields || [];
+        totalFields += fields.length;
+        html += `<div class="farm-group">
+            <div class="farm-group-header">🚜 ${_escAttr(farm.name)}${farm.city ? ` · ${_escAttr(farm.city)}` : ''}${farm.region ? ` <span class="farm-region">${_escAttr(farm.region)}</span>` : ''}</div>`;
+        if (fields.length === 0) {
+            html += '<p class="farm-no-fields">Bu çiftlikte tarla kaydı yok.</p>';
+        } else {
+            html += '<div class="field-cards">';
+            for (const f of fields) {
+                const area = f.area_hectares != null ? `${_fmtNumber(f.area_hectares)} ha` : '—';
+                html += `<a class="field-card" href="#field/${f.id}" onclick="openFieldDetail(${f.id});return false;">
+                    <div class="field-card-name">🌱 ${_escAttr(f.name)}</div>
+                    <div class="field-card-meta">${_escAttr(f.soil_type || 'toprak —')} · ${area}</div>
+                    <div class="field-card-cta">Detayı gör →</div>
+                </a>`;
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+    }
+    if (totalFields === 0) {
+        html = '<div class="empty-state"><p>🌱 Çiftliğin var ama henüz tarla eklenmemiş.</p></div>';
+    }
+    container.innerHTML = html;
+    _setBusy('fieldsListContainer', false);
+}
+
+// ─── TARLA DETAYI (FIELD DETAIL) ──────────────────────────────
+let currentFieldId = null;
+
+function openFieldDetail(fieldId) {
+    currentFieldId = fieldId;
+    // Sayfayı aktive et (navigate yerine doğrudan — parametrik route).
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => { n.classList.remove('active'); n.removeAttribute('aria-current'); });
+    document.getElementById('page-field-detail').classList.add('active');
+    document.getElementById('pageTitle').textContent = pageTitles['field-detail'][0];
+    document.getElementById('pageSubtitle').textContent = pageTitles['field-detail'][1];
+    if (location.hash !== `#field/${fieldId}`) location.hash = `#field/${fieldId}`;
+    const main = document.getElementById('main-content');
+    if (main) main.focus({ preventScroll: false });
+    loadFieldDetail(fieldId);
+}
+
+async function loadFieldDetail(fieldId) {
+    const c = document.getElementById('fieldDetailContainer');
+    c.innerHTML = _skeletonBlock(5);
+    _setBusy('fieldDetailContainer', true);
+    const data = await apiAuth(`/api/fields/${fieldId}`);
+    if (!data) {
+        c.innerHTML = '<div class="empty-state"><p>⚠️ Tarla detayı alınamadı (erişim yok veya bulunamadı).</p></div>';
+        _setBusy('fieldDetailContainer', false);
+        return;
+    }
+    c.innerHTML = renderFieldDetail(data);
+    _setBusy('fieldDetailContainer', false);
+    // Nem trend grafiği (ayrı endpoint)
+    loadFieldReadingsChart(fieldId);
+}
+
+function renderFieldDetail(d) {
+    const cropName = d.crop ? d.crop.name : 'Ekili bitki yok';
+    const moistVal = d.avg_moisture_percent != null ? `%${_fmtNumber(d.avg_moisture_percent)}` : '—';
+    const ms = d.moisture_status || 'no_data';
+
+    // Sensör kartları
+    const sensorRows = (d.sensors || []).map(s => {
+        const m = s.latest_moisture_percent != null ? `%${_fmtNumber(s.latest_moisture_percent)}` : '—';
+        const t = s.latest_soil_temperature_c != null ? `${_fmtNumber(s.latest_soil_temperature_c)}°C` : '—';
+        return `<div class="detail-mini-card">
+            <div class="detail-mini-title">📡 ${_escAttr(s.sensor_type)} <span class="sensor-status sensor-${_escAttr(s.status)}">${_escAttr(s.status)}</span></div>
+            <div class="detail-mini-row">Nem: <strong>${m}</strong> · Toprak: <strong>${t}</strong></div>
+            <div class="detail-mini-sub">${s.latest_reading_at ? _fmtDate(s.latest_reading_at) : 'okuma yok'}</div>
+        </div>`;
+    }).join('') || '<p class="detail-empty">Bu tarlada sensör yok.</p>';
+
+    // Sulama geçmişi
+    const irrRows = (d.recent_irrigations || []).map(i => {
+        const amt = i.water_amount_liters != null ? `${_fmtNumber(i.water_amount_liters, 0)} L` : '—';
+        return `<tr><td>${_fmtDate(i.scheduled_date)}</td><td>${amt}</td><td>${i.duration_min ?? '—'} dk</td><td>${_escAttr(i.status)}</td></tr>`;
+    }).join('') || '<tr><td colspan="4" class="detail-empty">Sulama kaydı yok.</td></tr>';
+
+    // Hastalık geçmişi
+    const disRows = (d.disease_history || []).map(h => {
+        const conf = h.confidence_score != null ? `%${_fmtNumber(h.confidence_score * 100, 0)}` : '—';
+        return `<tr><td>${_fmtDate(h.captured_at)}</td><td>${_escAttr(h.diagnosis || '—')}</td><td>${conf}</td><td>${_escAttr(h.severity || '—')}</td></tr>`;
+    }).join('') || '<tr><td colspan="4" class="detail-empty">Hastalık analizi yok.</td></tr>';
+
+    // Toprak analizi (en yeni)
+    let soilHtml = '<p class="detail-empty">Toprak analizi yok.</p>';
+    if ((d.soil_analyses || []).length > 0) {
+        const s = d.soil_analyses[0];
+        soilHtml = `<div class="detail-mini-row">pH: <strong>${s.ph_level ?? '—'}</strong> · N: <strong>${s.nitrogen_mg_kg ?? '—'}</strong> · P: <strong>${s.phosphorus_mg_kg ?? '—'}</strong> · K: <strong>${s.potassium_mg_kg ?? '—'}</strong> mg/kg</div>
+            <div class="detail-mini-sub">${_escAttr(s.texture_class || '')} · ${_fmtDate(s.analysis_date)}</div>`;
+    }
+
+    // Açık uyarılar
+    const alertRows = (d.open_alerts || []).map(a =>
+        `<div class="detail-alert severity-${_escAttr(a.severity)}"><strong>${_escAttr(a.severity)}</strong> · ${_escAttr(a.message)} <span class="detail-mini-sub">${_fmtDate(a.created_at)}</span></div>`
+    ).join('') || '<p class="detail-empty">Açık uyarı yok ✅</p>';
+
+    return `
+        <div class="hero-banner field-detail-hero">
+            <h1><span class="hero-emoji">🌱</span> ${_escAttr(d.name)}</h1>
+            <p>🚜 ${_escAttr(d.farm_name)}${d.region ? ` · ${_escAttr(d.region)}` : ''}${d.city ? ` · ${_escAttr(d.city)}` : ''}</p>
+            <div class="hero-stats">
+                <div class="hero-stat">🌾 ${_escAttr(cropName)}</div>
+                <div class="hero-stat">📐 ${d.area_hectares != null ? _fmtNumber(d.area_hectares) + ' ha' : '—'}</div>
+                <div class="hero-stat">🪨 ${_escAttr(d.soil_type || '—')}</div>
+            </div>
+        </div>
+
+        <div class="cards-grid">
+            <div class="metric-card metric-status-${ms}">
+                <div class="metric-head"><span class="metric-icon" aria-hidden="true">💧</span><span class="metric-title">Toprak nemi (son 24 sa.)</span></div>
+                <div class="metric-value">${moistVal}</div>
+                <div class="metric-status"><span class="metric-status-pill">${_STATUS_EMOJI[ms]} ${_STATUS_LABEL[ms]}</span></div>
+            </div>
+        </div>
+
+        <div class="section-header">📡 Sensörler</div>
+        <div class="detail-mini-grid">${sensorRows}</div>
+
+        <div class="section-header">📈 Nem Trendi</div>
+        <div class="chart-box"><canvas id="fieldReadingsChart"></canvas></div>
+
+        <div class="section-header">🦠 Hastalık Tespiti — Yaprak Fotoğrafı Yükle</div>
+        <div class="form-box">
+            <div class="form-group">
+                <label for="fieldLeafFile">Yaprak Görseli (JPG/PNG/WebP, max 5 MB)</label>
+                <input type="file" id="fieldLeafFile" accept="image/jpeg,image/png,image/webp" />
+            </div>
+            <div id="fieldLeafPreviewWrap" style="display:none;text-align:center;margin:12px 0;">
+                <img id="fieldLeafPreview" alt="Önizleme" style="max-width:240px;max-height:180px;border-radius:12px;border:1px solid var(--border);" />
+            </div>
+            <button class="btn-primary" id="fieldLeafBtn" onclick="analyzeFieldLeaf()">🔬 Hastalığı Tespit Et</button>
+            <div id="fieldLeafResult" style="display:none;margin-top:16px;"></div>
+        </div>
+
+        <div class="section-header">🚿 Sulama Geçmişi</div>
+        <div class="table-box"><table class="detail-table"><thead><tr><th>Tarih</th><th>Su</th><th>Süre</th><th>Durum</th></tr></thead><tbody>${irrRows}</tbody></table></div>
+
+        <div class="section-header">🩺 Hastalık Geçmişi</div>
+        <div class="table-box"><table class="detail-table"><thead><tr><th>Tarih</th><th>Teşhis</th><th>Güven</th><th>Şiddet</th></tr></thead><tbody>${disRows}</tbody></table></div>
+
+        <div class="section-header">🪨 Toprak Analizi</div>
+        <div class="form-box">${soilHtml}</div>
+
+        <div class="section-header">🚨 Açık Uyarılar</div>
+        <div>${alertRows}</div>
+    `;
+}
+
+async function loadFieldReadingsChart(fieldId) {
+    const readings = await apiAuth(`/api/fields/${fieldId}/readings?limit=50`);
+    const canvas = document.getElementById('fieldReadingsChart');
+    if (!canvas || !readings) return;
+    const labels = readings.map(r => new Date(r.reading_timestamp).toLocaleDateString('tr'));
+    const values = readings.map(r => r.moisture_percent);
+    if (charts.fieldReadings) charts.fieldReadings.destroy();
+    charts.fieldReadings = new Chart(canvas, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Nem %', data: values, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .4, pointRadius: 2 }] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+    });
+}
+
+// Tarla detayında yaprak foto upload — field_id sabit (currentFieldId).
+async function analyzeFieldLeaf() {
+    const fileInput = document.getElementById('fieldLeafFile');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showToast('Lütfen bir görsel seç', 'warning');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (file.size > 5 * 1024 * 1024) { showToast('Dosya 5 MB\'dan büyük', 'error'); return; }
+    const token = getAuthToken();
+    if (!token) { showToast('Giriş yapman gerekiyor', 'warning'); location.hash = '#auth'; return; }
+    const btn = document.getElementById('fieldLeafBtn');
+    btn.disabled = true; btn.textContent = '⏳ Analiz ediliyor...';
+    const fd = new FormData();
+    fd.append('field_id', currentFieldId);
+    fd.append('image', file);
+    try {
+        const resp = await fetch(`${API_BASE}/api/plants/health-images/analyze`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fd,
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || `Hata ${resp.status}`, 'error');
+            return;
+        }
+        const data = await resp.json();
+        const sev = data.severity || 'none';
+        const sevColor = sev === 'severe' ? '#ef4444' : sev === 'moderate' ? '#f97316' : sev === 'mild' ? '#eab308' : '#22c55e';
+        const box = document.getElementById('fieldLeafResult');
+        box.innerHTML = `<div style="border-left:4px solid ${sevColor};padding-left:12px;">
+            <h4 style="margin:0 0 6px;">🧪 ${_escAttr(data.diagnosis)}</h4>
+            <p style="margin:2px 0;">Güven: <strong>%${_fmtNumber(data.confidence_score * 100, 0)}</strong> · Şiddet: <strong style="color:${sevColor};">${_escAttr(sev)}</strong></p>
+        </div>`;
+        box.style.display = 'block';
+        showToast('Analiz tamamlandı ✅', 'success');
+        // Detayı yenile — hastalık geçmişine yeni kayıt düşsün.
+        loadFieldDetail(currentFieldId);
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = '🔬 Hastalığı Tespit Et';
+    }
 }
 
 function renderMoistureChart(data) {
@@ -834,7 +1086,7 @@ async function analyzePlantImage() {
     try {
         const resp = await fetch(`${API_BASE}/api/plants/health-images/analyze`, {
             method: 'POST',
-            headers: { 'X-API-Key': 'dev-api-key' },
+            headers: { ..._authHeaders() },  // Bearer (RBAC) — yoksa X-API-Key fallback
             body: fd,
         });
         if (!resp.ok) {
@@ -874,12 +1126,21 @@ function renderPlantResult(data) {
     box.style.display = 'block';
 }
 
-// File input preview
+// File input preview — hem plants sayfası hem tarla detayı leaf upload'ı.
 document.addEventListener('change', (e) => {
-    if (e.target && e.target.id === 'plantsFile') {
+    if (!e.target) return;
+    if (e.target.id === 'plantsFile') {
         const file = e.target.files && e.target.files[0];
         const wrap = document.getElementById('plantsPreviewWrap');
         const img = document.getElementById('plantsPreview');
+        if (!file) { wrap.style.display = 'none'; return; }
+        img.src = URL.createObjectURL(file);
+        wrap.style.display = 'block';
+    } else if (e.target.id === 'fieldLeafFile') {
+        const file = e.target.files && e.target.files[0];
+        const wrap = document.getElementById('fieldLeafPreviewWrap');
+        const img = document.getElementById('fieldLeafPreview');
+        if (!wrap || !img) return;
         if (!file) { wrap.style.display = 'none'; return; }
         img.src = URL.createObjectURL(file);
         wrap.style.display = 'block';
@@ -1194,9 +1455,17 @@ async function init() {
     // currentUser snapshot'ına bakacak.
     await refreshAuthState();
 
-    // Load initial page
-    const page = location.hash.slice(1) || 'dashboard';
-    if (pageTitles[page]) navigate(page); else navigate('dashboard');
+    // Load initial page — parametrik #field/{id} route'u da destekle.
+    const raw = location.hash.slice(1) || 'dashboard';
+    if (raw.startsWith('field/')) {
+        const id = parseInt(raw.split('/')[1], 10);
+        if (Number.isFinite(id)) openFieldDetail(id);
+        else navigate('dashboard');
+    } else if (pageTitles[raw]) {
+        navigate(raw);
+    } else {
+        navigate('dashboard');
+    }
 
     // Auto-refresh every 30s
     refreshInterval = setInterval(() => {
@@ -1516,6 +1785,9 @@ Object.assign(window, {
     analyzePlantImage,
     loadAlerts,
     loadDashboard,
+    loadFields,
+    openFieldDetail,
+    analyzeFieldLeaf,
     doLogin,
     doRegister,
     doLogout,
