@@ -7,7 +7,7 @@
 [![A11y](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue)
 ![Coverage 95%](https://img.shields.io/badge/Coverage-95%25-brightgreen)
-![Tests 485+32](https://img.shields.io/badge/Tests-485%20backend%20%2B%2032%20frontend-success)
+![Tests 622+32](https://img.shields.io/badge/Tests-622%20backend%20%2B%2032%20frontend-success)
 
 ---
 
@@ -38,7 +38,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
 |:--|:--|:--|
 | 🧑‍🌾 **Çiftçi** | Yalnız kendi çiftliği, tarlaları, sensörleri | Tarla başına sulama önerisi, yaprak hastalığı tespiti, gübre takvimi |
 | 🛠️ **Geliştirici** | API key + Swagger + test endpoint'leri | Sistem entegrasyonu, IoT cihaz bağlama, fuzz/load test |
-| 🏛️ **Genel Gözetmen** | Tüm çiftliklere read-only, harita + analytics | Bakanlık/araştırmacı: 81 il düzeyinde gözetim ve raporlama |
+| 🏛️ **Genel Gözetmen** | Tüm çiftliklere read-only, harita + analytics | Sistem-geneli gözetim ve raporlama (tüm çiftlikler, salt-okunur) |
 | 👑 **Admin** | Tüm sistem + kullanıcı yönetimi + audit log | Operasyonel kontrol, rol atama, kritik alert yönetimi |
 
 > **`rebuild` branch — aktif geliştirme:** 4-rollü RBAC, rol-spesifik dashboard'lar, eyleme yönelik akışlar ve onboarding burada inşa ediliyor. Detaylı plan: [`docs/REBUILD_ROADMAP.md`](docs/REBUILD_ROADMAP.md).
@@ -60,7 +60,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
             └─ APScheduler (haftalık archive, günlük hava verisi fetch)
 ```
 
-**Ölçek:** 12 router · ~47 endpoint · 15 ORM tablo · 81 il × 7 bölge × 17 bitki = 7500+ kayıt seed verisi.
+**Ölçek:** 15 router · ~65 endpoint · 15 ORM tablo · çiftçi-odaklı demo seed (birkaç çiftçi · çoklu çiftlik/tarla · 17 bitki türü referansı).
 
 **Diyagram + ER şeması:** [`docs/architecture.md`](docs/architecture.md) · [`database/sfdap_schema.sql`](database/sfdap_schema.sql)
 
@@ -68,7 +68,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
 
 ## 📡 API
 
-- **Swagger UI:** http://localhost:8000/docs (12 router, OpenAPI 3.1 contract)
+- **Swagger UI:** http://localhost:8000/docs (15 router, OpenAPI 3.1 contract)
 - **OpenAPI JSON:** http://localhost:8000/openapi.json
 - **Endpoint + auth + örnek istekler:** [`docs/api/API_Kullanim_Kilavuzu.md`](docs/api/API_Kullanim_Kilavuzu.md)
 
@@ -78,7 +78,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
 
 | Kategori | Değer | Komut |
 |:--|:--|:--|
-| Backend test | **485** geçer | `make test` |
+| Backend test | **622** geçer | `make test` |
 | Frontend test | **32** geçer (Vitest + jsdom) | `cd frontend && npm test` |
 | Coverage | **%95.04** (eşik %80) | `make test` |
 | Lint + format | Ruff temiz (17 kural grubu) | `make lint && make format` |

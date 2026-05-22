@@ -100,7 +100,7 @@ docker compose --profile postgres up -d db
 # Migration'ları uygula (14-tablo initial + sensor reading aggregate)
 docker compose exec api alembic upgrade head
 
-# Seed data (opsiyonel — 81 il + 7500+ kayıt)
+# Seed data (opsiyonel — çiftçi-odaklı demo verisi)
 docker compose exec api python database/seed_data.py
 ```
 

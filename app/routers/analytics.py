@@ -1,12 +1,12 @@
 """
-Analytics API Endpoints
-=========================
-Aggregate statistics and insight data feeding the visualization
-dashboard.
-
----
-
+Analytics API Endpoints — REBUILD Faz 1 RBAC
+==============================================
 Görselleştirme dashboard'u için toplu istatistik ve içgörü uçları.
+
+RBAC kapsamı: **admin / overseer / developer only** — sistem-geneli
+aggregate'ler farmer scope'una uygun değil (joins/counts karmaşık).
+Farmer için "Bugünün durumu" Faz 2'de `/api/dashboard/today` endpoint'i
+ile gelecek (farmer'ın kendi farm'larındaki kompakt özet).
 """
 
 from __future__ import annotations
@@ -28,15 +28,23 @@ from app.models.models import (
     User,
     WeatherData,
 )
+from app.routers.auth import require_role
 from app.services.report_service import ReportService
 
 router = APIRouter(prefix="/api/analytics", tags=["Analitik & Görselleştirme"])
 
 
-@router.get("/summary")
+@router.get(
+    "/summary",
+    responses={
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "Farmer analytics'e erişemez (sistem-geneli aggregate)"},
+    },
+)
 def get_analytics_summary(
     days: int = Query(default=30, ge=1, le=365, description="Son kaç gün"),
     db: Session = Depends(get_db),
+    _user: User = Depends(require_role("admin", "overseer", "developer")),
 ) -> dict:
     """
     Dashboard analitik panosu için toplu istatistik verileri döndürür.
@@ -68,9 +76,9 @@ def get_analytics_summary(
 
     # ─── HAVA DURUMU VERİLERİNİ TEK SORGUDA ÇEK ──────────────────
     # N+1 önleme: Önceki yaklaşım her çiftlik için ayrı sorgu yapıyordu
-    # (81 il × 2 döngü ≈ 162 query). Şimdi tüm 'since' sonrası WeatherData
-    # kayıtlarını tek sorguda alıp Python'da farm_id ile gruplandırıyoruz.
-    # EN: N+1 fix — was 1 + 2N queries (≈162 for 81 farms); now 1 + 1 = 2.
+    # (çok-çiftlik senaryosunda 1 + 2N query). Şimdi tüm 'since' sonrası
+    # WeatherData kayıtlarını tek sorguda alıp Python'da farm_id ile gruplandırıyoruz.
+    # EN: N+1 fix — was 1 + 2N queries; now 1 + 1 = 2.
     farms = db.query(Farm).all()
     all_weather_records = db.query(WeatherData).filter(WeatherData.recorded_at >= since).all()
 
@@ -202,13 +210,20 @@ def get_analytics_summary(
     }
 
 
-@router.get("/compare")
+@router.get(
+    "/compare",
+    responses={
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "Farmer compare'e erişemez (sistem-geneli aggregate)"},
+    },
+)
 def compare_analytics(
     start_date_1: datetime = Query(..., description="1. Periyot Baslangic (Orn: 2026-03-01T00:00:00Z)"),
     end_date_1: datetime = Query(..., description="1. Periyot Bitis (Orn: 2026-03-31T23:59:59Z)"),
     start_date_2: datetime = Query(..., description="2. Periyot Baslangic"),
     end_date_2: datetime = Query(..., description="2. Periyot Bitis"),
     db: Session = Depends(get_db),
+    _user: User = Depends(require_role("admin", "overseer", "developer")),
 ) -> dict:
     """
     Kullanicinin belirledigi iki farkli zaman dilimini kiyaslar.
@@ -279,23 +294,23 @@ def compare_analytics(
             "description": "Üretilen rapor (`format` query'sine göre PDF veya XLSX).",
         },
         400: {"description": "Geçersiz format değeri"},
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "Farmer export'a erişemez"},
     },
 )
 def export_analytics(
     format: str = Query("pdf", description="Export formati (pdf veya xlsx)"),
-    # Bound days to 1 year — unbounded values overflow `timedelta`.
-    # ---
-    # `days` 1 yıla sınırlanır; sınırsız değerler `timedelta` overflow eder.
     days: int = Query(30, ge=1, le=365, description="Son kac gunluk veri (max 365)"),
     db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "overseer", "developer")),
 ) -> StreamingResponse:
-    """
-    Analitik verilerini PDF veya Excel formati olarak disari aktarir.
-    """
+    """Analitik verilerini PDF veya Excel formati olarak disari aktarir."""
     if format not in ["pdf", "xlsx"]:
         raise HTTPException(status_code=400, detail="Gecersiz format. Sadece 'pdf' veya 'xlsx' desteklenir.")
 
-    data = get_analytics_summary(days=days, db=db)
+    # `get_analytics_summary` artık `_user` Depends gerektiriyor; export
+    # zaten authorized caller'ı geçirir.
+    data = get_analytics_summary(days=days, db=db, _user=user)
 
     if format == "pdf":
         file_stream = ReportService.generate_pdf_report(data)

@@ -18,7 +18,7 @@ health, analytics and system alerts. Auth schemas live in app/routers/auth.py.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
 
@@ -161,6 +161,17 @@ class IrrigationResponse(BaseModel):
     scheduled_date: UtcDateTime
     water_amount_liters: float | None
     status: str
+
+
+class IrrigationStatusUpdate(BaseModel):
+    """Sulama programı durum güncelleme — REBUILD Faz 4 onay/takip akışı.
+
+    pending (öneri onaylandı, bekliyor) → completed (yapıldı) | cancelled (iptal).
+    """
+
+    model_config = ConfigDict(json_schema_extra={"example": {"status": "completed"}})
+
+    status: Literal["pending", "completed", "cancelled"]
 
 
 class IrrigationPredictionRequest(BaseModel):
@@ -424,6 +435,76 @@ class FarmDetailResponse(FarmResponse):
     fields: list[FieldSummary]
 
 
+# ========== FARM / FIELD WRITE (REBUILD Faz 4 — CRUD) ==========
+class FarmCreate(BaseModel):
+    """Yeni çiftlik oluşturma — `user_id` current_user'dan alınır (body'de yok)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "Ahmet'in Çiftliği",
+                "city": "Konya",
+                "region": "İç Anadolu",
+                "area_hectares": 8.0,
+                "location_lat": 37.87,
+                "location_lng": 32.48,
+            }
+        }
+    )
+
+    name: str
+    city: str | None = None
+    region: str | None = None
+    area_hectares: float | None = None
+    location_lat: float | None = None
+    location_lng: float | None = None
+
+
+class FarmUpdate(BaseModel):
+    """Çiftlik kısmi güncelleme — yalnız verilen alanlar değişir (exclude_unset)."""
+
+    name: str | None = None
+    city: str | None = None
+    region: str | None = None
+    area_hectares: float | None = None
+    location_lat: float | None = None
+    location_lng: float | None = None
+
+
+class FieldCreate(BaseModel):
+    """Yeni tarla oluşturma — `farm_id` sahiplik kontrolünden geçer."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "farm_id": 1,
+                "name": "Tarla A",
+                "soil_type": "killi",
+                "area_hectares": 3.5,
+                "elevation_m": 1020.0,
+                "crop_id": 1,
+            }
+        }
+    )
+
+    farm_id: SqliteSafeInt
+    name: str
+    soil_type: str | None = None
+    area_hectares: float | None = None
+    elevation_m: float | None = None
+    crop_id: SqliteSafeInt | None = None
+
+
+class FieldUpdate(BaseModel):
+    """Tarla kısmi güncelleme — yalnız verilen alanlar değişir."""
+
+    name: str | None = None
+    soil_type: str | None = None
+    area_hectares: float | None = None
+    elevation_m: float | None = None
+    crop_id: SqliteSafeInt | None = None
+
+
 class SoilAnalysisResponse(BaseModel):
     """SoilAnalysis serializer (`GET /api/farms/{farm_id}/soil`)."""
 
@@ -452,3 +533,166 @@ class HealthCheckResponse(BaseModel):
     version: str
     components: dict  # {db: ok, scheduler: ok, ml_model: ok, ...}
     timestamp: UtcDateTime
+
+
+# ========== DASHBOARD (REBUILD Faz 2 — rol-aware "Çiftliğim") ==========
+class DashboardSoilMoisture(BaseModel):
+    """Son 24 saat içindeki toprak nemi özeti.
+
+    Farmer rolü için kendi sensörlerinden, admin/overseer/developer için
+    sistem-geneli sensörlerden hesaplanır.
+    """
+
+    avg_moisture_percent: float | None = None
+    reading_count: int = 0
+    sensor_count: int = 0
+    last_reading_at: UtcDateTime | None = None
+    status: str = "no_data"  # 'dry' | 'optimal' | 'wet' | 'no_data'
+
+
+class DashboardLastIrrigation(BaseModel):
+    """En son planlanan/gerçekleşen sulama kaydı."""
+
+    irrigation_id: int | None = None
+    field_id: int | None = None
+    field_name: str | None = None
+    scheduled_date: UtcDateTime | None = None
+    water_amount_liters: float | None = None
+    status: str | None = None  # 'scheduled' | 'completed' | 'cancelled' | ...
+
+
+class DashboardOpenAlerts(BaseModel):
+    """Açık (resolved=False) uyarı sayımı + severity kırılımı."""
+
+    total: int = 0
+    by_severity: dict[str, int] = Field(default_factory=lambda: {"low": 0, "medium": 0, "critical": 0})
+    latest_message: str | None = None
+    latest_severity: str | None = None
+    latest_created_at: UtcDateTime | None = None
+
+
+class DashboardLastDisease(BaseModel):
+    """En son bitki sağlığı tanısı (CNN/heuristic tahmin)."""
+
+    image_id: int | None = None
+    field_id: int | None = None
+    field_name: str | None = None
+    captured_at: UtcDateTime | None = None
+    diagnosis: str | None = None
+    severity: str | None = None  # 'none' | 'mild' | 'moderate' | 'severe'
+    confidence_score: float | None = None
+
+
+class DashboardSummaryResponse(BaseModel):
+    """Rol-aware 'Çiftliğim' özet ekranı.
+
+    `scope == 'user'`: farmer rolü, yalnız kendi farm zinciri.
+    `scope == 'system'`: admin/overseer/developer, sistem-geneli toplam.
+    """
+
+    user_name: str
+    user_role: str  # 'farmer' | 'developer' | 'overseer' | 'admin'
+    scope: str  # 'user' | 'system'
+    farm_count: int
+    field_count: int
+    sensor_count: int
+    soil_moisture_today: DashboardSoilMoisture
+    last_irrigation: DashboardLastIrrigation
+    open_alerts: DashboardOpenAlerts
+    last_disease: DashboardLastDisease
+    generated_at: UtcDateTime
+
+
+# ========== FIELD DETAIL (REBUILD Faz 3 — Tarla detay sayfası) ==========
+class FieldCropInfo(BaseModel):
+    """Tarlaya ekili bitki türü özeti (CropType)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    scientific_name: str | None = None
+    water_need_mm_per_day: float | None = None
+
+
+class FieldSensorSummary(BaseModel):
+    """Tarladaki tek sensör + en son okuması (detay sayfası kartı için)."""
+
+    id: int
+    sensor_type: str
+    serial_number: str | None = None
+    status: str
+    latest_moisture_percent: float | None = None
+    latest_soil_temperature_c: float | None = None
+    latest_reading_at: UtcDateTime | None = None
+
+
+class FieldIrrigationSummary(BaseModel):
+    """Tarlanın sulama geçmişinden tek kayıt."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    scheduled_date: UtcDateTime
+    water_amount_liters: float | None = None
+    duration_min: int | None = None
+    status: str
+    source: str | None = None
+
+
+class FieldDiseaseSummary(BaseModel):
+    """Tarlanın bitki sağlığı/hastalık geçmişinden tek kayıt."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    image_url: str | None = None
+    captured_at: UtcDateTime | None = None
+    diagnosis: str | None = None
+    confidence_score: float | None = None
+    severity: str | None = None
+
+
+class FieldAlertSummary(BaseModel):
+    """Tarlaya bağlı açık uyarı (SystemAlert)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    alert_type: str
+    severity: str
+    message: str
+    is_resolved: bool
+    created_at: UtcDateTime
+
+
+class FieldDetailResponse(BaseModel):
+    """Tek tarlanın tüm bağlamı — sensör, sulama, hastalık, toprak, uyarı.
+
+    Demo akışının kalbi: dashboard "Tarla A susuz" → bu sayfa → yaprak
+    foto upload → tanı. RBAC: farmer yalnız kendi tarlasını görür.
+    """
+
+    # ─── Tarla çekirdeği ───────────────────────────
+    id: int
+    name: str
+    area_hectares: float | None = None
+    soil_type: str | None = None
+    elevation_m: float | None = None
+    # ─── Üst çiftlik ───────────────────────────────
+    farm_id: int
+    farm_name: str
+    region: str | None = None
+    city: str | None = None
+    # ─── Ekili bitki ───────────────────────────────
+    crop: FieldCropInfo | None = None
+    # ─── Toprak nemi özeti (son 24 saat, tarladaki sensörler) ──
+    moisture_status: str  # 'dry' | 'optimal' | 'wet' | 'no_data'
+    avg_moisture_percent: float | None = None
+    # ─── Koleksiyonlar ─────────────────────────────
+    sensors: list[FieldSensorSummary]
+    recent_irrigations: list[FieldIrrigationSummary]
+    disease_history: list[FieldDiseaseSummary]
+    soil_analyses: list[SoilAnalysisResponse]
+    open_alerts: list[FieldAlertSummary]
+    generated_at: UtcDateTime

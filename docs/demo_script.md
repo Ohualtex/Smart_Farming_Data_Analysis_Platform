@@ -1,198 +1,147 @@
-# 🎬 SFDAP — Sunum Demo Senaryosu
+# 🎬 SFDAP — Sunum Demo Senaryosu (REBUILD)
 
-**Hedef süre:** 12-15 dakika
-**Teknik gereksinimler:** Python 3.12, dashboard tarayıcıda açık, terminal ile API canlı
+**Hedef süre:** 10-12 dakika
+**Teknik gereksinimler:** Python 3.12, dashboard tarayıcıda açık, terminal API canlı
+
+> Bu senaryo REBUILD sonrası **çiftçi-odaklı** akışı izler: ön panel (giriş) →
+> "Çiftliğim" → tarla detay → sulama onayı → hastalık tanısı → bildirim →
+> (admin) sistem gözetimi. Demo persona **Çiftçi Ahmet**'in 5 sorusunu cevaplar.
 
 ---
 
 ## ⚙️ Hazırlık (sunumdan önce, 2 dk)
 
 ```bash
-# 1. Projeyi başlat
 cd Smart_Farming_Data_Analysis_Platform
-make run                 # ya da: .venv/bin/uvicorn app.main:app --port 8000
-
-# 2. Tarayıcıda iki sekme aç
-#    - http://localhost:8000/dashboard/
-#    - http://localhost:8000/docs    (Swagger)
-
-# 3. Terminal hazır tut (curl demo'su için)
+# Taze çiftçi-odaklı demo seed (5 kullanıcı, 3 çiftlik, 6 tarla)
+rm -f sfdap_dev.db && python database/seed_data.py
+make run                 # uvicorn → http://localhost:8000
 ```
 
-**DB hazırlığı (eğer ilk demo değilse):**
-```bash
-rm sfdap_dev.db
-python database/seed_data.py    # 7500+ kayıtlık seed yüklenir, ~5 sn
-```
+Tarayıcıda aç: **http://localhost:8000/dashboard/** (+ opsiyonel `/docs` Swagger).
+
+**Demo hesapları:**
+
+| Rol | E-posta | Şifre |
+|:--|:--|:--|
+| 🧑‍🌾 Çiftçi | `ahmet@demo.test` | `DemoCiftci2026` |
+| 🛡️ Admin | `admin@demo.test` | `DemoAdmin2026` |
+| 🏛️ Gözetmen | `overseer@demo.test` | `DemoGozetmen2026` |
 
 ---
 
 ## 🎯 Demo Akışı
 
-### Adım 1 — Açılış & Bağlam (1 dk)
+### Adım 1 — Ön panel & giriş (1 dk)
 
-> *"Merhaba. Bu, **SFDAP — Akıllı Tarım Veri Analizi Platformu**. Türkiye'nin
-> tüm 81 ilinde toprak sensörleri, hava durumu ve makine öğrenimi
-> tahminlerini tek panelde birleştiren bir akademik proje. 5 kişilik bir
-> ekiple Scrum metodolojisiyle 6 ay içinde geliştirdik."*
+> *"SFDAP — çiftçinin kendi tarlalarındaki sensör, hava ve ML tahminlerini tek
+> panelde birleştiren bir karar destek aracı. Giriş yapmadan içerik görünmez."*
 
-**Göster:** Dashboard ana sayfa
-- Hero banner: "81 il · 324 sensör · 4860 okuma · 17 bitki türü"
-- Üst kartlar: günlük genel durum
-- Filiz maskotu sağ alt köşede karşılar
+**Göster:** `/dashboard/` açılır → full-screen **ön panel** (giriş ekranı) karşılar.
+- "Hesabın yok mu? Kayıt ol" linki → kayıt formu (gizli, isteğe bağlı)
+- `ahmet@demo.test` / `DemoCiftci2026` ile **giriş yap**
 
----
-
-### Adım 2 — Mimari Özet (1 dk)
-
-> *"Backend FastAPI + SQLAlchemy. ML için scikit-learn. Dashboard tek-sayfa
-> SPA, Chart.js ile zengin görselleştirmeler. Hepsi Docker ile
-> kontenerize edilebilir, GitHub Actions ile CI/CD pipeline'ı çalışıyor."*
-
-**Göster:** README mimari diyagramı (mermaid) ve `docs/architecture.md`
+> *"Giriş yapınca header'da yeşil 'çiftçi' rozeti + sahip olduğu çiftlik sayısı."*
 
 ---
 
-### Adım 3 — Bölge Bazlı Analitik (2 dk)
+### Adım 2 — "Çiftliğim" dashboard (1.5 dk)
 
-> *"Türkiye'nin 7 coğrafi bölgesi farklı iklim koşulları sunar. Bunu veri
-> üzerinde görelim."*
+> *"Ahmet'in ilk sorusu: tarlam susuz mu? Dashboard 4 kartla anında cevap veriyor."*
 
-**Tıkla:** Sidebar → **Analitik**
+**Göster:** Genel Bakış sayfası — rol-aware özet:
+- 💧 **Bugün toprak nemi** — Tarla A **🥵 Susuz** (kritik)
+- 🚿 Son sulama · 🚨 Açık uyarı (severity kırılımı) · 🦠 Son hastalık tanısı
+- Hero: çiftlik / sensör / okuma sayıları (giriş yapan çiftçiye göre)
 
-- Sensör tipi dağılımı (donut chart)
-- **Çiftlik bazlı sıcaklık karşılaştırması** — bölgelere göre kırılım
-- NPK radar chart — bitki bazlı azot/fosfor/potasyum ihtiyacı
-- Günlük sıcaklık trendi (gece-gündüz pattern, diurnal)
-
-> *"Burada gerçekçi bir günlük döngü görüyoruz: gece 14°C, öğle 23°C —
-> sezonsal pattern simülasyonu."*
+> *(Yeni/boş hesap demosu:)* *"Yeni kullanıcı boş hesapla girince onboarding banner
+> karşılar — tek tıkla 'Demo verisi yükle' ile örnek çiftlik kurulur."*
 
 ---
 
-### Adım 4 — ML Sulama Tahmini (2 dk)
+### Adım 3 — Tarla detayı (2 dk)
 
-> *"Şimdi gerçek bir senaryo: bir çiftçi tarlasına ne kadar su vermesi
-> gerektiğini bilmek istiyor. RandomForest modeli toprak nemi, hava
-> nemi, sıcaklık ve son yağış miktarına bakarak öneriyor."*
+**Tıkla:** Sidebar → **Tarlalarım** → "Ahmet'in Çiftliği" → **Tarla A**
 
-**Tıkla:** Sidebar → **Sulama**
+- Hero: bitki (Buğday) · alan · toprak tipi · ✏️ Düzenle / 🗑 Sil
+- Toprak nemi kartı (Susuz) + **nem trend grafiği** (Chart.js, son okumalar)
+- Sensörler (son okumalarıyla) · sulama geçmişi · hastalık geçmişi · toprak analizi · açık uyarı
 
-Form değerlerini gir:
-- Toprak nemi: **30%**
-- Toprak sıcaklığı: 22°C
-- Hava nemi: 60%
-- Hava sıcaklığı: 25°C
-- Yağış: 2 mm
-
-**Sonuç:** "Orta düzeyde sulama gerekli: 28 litre."
-
-> *"Modelimiz scikit-learn 1.8 ile sentetik 1000 örneklik veri üzerinde
-> eğitildi. Her tahmin otomatik olarak `ModelPerformanceLog` tablosuna
-> kaydediliyor — gerçek değerler sonradan PATCH ile doldurulup model
-> doğruluğu zamanla takip ediliyor."*
+> *"Tek tarlanın tüm bağlamı tek ekranda — RBAC sayesinde Ahmet yalnız kendi
+> tarlasını görür."*
 
 ---
 
-### Adım 5 — Akıllı Gübreleme Önerisi (1 dk)
+### Adım 4 — ML sulama önerisi → onayla (1.5 dk)
 
-> *"17 farklı bitki türü için NPK önerisi sunuyoruz. Türkiye'de yaygın
-> tüm büyük ürünler — buğday, mısır, domates, çay, fındık, üzüm, antep
-> fıstığı."*
+**Tıkla:** Sidebar → **Sulama** → form doldur (toprak nemi 22, sıcaklık 25, vb.) → **Tahmin**
 
-**Tıkla:** Sidebar → **Gübreleme**
+> *"RandomForest modeli kaç litre su gerektiğini söylüyor. Ama asıl yeni şey:
+> öneriyi tek tıkla programa ekleyebiliyoruz."*
 
-- **Bitki:** Domates seç
-- **Alan:** 1 hektar
-- **Toprak:** N=80, P=40, K=50, pH=6.5
-- **Çalıştır**
-
-**Sonuç:** "Domates için toplam 560 kg gübre öneriliyor."
-
-> *"Sonuç hem nicel (kg) hem de Türkçe açıklamayla geliyor. Bu çiftçiye
-> doğrudan eyleme geçirilebilir bir bilgi."*
+- Sonuç kartında **"✅ Onayla ve programa ekle"** → tarla seç → sulama programı (pending) oluşur
+- Tarla detayında sulama satırında **✓ Tamamlandı / ✗ İptal** ile durum takibi
 
 ---
 
-### Adım 6 — UX Cilası ve Filiz Asistan (1.5 dk)
+### Adım 5 — Yaprak fotoğrafından hastalık tanısı (1.5 dk)
 
-> *"Dashboard light/dark tema, mobil-responsive, Türkçe arayüz.
-> Çiftçinin kullanacağı bir araç olduğu için UI dilimiz teknik değil
-> tamamen yerel."*
+> *"Ahmet'in ikinci sorusu: bu yaprakta hastalık var mı?"*
 
-**Tema toggle (sağ üst):** Dark → Light geçiş
+**Tarla detayında** → "🦠 Hastalık Tespiti" → yaprak fotoğrafı yükle → **Tespit Et**
 
-> *"**Filiz** adlı SVG-tabanlı maskot karakter dashboard'da canlı:
-> 65+ tarımsal ipucu, gündüz/gece mood otomasyonu, göz takibi, tıklama
-> tepkileri ile çiftçi-dostu mikro-etkileşim."*
+- CNN/heuristic model anında teşhis + güven skoru + şiddet döndürür
+- Sonuç hastalık geçmişine düşer (detay otomatik yenilenir)
 
 ---
 
-### Adım 7 — Swagger API Rehberi (1.5 dk)
+### Adım 6 — Bildirim akışı (1 dk)
 
-**Tarayıcıda:** http://localhost:8000/docs
+> *"Beşinci soru: bir sorun çıkarsa haberim olur mu? Header'daki çan bunu çözüyor."*
 
-> *"Geliştirici tarafı: 43 endpoint, hepsi Swagger'da Türkçe açıklamalı.
-> Sağ üstten Authorize → API key ver, herhangi bir endpoint'i canlı
-> test et."*
-
-- **Authorize butonuna tıkla:** `dev-api-key`
-- `POST /api/fertilizer/recommend` → "Try it out" → Execute → 200 ✅
-
-> *"Ekip arkadaşlarımız bu Swagger üzerinden hem geliştirme hem test
-> yapıyor. Her endpoint için `examples=` ile canlı body geliyor."*
+**Tıkla:** Header → **🔔 bildirim çanı**
+- Açık uyarı sayısı + dropdown (mesaj/severity/hızlı Çöz)
+- **"🔄 Kontrol et"** → tarlaları tarar, düşük nem / hastalık hatırlatması üretir (dedup'lı)
 
 ---
 
-### Adım 8 — Sistem Sağlığı & Operasyon (1 dk)
+### Adım 7 — Gübreleme önerisi (1 dk)
 
-**Curl ile:**
-```bash
-curl http://localhost:8000/api/health/deep | jq
-```
+**Tıkla:** Sidebar → **Gübreleme** → Domates, 1 ha, N=80/P=40/K=50 → **Çalıştır**
 
-> *"Production-ready bir sistem için derin sağlık kontrolü: DB latency,
-> scheduler durumu, ML model varlığı, aktif sensör sayısı, alert
-> sayaçları. Kubernetes liveness/readiness probe'larıyla uyumlu."*
-
-**Curl ile:**
-```bash
-curl http://localhost:8000/api/model-performance/drift/irrigation_rf
-```
-
-> *"Model drift tespiti: bir modelin son haftadaki accuracy'si baseline'a
-> göre %10'dan fazla düşerse otomatik `SystemAlert` oluşur."*
+> *"17 bitki türü için NPK önerisi — hem nicel (kg) hem Türkçe açıklama."*
 
 ---
 
-### Adım 9 — Test & Kalite (1 dk)
+### Adım 8 — Admin/gözetmen: sistem gözetimi (1.5 dk)
+
+**Çıkış yap → `admin@demo.test` ile giriş** (header rozeti kırmızı 'yönetici').
+
+> *"Aynı platform, farklı rol. Admin sistem-geneli görür + kullanıcıları yönetir."*
+
+- Sidebar'da **👥 Kullanıcılar** (yalnız admin görür) → liste + rol değiştir / şifre sıfırla / sil / yeni kullanıcı
+- **Harita** → sistemdeki çiftliklerin coğrafi dağılımı (bölge renkli)
+- **Analitik** → sistem-geneli bölge kırılımları (admin/gözetmen sistem özeti)
+- Dashboard `scope=system` — tüm çiftliklerin toplamı
+
+> *"Çiftçi kendi verisini, gözetmen tüm sistemi read-only, admin tam yetki —
+> 4-rol RBAC her endpoint'te uygulanıyor."*
+
+---
+
+### Adım 9 — Test & kalite + kapanış (1 dk)
 
 **Terminal:**
 ```bash
-make test
+make test            # 622 backend test
+cd frontend && npm test   # 32 frontend (Vitest)
 ```
 
-> *"301 test, %94 coverage, 23 test dosyası, GitHub Actions ile her PR'da
-> otomatik (lint + test + alembic migration smoke + güvenlik tarayıcıları).
-> Pre-commit hook'larıyla ruff lint + format + bandit zorunlu."*
+> *"622 backend + 32 frontend test, ruff lint+format temiz, bandit medium+ 0 issue.
+> 4 GitHub Actions workflow (lint+test+migrations+fuzz / security / a11y).
+> Pre-commit hook'larıyla her commit denetimden geçiyor."*
 
-```bash
-.venv/bin/ruff check app/
-# → All checks passed!
-```
-
----
-
-### Adım 10 — Yol Haritası ve Kapanış (1 dk)
-
-> *"Proje yolculuğumuzda CNN bitki sağlığı modeli, Auth UI ve IoT/MQTT
-> entegrasyonu öne çıkan özellikler oldu. Üretim çekirdeği olarak JWT auth,
-> Alembic migration, rate limit, N+1 fix ve nginx+Let's Encrypt katmanları
-> kuruldu. Cila & gözlemlenebilirlik aşamasında Sentry, Prometheus,
-> frontend a11y ve backup süreçleri devreye alındı. Final teslim akademik
-> rapor ile tamamlanacak."*
-
-**README "Yol Haritası" tablosunu göster.**
+**Göster:** README "Sprint Durumu" + `CHANGELOG.md` [Unreleased] REBUILD bölümü.
 
 > *"Sorularınız?"*
 
@@ -201,16 +150,16 @@ make test
 ## 🎬 Demo İpuçları
 
 - **Hız:** her ekran 30-60 sn — yavaş tıkla, açıklamayı tamamla
-- **Hata olursa:** API kapalıysa Filiz "uykulu" olabilir; F5 ile yenile
-- **Görüntü kalitesi:** tarayıcıyı 100% zoom, dark mode görsel olarak daha çarpıcı
+- **Giriş gate:** demo başında çıkış yapıp ön paneli göstermek etkili
+- **Görüntü:** %100 zoom; dark mode görsel olarak daha çarpıcı
 - **Yedek:** Wi-Fi giderse OpenWeatherMap çağrıları başarısız olur ama seed verisi yeter
 
 ## 🚨 Olası sorular & cevaplar
 
 | Soru | Cevap |
 |:--|:--|
-| Gerçek çiftçiler nasıl kullanır? | "Pilot için sensör donanım kiti + mobil app gerek. Auth UI + JWT backend kuruldu, 1-2 pilot çiftliğe deploy edilebilir." |
-| Hangi veriyi kullandınız? | "Eğitim setimiz 1000 sentetik örnek (RandomForest). IoT MQTT entegrasyonu ile gerçek sensör akışına hazır." |
-| Filiz neden var? | "Çiftçilerin teknolojiyle bağ kurması için sevimli bir asistan. Tarımsal ipuçları + sistem durumu görselleştirme." |
-| Maliyet modeli? | "Akademik proje. Üretim için kooperatif/Bakanlık destekli SaaS modeli düşünülebilir." |
-| Veri gizliliği? | "JWT + bcrypt ile kullanıcı bazlı izolasyon var; üretimde RBAC + KVKK uyumlu data handling planlı." |
+| Gerçek çiftçiler nasıl kullanır? | "Sensör donanım kiti + mobil app ile pilot. JWT auth + 4-rol RBAC kuruldu; çiftçi kendi verisini görür." |
+| 81 il / ulusal ölçek nerede? | "O çerçeveden vazgeçtik — proje artık çiftçi-odaklı bir saha aracı; admin/gözetmen sistem-geneli gözetim sağlar." |
+| Hangi veriyi kullandınız? | "ML eğitim seti sentetik (RandomForest). Demo seed çiftçi-odaklı; IoT/MQTT ile gerçek akışa hazır." |
+| Veri gizliliği / izolasyon? | "JWT + bcrypt + 4-rol RBAC: her endpoint farmer'ı kendi `user_id`'sine bağlı veriyle sınırlar; admin self-demote/self-delete'e karşı korumalı." |
+| Bildirimler gerçek zamanlı mı? | "On-demand 'Kontrol et' tarama dedup'lı uyarı üretir; periyodik scheduler'a genişletilebilir." |

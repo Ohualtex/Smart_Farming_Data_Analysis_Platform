@@ -322,7 +322,15 @@ class TestAuthFlowIntegration:
         assert decoded["exp"] > decoded["iat"]
 
     def test_tampered_jwt_rejected(self, client):
-        """JWT'nin son karakteri değiştirildiğinde signature invalid → 401."""
+        """JWT payload'ı değiştirildiğinde signature invalid → 401.
+
+        NOT (flaky fix): Önceki sürüm token'ın **son** karakterini
+        değiştiriyordu. Ama JWT imzası base64url'dir ve son karakterin
+        trailing-bit'leri bazı imza byte değerlerinde aynı byte'a decode
+        olur → imza geçerli kalır → test rastgele 200 döndürürdü. Şimdi
+        **payload** (ortadaki) segmentin ilk karakterini değiştiriyoruz;
+        bu imza ↔ payload uyumunu her zaman bozar (deterministik 401).
+        """
         email = _new_email()
         client.post(
             "/api/auth/register",
@@ -331,8 +339,10 @@ class TestAuthFlowIntegration:
         token = client.post("/api/auth/login", json={"email": email, "password": "S3kürSifre2026"}).json()[
             "access_token"
         ]
-        # Son karakteri değiştir
-        tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
+        # JWT = header.payload.signature — payload segmentini boz.
+        header, payload, signature = token.split(".")
+        tampered_payload = ("A" if payload[0] != "A" else "B") + payload[1:]
+        tampered = f"{header}.{tampered_payload}.{signature}"
         response = client.get(
             "/api/auth/me",
             headers={"Authorization": f"Bearer {tampered}"},

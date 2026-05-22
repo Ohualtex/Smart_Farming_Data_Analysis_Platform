@@ -59,8 +59,9 @@ class TestSecurityHeaders:
         assert r.status_code == 200
         assert r.headers.get("X-Robots-Tag") == "noindex, nofollow"
 
-    def test_headers_persist_on_error_responses(self, client):
+    def test_headers_persist_on_error_responses(self, admin_client):
         """404 gibi error response'larda da güvenlik header'ları olmalı."""
+        client, _ = admin_client
         r = client.get("/api/sensors/9999999")
         assert r.status_code == 404
         # Middleware her response'a ekler — error case dahil

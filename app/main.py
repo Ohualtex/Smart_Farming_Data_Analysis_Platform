@@ -39,12 +39,15 @@ from app.routers import (
     alerts,
     analytics,
     auth,
+    dashboard,
     farms,
     fertilizer,
+    fields,
     health,
     irrigation,
     metrics,
     model_performance,
+    onboarding,
     plants,
     sensors,
     weather,
@@ -103,7 +106,30 @@ TAGS_METADATA = [
     {
         "name": "Analitik & Görselleştirme",
         "description": "📊 **Toplu istatistik, dönem karşılaştırma ve PDF/Excel rapor üretimi.** "
-        "81 il × 7 bölge bazlı kırılımlar, dashboard'un veri kaynağıdır.",
+        "Sistemdeki çiftliklerin bölge bazlı kırılımları (admin/gözetmen sistem özeti).",
+    },
+    {
+        "name": "Çiftliğim",
+        "description": "🏠 **Rol-aware tek-ekran özet** — çiftçi için kendi farm zinciri, "
+        "admin/overseer/developer için sistem-geneli toplam. 4 metrik: toprak nemi, "
+        "son sulama, açık uyarı, son hastalık tanısı.",
+    },
+    {
+        "name": "Tarla Detayı",
+        "description": "🌱 **Tek tarlanın tüm bağlamı** — sensörler (son okumalarıyla), sulama "
+        "geçmişi, hastalık tanı geçmişi, toprak analizleri ve açık uyarılar. Yaprak foto "
+        "upload → tanı demo akışının merkezi. Farmer yalnız kendi tarlasını görür.",
+    },
+    {
+        "name": "Onboarding",
+        "description": "🚀 **Yeni kullanıcı kurulumu** — boş hesaba tek-tık demo verisi "
+        "(çiftlik + tarla + sensör/okuma + uyarı) kurar; kullanıcı platformu anında keşfeder.",
+    },
+    {
+        "name": "Kullanıcı Yönetimi",
+        "description": "👥 **Admin-only kullanıcı yönetimi** — tüm kullanıcıları listele, rol "
+        "değiştir, yeni kullanıcı oluştur (rol seçerek), şifre sıfırla, sil. Yalnız `admin` "
+        "rolü erişir; diğer roller 403 alır.",
     },
     {
         "name": "Sistem Uyarıları",
@@ -137,8 +163,9 @@ app = FastAPI(
     description="""
 ## 🌾 Akıllı Tarım Veri Analizi Platformu
 
-Bu API, **çiftçilerin tarımsal verimliliğini artırmak** için 81 il genelinden toplanan
-toprak sensörleri, hava durumu verileri ve makine öğrenimi tahminlerini birleştirir.
+Bu API, **çiftçilerin tarımsal verimliliğini artırmak** için çiftçinin kendi tarlalarından
+toplanan toprak sensörleri, hava durumu verileri ve makine öğrenimi tahminlerini birleştirir.
+Çiftçi yalnız kendi çiftliğini görür; admin/gözetmen tüm çiftliklerde sistem-geneli özet alır.
 
 ### 🎯 Ne sunuyoruz?
 
@@ -167,7 +194,7 @@ Yukarıdaki **🔒 Authorize** butonuna tıklayıp şu anahtarı girin: `dev-api
 ### 👥 Bu Platform Hakkında
 
 **SFDAP**, 5 kişilik öğrenci ekibi tarafından geliştirilen Scrum tabanlı bir projedir.
-Türkiye'nin tüm illerinde geçerli verilerle çalışır.
+Çiftçi-odaklı bir saha aracıdır; admin/gözetmen rolleri sistem-geneli gözetim sağlar.
 """,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -214,12 +241,15 @@ register_exception_handlers(app)
 
 app.include_router(health.router)
 app.include_router(farms.router)
+app.include_router(fields.router)
 app.include_router(sensors.router)
 app.include_router(weather.router)
 app.include_router(irrigation.router)
 app.include_router(plants.router)
 app.include_router(fertilizer.router)
 app.include_router(analytics.router)
+app.include_router(dashboard.router)
+app.include_router(onboarding.router)
 
 app.include_router(alerts.router)
 app.include_router(metrics.router)

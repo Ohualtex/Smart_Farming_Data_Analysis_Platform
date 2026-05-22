@@ -35,7 +35,7 @@ graph TB
     subgraph "Veri Katmanı"
         DB[(SQLite / PostgreSQL<br/>14 Tablo)]
         Migration[🗄️ Alembic Migration]
-        Seed[🌱 Seed Data<br/>81 il × 7500+ kayıt]
+        Seed[🌱 Seed Data<br/>çiftçi-odaklı demo seti]
     end
 
     Browser -->|HTTPS| Static
@@ -205,7 +205,7 @@ erDiagram
 
 | Görev | Trigger | Açıklama |
 |:--|:--|:--|
-| `fetch_daily_weather` | Cron `02:00` | Tüm 81 ilden OpenWeatherMap'e istek + DB'ye yaz |
+| `fetch_daily_weather` | Cron `02:00` | Kayıtlı çiftliklerin konumları için OpenWeatherMap'e istek + DB'ye yaz |
 | `aggregate_old_readings` | Haftalık | 30+ günlük sensör okumalarını aylık özet tabloya taşı |
 | `model_drift_check` | Günlük | Tüm aktif modeller için drift endpoint'ini çağır |
 

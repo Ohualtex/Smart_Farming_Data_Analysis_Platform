@@ -14,15 +14,32 @@ import { _skeletonBlock, _skeletonCards, _skeletonRows, _setBusy } from "./lib/s
 import { loadMap as _loadMapImpl } from "./lib/map.js";
 
 const API_BASE = window.location.origin;
+const AUTH_TOKEN_KEY = 'sfdap_auth_token';
 let refreshInterval = null;
 let charts = {};
 let apiOnline = false;
+// Son /me snapshot — header badge + role-aware UI guard'ları için.
+// Login/logout sırasında refreshAuthState() bu objeyi güncelliyor.
+let currentUser = null;
 
 // ─── API SERVICE ──────────────────────────────────────────────
+
+/**
+ * Auth header builder — Bearer token varsa Authorization, yoksa X-API-Key.
+ * REBUILD Faz 2 / Adım 7: tek noktadan auth header bind'i; rol-aware
+ * endpoint'ler (`/api/dashboard/summary`, `/api/auth/me` vb) Bearer ister.
+ */
+function _authHeaders() {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    return token
+        ? { 'Authorization': `Bearer ${token}` }
+        : { 'X-API-Key': 'dev-api-key' };  // anonim fallback (eski endpoint'ler)
+}
+
 async function api(endpoint, options = {}) {
     try {
         const res = await fetch(`${API_BASE}${endpoint}`, {
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': 'dev-api-key', ...options.headers },
+            headers: { 'Content-Type': 'application/json', ..._authHeaders(), ...options.headers },
             ...options
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -33,9 +50,49 @@ async function api(endpoint, options = {}) {
     }
 }
 
+/**
+ * Bearer-zorunlu API çağrısı — token yoksa null + auth sayfasına yönlendirir.
+ * Dashboard summary, sensors, alerts gibi RBAC'lı endpoint'ler için kullanılır.
+ * 401/403 dönerse token temizler ve toast gösterir.
+ */
+async function apiAuth(endpoint, options = {}) {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+        // Login formuna yumuşak yönlendirme; hard reload yok.
+        if (location.hash !== '#auth') location.hash = '#auth';
+        return null;
+    }
+    try {
+        const res = await fetch(`${API_BASE}${endpoint}`, {
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options.headers },
+            ...options
+        });
+        if (res.status === 401) {
+            // Token expire ya da revoke
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            currentUser = null;
+            _renderUserBadge(null);
+            showToast('Oturum süresi doldu, tekrar giriş yap', 'warning');
+            location.hash = '#auth';
+            return null;
+        }
+        if (res.status === 403) {
+            showToast('Bu işlem için yetkin yok', 'warning');
+            return null;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    } catch (e) {
+        console.warn(`API Auth Error: ${endpoint}`, e);
+        return null;
+    }
+}
+
 // ─── NAVIGATION ───────────────────────────────────────────────
 const pageTitles = {
     dashboard: ['Genel Bakış', 'Tarlanın özeti'],
+    fields: ['Tarlalarım', 'Çiftliklerine bağlı tarlalar'],
+    'field-detail': ['Tarla Detayı', 'Sensör, sulama, hastalık ve toprak'],
     weather: ['Hava Durumu', 'Sıcaklık, nem ve yağış'],
     irrigation: ['Sulama', 'Önerilen su miktarı ve geçmiş'],
     fertilizer: ['Gübreleme', 'NPK önerisi ve takvim'],
@@ -44,7 +101,8 @@ const pageTitles = {
     map: ['Türkiye Haritası', 'Çiftliklerin coğrafi dağılımı'],
     plants: ['Bitki Sağlığı', 'Yapraktan hastalık tespiti'],
     alerts: ['Uyarılar', 'Sistem ve sensör uyarıları'],
-    auth: ['Hesabım', 'Giriş, kayıt ve profil'],
+    users: ['Kullanıcı Yönetimi', 'Tüm kullanıcılar (admin)'],
+    auth: ['Hesabım', 'Profil ve şifre'],
 };
 
 function navigate(page) {
@@ -68,6 +126,7 @@ function navigate(page) {
     if (main) main.focus({ preventScroll: false });
     // Load page data
     if (page === 'dashboard') loadDashboard();
+    else if (page === 'fields') loadFields();
     else if (page === 'sensors') loadSensors();
     else if (page === 'weather') loadWeather();
     else if (page === 'irrigation') loadIrrigation();
@@ -75,7 +134,9 @@ function navigate(page) {
     else if (page === 'map') loadMap();
     else if (page === 'plants') loadPlants();
     else if (page === 'alerts') loadAlerts();
+    else if (page === 'users') loadUsers();
     else if (page === 'auth') refreshAuthState();
+    // 'field-detail' navigate() ile değil openFieldDetail(id) ile yüklenir.
     // Close sidebar on mobile (a11y: hamburger aria-expanded sync)
     const sidebar = document.getElementById('sidebar');
     sidebar.classList.remove('open');
@@ -93,35 +154,574 @@ function toggleSidebar() {
 
 // ─── HASH ROUTER ──────────────────────────────────────────────
 window.addEventListener('hashchange', () => {
-    const page = location.hash.slice(1) || 'dashboard';
-    if (pageTitles[page]) navigate(page);
+    const raw = location.hash.slice(1) || 'dashboard';
+    // Parametrik route: #field/{id} → tarla detayı
+    if (raw.startsWith('field/')) {
+        const id = parseInt(raw.split('/')[1], 10);
+        if (Number.isFinite(id)) openFieldDetail(id);
+        return;
+    }
+    if (pageTitles[raw]) navigate(raw);
 });
 
 // ─── DASHBOARD ────────────────────────────────────────────────
-async function loadDashboard() {
-    // Insert skeleton placeholders before the fetch starts.
-    document.getElementById('dashboardCards').innerHTML = _skeletonCards(5);
-    _setBusy('dashboardCards', true);
-    const [sensors, weather, schedules] = await Promise.all([
-        api('/api/sensors/'), api('/api/weather/?limit=30'), api('/api/irrigation/schedules?limit=20')
-    ]);
-    apiOnline = sensors !== null;
-    updateStatus(apiOnline);
-    const s = sensors || []; const w = weather || []; const sc = schedules || [];
-    // Summary cards
-    const avgMoisture = w.length ? (w.reduce((a,d) => a + (d.humidity_percent||0), 0) / w.length).toFixed(1) : '—';
-    const avgTemp = w.length ? (w.reduce((a,d) => a + (d.temperature_c||0), 0) / w.length).toFixed(1) : '—';
-    const totalPrecip = w.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1);
-    document.getElementById('dashboardCards').innerHTML = `
-        <div class="card"><div class="card-icon" aria-hidden="true">📡</div><div class="card-value">${s.length}</div><div class="card-label">Aktif Sensör</div></div>
-        <div class="card"><div class="card-icon" aria-hidden="true">🌡️</div><div class="card-value">${avgTemp}°C</div><div class="card-label">Ort. Sıcaklık</div></div>
-        <div class="card"><div class="card-icon" aria-hidden="true">💧</div><div class="card-value">%${avgMoisture}</div><div class="card-label">Ort. Nem</div></div>
-        <div class="card"><div class="card-icon" aria-hidden="true">🌧️</div><div class="card-value">${totalPrecip}mm</div><div class="card-label">Toplam Yağış</div></div>
-        <div class="card"><div class="card-icon" aria-hidden="true">📋</div><div class="card-value">${sc.length}</div><div class="card-label">Sulama Kaydı</div></div>
+// REBUILD Faz 2 / Adım 8: "Çiftliğim" rol-aware kartlar
+// /api/dashboard/summary tek endpoint'inden 4 metrik card + hero stats
+// + trend chart'ları (Bearer-aware api() üzerinden).
+
+const _STATUS_LABEL = { dry: 'Susuz', optimal: 'Uygun', wet: 'Aşırı sulu', no_data: 'Veri yok' };
+const _STATUS_EMOJI = { dry: '🥵', optimal: '👌', wet: '💧', no_data: '—' };
+
+function _fmtDate(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }); }
+    catch { return iso; }
+}
+function _fmtNumber(v, decimals = 1) {
+    if (v === null || v === undefined) return '—';
+    return Number(v).toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function _escAttr(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _renderSummaryCards(summary) {
+    const moist = summary.soil_moisture_today || {};
+    const irr = summary.last_irrigation || {};
+    const alerts = summary.open_alerts || { by_severity: {} };
+    const disease = summary.last_disease || {};
+    const scopeNote = summary.scope === 'system'
+        ? 'Sistem geneli'
+        : 'Senin tarlalarından';
+    const moistValue = moist.avg_moisture_percent !== null && moist.avg_moisture_percent !== undefined
+        ? `%${_fmtNumber(moist.avg_moisture_percent)}`
+        : '—';
+    const moistStatus = moist.status || 'no_data';
+    const irrAmount = irr.water_amount_liters !== null && irr.water_amount_liters !== undefined
+        ? `${_fmtNumber(irr.water_amount_liters, 0)} L`
+        : '—';
+    const irrTitle = irr.field_name ? `${irr.field_name} · ${_fmtDate(irr.scheduled_date)}` : 'Sulama kaydı yok';
+    const sev = alerts.by_severity || {};
+    const severityChips = [
+        { key: 'critical', label: 'kritik', cls: 'critical' },
+        { key: 'medium', label: 'orta', cls: 'medium' },
+        { key: 'low', label: 'düşük', cls: 'low' },
+    ].map(({ key, label, cls }) => {
+        const cnt = sev[key] || 0;
+        return cnt > 0
+            ? `<span class="severity-chip severity-${cls}">${cnt} ${label}</span>`
+            : '';
+    }).join(' ');
+    const diseaseDx = disease.diagnosis || '—';
+    const diseaseDetail = disease.diagnosis
+        ? `${disease.field_name || 'Tarla'} · ${_fmtDate(disease.captured_at)} · güven %${_fmtNumber((disease.confidence_score || 0) * 100, 0)}`
+        : 'Henüz yaprak görseli analiz edilmedi';
+    return `
+        <div class="metric-card metric-moisture metric-status-${moistStatus}">
+            <div class="metric-head">
+                <span class="metric-icon" aria-hidden="true">💧</span>
+                <span class="metric-title">Bugün toprak nemi</span>
+            </div>
+            <div class="metric-value">${moistValue}</div>
+            <div class="metric-status">
+                <span class="metric-status-pill">${_STATUS_EMOJI[moistStatus]} ${_STATUS_LABEL[moistStatus]}</span>
+            </div>
+            <div class="metric-context">${moist.sensor_count || 0} sensör · ${moist.reading_count || 0} okuma · son 24 sa.</div>
+            <div class="metric-scope">${scopeNote}</div>
+        </div>
+
+        <div class="metric-card metric-irrigation">
+            <div class="metric-head">
+                <span class="metric-icon" aria-hidden="true">🚿</span>
+                <span class="metric-title">Son sulama</span>
+            </div>
+            <div class="metric-value">${irrAmount}</div>
+            <div class="metric-context"><strong>${_escAttr(irr.field_name || '—')}</strong> · ${_fmtDate(irr.scheduled_date)}</div>
+            <div class="metric-context">${_escAttr(irr.status || (irr.irrigation_id ? '—' : 'Sulama kaydı yok'))}</div>
+            <div class="metric-scope">${scopeNote}</div>
+        </div>
+
+        <div class="metric-card metric-alerts ${alerts.total > 0 ? 'has-alerts' : ''}">
+            <div class="metric-head">
+                <span class="metric-icon" aria-hidden="true">🚨</span>
+                <span class="metric-title">Açık uyarılar</span>
+            </div>
+            <div class="metric-value">${alerts.total || 0}</div>
+            <div class="metric-context metric-severities">${severityChips || '<span class="metric-status-pill">Açık uyarı yok ✅</span>'}</div>
+            <div class="metric-context metric-latest">${alerts.latest_message ? _escAttr(alerts.latest_message) : ''}</div>
+            <div class="metric-scope">${scopeNote}</div>
+        </div>
+
+        <div class="metric-card metric-disease metric-severity-${disease.severity || 'none'}">
+            <div class="metric-head">
+                <span class="metric-icon" aria-hidden="true">🦠</span>
+                <span class="metric-title">Son hastalık tanısı</span>
+            </div>
+            <div class="metric-value metric-value-text">${_escAttr(diseaseDx)}</div>
+            <div class="metric-context">${_escAttr(diseaseDetail)}</div>
+            <div class="metric-scope">${scopeNote}</div>
+        </div>
     `;
+}
+
+// Onboarding banner — boş hesap (farm_count==0) için (REBUILD Faz 6)
+function _onboardingBannerHtml() {
+    return `
+        <div class="onboarding-banner" style="grid-column: 1 / -1;">
+            <div class="onboarding-emoji" aria-hidden="true">🌱</div>
+            <h3>Hoş geldin! Hadi başlayalım.</h3>
+            <p>Henüz çiftliğin yok. İlk çiftliğini ekleyerek başlayabilir ya da
+               tek tıkla örnek verilerle platformu hemen keşfedebilirsin.</p>
+            <div class="onboarding-actions">
+                <button class="btn-primary" onclick="navigate('fields');toggleForm('newFarmForm')">➕ İlk çiftliğimi ekle</button>
+                <button class="btn-secondary" id="loadDemoBtn" onclick="loadDemoData()">🎬 Demo verisi yükle</button>
+            </div>
+        </div>`;
+}
+
+/** Tek-tık demo veri kur (POST /api/onboarding/demo) → dashboard'u tazele. */
+async function loadDemoData() {
+    const btn = document.getElementById('loadDemoBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Kuruluyor...'; }
+    const res = await apiAuth('/api/onboarding/demo', { method: 'POST' });
+    if (res) {
+        showToast('Demo verisi kuruldu ✅ — keşfetmeye başla!', 'success');
+        await refreshAuthState();  // badge owned_farms_count + bell tazele
+        loadDashboard();
+    } else if (btn) {
+        btn.disabled = false; btn.textContent = '🎬 Demo verisi yükle';
+    }
+}
+
+async function loadDashboard() {
+    const cards = document.getElementById('dashboardCards');
+    cards.innerHTML = _skeletonCards(4);
+    _setBusy('dashboardCards', true);
+
+    // Token yoksa rol-aware özet çekilmez; kullanıcıyı auth sayfasına yönlendir.
+    const token = getAuthToken();
+    if (!token) {
+        cards.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <p>🔐 "Çiftliğim" özetini görmek için <a href="#auth">giriş yap</a>.</p>
+            </div>
+        `;
+        _setBusy('dashboardCards', false);
+        updateStatus(apiOnline);
+        return;
+    }
+
+    const [summary, weather] = await Promise.all([
+        apiAuth('/api/dashboard/summary'),
+        api('/api/weather/?limit=30'),
+    ]);
+    apiOnline = summary !== null;
+    updateStatus(apiOnline);
+
+    if (summary && summary.scope === 'user' && summary.farm_count === 0) {
+        // Boş hesap — onboarding banner (REBUILD Faz 6)
+        cards.innerHTML = _onboardingBannerHtml();
+        const heroFarms = document.getElementById('heroFarms');
+        if (heroFarms) heroFarms.textContent = '0';
+    } else if (summary) {
+        cards.innerHTML = _renderSummaryCards(summary);
+        // Hero stats — rol-aware sayım. Farmer için "kendi" çiftlik/sensör;
+        // admin için sistem geneli.
+        const heroFarms = document.getElementById('heroFarms');
+        const heroSensors = document.getElementById('heroSensors');
+        const heroReadings = document.getElementById('heroReadings');
+        if (heroFarms) heroFarms.textContent = summary.farm_count;
+        if (heroSensors) heroSensors.textContent = summary.sensor_count;
+        if (heroReadings) heroReadings.textContent = (summary.soil_moisture_today || {}).reading_count || 0;
+    } else {
+        cards.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <p>⚠️ Özet alınamadı. <button class="btn-link" onclick="loadDashboard()">Tekrar dene</button></p>
+            </div>
+        `;
+    }
     _setBusy('dashboardCards', false);
-    // Charts
-    renderMoistureChart(w); renderTempHumChart(w); renderPrecipChart(w);
+
+    // Trend chart'lar — weather Bearer üzerinden gelir (api() artık _authHeaders kullanıyor).
+    const w = weather || [];
+    renderMoistureChart(w);
+    renderTempHumChart(w);
+    renderPrecipChart(w);
+}
+
+// ─── TARLALARIM (FIELD LIST) ──────────────────────────────────
+// REBUILD Faz 3 / Adım 6: çiftlik bazlı tarla listesi.
+// /api/farms/ → her farm için /api/farms/{id} (nested fields).
+// Tarlalarım sayfasında çiftlik dropdown'ı için son çekilen çiftlik listesi
+let _myFarms = [];
+
+async function loadFields() {
+    const container = document.getElementById('fieldsListContainer');
+    container.innerHTML = _skeletonBlock(3);
+    _setBusy('fieldsListContainer', true);
+
+    const token = getAuthToken();
+    if (!token) {
+        container.innerHTML = '<div class="empty-state"><p>🔐 Tarlalarını görmek için <a href="#auth">giriş yap</a>.</p></div>';
+        _setBusy('fieldsListContainer', false);
+        return;
+    }
+
+    const farms = await apiAuth('/api/farms/?limit=100');
+    if (farms === null) {
+        container.innerHTML = '<div class="empty-state"><p>⚠️ Çiftlikler alınamadı.</p></div>';
+        _setBusy('fieldsListContainer', false);
+        return;
+    }
+    _myFarms = farms;
+
+    // ─── Eylem çubuğu: çiftlik/tarla ekle (toggle formlar) ───
+    const farmOpts = farms.map(f => `<option value="${f.id}">${_escAttr(f.name)}</option>`).join('');
+    let html = `
+        <div class="crud-actionbar">
+            <button class="btn-primary" onclick="toggleForm('newFarmForm')">➕ Çiftlik Ekle</button>
+            ${farms.length ? `<button class="btn-secondary" onclick="toggleForm('newFieldForm')">➕ Tarla Ekle</button>` : ''}
+        </div>
+        <div class="form-box crud-form" id="newFarmForm" style="display:none;">
+            <h4 style="margin-top:0;">➕ Yeni Çiftlik</h4>
+            <div class="form-row">
+                <div class="form-group"><label>Ad *</label><input type="text" id="nfName" placeholder="Çiftlik adı" /></div>
+                <div class="form-group"><label>İl</label><input type="text" id="nfCity" placeholder="Konya" /></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Bölge</label><input type="text" id="nfRegion" placeholder="İç Anadolu" /></div>
+                <div class="form-group"><label>Alan (ha)</label><input type="number" id="nfArea" step="0.1" placeholder="8.0" /></div>
+            </div>
+            <button class="btn-primary" onclick="submitNewFarm()">Kaydet</button>
+        </div>
+        <div class="form-box crud-form" id="newFieldForm" style="display:none;">
+            <h4 style="margin-top:0;">➕ Yeni Tarla</h4>
+            <div class="form-row">
+                <div class="form-group"><label>Çiftlik *</label><select id="ndFarm">${farmOpts}</select></div>
+                <div class="form-group"><label>Ad *</label><input type="text" id="ndName" placeholder="Tarla A" /></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Toprak tipi</label><input type="text" id="ndSoil" placeholder="killi" /></div>
+                <div class="form-group"><label>Alan (ha)</label><input type="number" id="ndArea" step="0.1" placeholder="3.5" /></div>
+            </div>
+            <button class="btn-primary" onclick="submitNewField()">Kaydet</button>
+        </div>
+    `;
+
+    if (farms.length === 0) {
+        html += `<div class="empty-state">
+            <p>🌱 Henüz çiftliğin yok. Yukarıdan "Çiftlik Ekle" ile başla
+               ya da <button class="btn-link" onclick="loadDemoData()">demo verisi yükle</button>.</p>
+        </div>`;
+        container.innerHTML = html;
+        _setBusy('fieldsListContainer', false);
+        return;
+    }
+
+    // Her çiftliğin detayını çek (nested fields için). Küçük N (farmer 1-4 farm).
+    const details = await Promise.all(farms.map(f => apiAuth(`/api/farms/${f.id}`)));
+    for (const farm of details) {
+        if (!farm) continue;
+        const fields = farm.fields || [];
+        html += `<div class="farm-group">
+            <div class="farm-group-header">
+                <span>🚜 ${_escAttr(farm.name)}${farm.city ? ` · ${_escAttr(farm.city)}` : ''}${farm.region ? ` <span class="farm-region">${_escAttr(farm.region)}</span>` : ''}</span>
+                <span class="farm-actions">
+                    <button class="btn-mini" onclick="editFarm(${farm.id}, '${_escAttr(farm.name)}')">✏️</button>
+                    <button class="btn-mini btn-danger" onclick="deleteFarm(${farm.id}, '${_escAttr(farm.name)}')">🗑</button>
+                </span>
+            </div>`;
+        if (fields.length === 0) {
+            html += '<p class="farm-no-fields">Bu çiftlikte tarla kaydı yok.</p>';
+        } else {
+            html += '<div class="field-cards">';
+            for (const f of fields) {
+                const area = f.area_hectares != null ? `${_fmtNumber(f.area_hectares)} ha` : '—';
+                html += `<div class="field-card-wrap">
+                    <a class="field-card" href="#field/${f.id}" onclick="openFieldDetail(${f.id});return false;">
+                        <div class="field-card-name">🌱 ${_escAttr(f.name)}</div>
+                        <div class="field-card-meta">${_escAttr(f.soil_type || 'toprak —')} · ${area}</div>
+                        <div class="field-card-cta">Detayı gör →</div>
+                    </a>
+                    <button class="btn-mini btn-danger field-card-del" onclick="deleteField(${f.id}, '${_escAttr(f.name)}')" title="Tarlayı sil">🗑</button>
+                </div>`;
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+    }
+    container.innerHTML = html;
+    _setBusy('fieldsListContainer', false);
+}
+
+// ─── Çiftlik/Tarla CRUD aksiyonları (REBUILD Faz 4) ───────────
+function toggleForm(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitNewFarm() {
+    const name = document.getElementById('nfName').value.trim();
+    if (!name) { showToast('Çiftlik adı gerekli', 'warning'); return; }
+    const body = {
+        name,
+        city: document.getElementById('nfCity').value.trim() || null,
+        region: document.getElementById('nfRegion').value.trim() || null,
+        area_hectares: parseFloat(document.getElementById('nfArea').value) || null,
+    };
+    const res = await apiAuth('/api/farms/', { method: 'POST', body: JSON.stringify(body) });
+    if (res) { showToast('Çiftlik eklendi ✅', 'success'); loadFields(); }
+}
+
+async function submitNewField() {
+    const farmId = parseInt(document.getElementById('ndFarm').value, 10);
+    const name = document.getElementById('ndName').value.trim();
+    if (!farmId || !name) { showToast('Çiftlik ve tarla adı gerekli', 'warning'); return; }
+    const body = {
+        farm_id: farmId,
+        name,
+        soil_type: document.getElementById('ndSoil').value.trim() || null,
+        area_hectares: parseFloat(document.getElementById('ndArea').value) || null,
+    };
+    const res = await apiAuth('/api/fields', { method: 'POST', body: JSON.stringify(body) });
+    if (res) { showToast('Tarla eklendi ✅', 'success'); loadFields(); }
+}
+
+async function editFarm(farmId, currentName) {
+    const name = prompt('Yeni çiftlik adı:', currentName);
+    if (name === null) return;
+    if (!name.trim()) { showToast('Ad boş olamaz', 'warning'); return; }
+    const res = await apiAuth(`/api/farms/${farmId}`, { method: 'PATCH', body: JSON.stringify({ name: name.trim() }) });
+    if (res) { showToast('Çiftlik güncellendi', 'success'); loadFields(); }
+}
+
+async function deleteFarm(farmId, name) {
+    if (!confirm(`"${name}" çiftliğini silmek istiyor musun? (Tarlası varsa silinemez.)`)) return;
+    const token = getAuthToken();
+    try {
+        const resp = await fetch(`${API_BASE}/api/farms/${farmId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        if (resp.status === 204) { showToast('Çiftlik silindi', 'success'); loadFields(); }
+        else { const e = await resp.json().catch(() => ({})); showToast(e.detail || `Silinemedi (${resp.status})`, 'error'); }
+    } catch { showToast('Sunucuya ulaşılamadı', 'error'); }
+}
+
+async function editField(fieldId, currentName) {
+    const name = prompt('Yeni tarla adı:', currentName);
+    if (name === null) return;
+    if (!name.trim()) { showToast('Ad boş olamaz', 'warning'); return; }
+    const res = await apiAuth(`/api/fields/${fieldId}`, { method: 'PATCH', body: JSON.stringify({ name: name.trim() }) });
+    if (res) { showToast('Tarla güncellendi', 'success'); if (currentFieldId === fieldId) loadFieldDetail(fieldId); else loadFields(); }
+}
+
+async function deleteField(fieldId, name) {
+    if (!confirm(`"${name}" tarlasını silmek istiyor musun? (Sensörü varsa silinemez.)`)) return;
+    const token = getAuthToken();
+    try {
+        const resp = await fetch(`${API_BASE}/api/fields/${fieldId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        if (resp.status === 204) {
+            showToast('Tarla silindi', 'success');
+            // Detay sayfasındaysak listeye dön
+            if (currentFieldId === fieldId) { location.hash = '#fields'; navigate('fields'); }
+            else loadFields();
+        } else { const e = await resp.json().catch(() => ({})); showToast(e.detail || `Silinemedi (${resp.status})`, 'error'); }
+    } catch { showToast('Sunucuya ulaşılamadı', 'error'); }
+}
+
+// ─── TARLA DETAYI (FIELD DETAIL) ──────────────────────────────
+let currentFieldId = null;
+
+function openFieldDetail(fieldId) {
+    currentFieldId = fieldId;
+    // Sayfayı aktive et (navigate yerine doğrudan — parametrik route).
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => { n.classList.remove('active'); n.removeAttribute('aria-current'); });
+    document.getElementById('page-field-detail').classList.add('active');
+    document.getElementById('pageTitle').textContent = pageTitles['field-detail'][0];
+    document.getElementById('pageSubtitle').textContent = pageTitles['field-detail'][1];
+    if (location.hash !== `#field/${fieldId}`) location.hash = `#field/${fieldId}`;
+    const main = document.getElementById('main-content');
+    if (main) main.focus({ preventScroll: false });
+    loadFieldDetail(fieldId);
+}
+
+async function loadFieldDetail(fieldId) {
+    const c = document.getElementById('fieldDetailContainer');
+    c.innerHTML = _skeletonBlock(5);
+    _setBusy('fieldDetailContainer', true);
+    const data = await apiAuth(`/api/fields/${fieldId}`);
+    if (!data) {
+        c.innerHTML = '<div class="empty-state"><p>⚠️ Tarla detayı alınamadı (erişim yok veya bulunamadı).</p></div>';
+        _setBusy('fieldDetailContainer', false);
+        return;
+    }
+    c.innerHTML = renderFieldDetail(data);
+    _setBusy('fieldDetailContainer', false);
+    // Nem trend grafiği (ayrı endpoint)
+    loadFieldReadingsChart(fieldId);
+}
+
+function renderFieldDetail(d) {
+    const cropName = d.crop ? d.crop.name : 'Ekili bitki yok';
+    const moistVal = d.avg_moisture_percent != null ? `%${_fmtNumber(d.avg_moisture_percent)}` : '—';
+    const ms = d.moisture_status || 'no_data';
+
+    // Sensör kartları
+    const sensorRows = (d.sensors || []).map(s => {
+        const m = s.latest_moisture_percent != null ? `%${_fmtNumber(s.latest_moisture_percent)}` : '—';
+        const t = s.latest_soil_temperature_c != null ? `${_fmtNumber(s.latest_soil_temperature_c)}°C` : '—';
+        return `<div class="detail-mini-card">
+            <div class="detail-mini-title">📡 ${_escAttr(s.sensor_type)} <span class="sensor-status sensor-${_escAttr(s.status)}">${_escAttr(s.status)}</span></div>
+            <div class="detail-mini-row">Nem: <strong>${m}</strong> · Toprak: <strong>${t}</strong></div>
+            <div class="detail-mini-sub">${s.latest_reading_at ? _fmtDate(s.latest_reading_at) : 'okuma yok'}</div>
+        </div>`;
+    }).join('') || '<p class="detail-empty">Bu tarlada sensör yok.</p>';
+
+    // Sulama geçmişi — pending kayıtlarda tamamla/iptal butonları
+    const irrRows = (d.recent_irrigations || []).map(i => {
+        const amt = i.water_amount_liters != null ? `${_fmtNumber(i.water_amount_liters, 0)} L` : '—';
+        const actions = i.status === 'pending'
+            ? `<button class="btn-mini" onclick="updateIrrigationStatus(${i.id}, 'completed')">✓ Tamamlandı</button>
+               <button class="btn-mini btn-danger" onclick="updateIrrigationStatus(${i.id}, 'cancelled')">✗ İptal</button>`
+            : '—';
+        return `<tr><td>${_fmtDate(i.scheduled_date)}</td><td>${amt}</td><td>${i.duration_min ?? '—'} dk</td><td><span class="irr-status irr-${_escAttr(i.status)}">${_escAttr(i.status)}</span></td><td class="user-actions">${actions}</td></tr>`;
+    }).join('') || '<tr><td colspan="5" class="detail-empty">Sulama kaydı yok.</td></tr>';
+
+    // Hastalık geçmişi
+    const disRows = (d.disease_history || []).map(h => {
+        const conf = h.confidence_score != null ? `%${_fmtNumber(h.confidence_score * 100, 0)}` : '—';
+        return `<tr><td>${_fmtDate(h.captured_at)}</td><td>${_escAttr(h.diagnosis || '—')}</td><td>${conf}</td><td>${_escAttr(h.severity || '—')}</td></tr>`;
+    }).join('') || '<tr><td colspan="4" class="detail-empty">Hastalık analizi yok.</td></tr>';
+
+    // Toprak analizi (en yeni)
+    let soilHtml = '<p class="detail-empty">Toprak analizi yok.</p>';
+    if ((d.soil_analyses || []).length > 0) {
+        const s = d.soil_analyses[0];
+        soilHtml = `<div class="detail-mini-row">pH: <strong>${s.ph_level ?? '—'}</strong> · N: <strong>${s.nitrogen_mg_kg ?? '—'}</strong> · P: <strong>${s.phosphorus_mg_kg ?? '—'}</strong> · K: <strong>${s.potassium_mg_kg ?? '—'}</strong> mg/kg</div>
+            <div class="detail-mini-sub">${_escAttr(s.texture_class || '')} · ${_fmtDate(s.analysis_date)}</div>`;
+    }
+
+    // Açık uyarılar
+    const alertRows = (d.open_alerts || []).map(a =>
+        `<div class="detail-alert severity-${_escAttr(a.severity)}"><strong>${_escAttr(a.severity)}</strong> · ${_escAttr(a.message)} <span class="detail-mini-sub">${_fmtDate(a.created_at)}</span></div>`
+    ).join('') || '<p class="detail-empty">Açık uyarı yok ✅</p>';
+
+    return `
+        <div class="hero-banner field-detail-hero">
+            <h1><span class="hero-emoji">🌱</span> ${_escAttr(d.name)}</h1>
+            <p>🚜 ${_escAttr(d.farm_name)}${d.region ? ` · ${_escAttr(d.region)}` : ''}${d.city ? ` · ${_escAttr(d.city)}` : ''}</p>
+            <div class="hero-stats">
+                <div class="hero-stat">🌾 ${_escAttr(cropName)}</div>
+                <div class="hero-stat">📐 ${d.area_hectares != null ? _fmtNumber(d.area_hectares) + ' ha' : '—'}</div>
+                <div class="hero-stat">🪨 ${_escAttr(d.soil_type || '—')}</div>
+            </div>
+            <div class="field-detail-actions">
+                <button class="btn-mini" onclick="editField(${d.id}, '${_escAttr(d.name)}')">✏️ Düzenle</button>
+                <button class="btn-mini btn-danger" onclick="deleteField(${d.id}, '${_escAttr(d.name)}')">🗑 Sil</button>
+            </div>
+        </div>
+
+        <div class="cards-grid">
+            <div class="metric-card metric-status-${ms}">
+                <div class="metric-head"><span class="metric-icon" aria-hidden="true">💧</span><span class="metric-title">Toprak nemi (son 24 sa.)</span></div>
+                <div class="metric-value">${moistVal}</div>
+                <div class="metric-status"><span class="metric-status-pill">${_STATUS_EMOJI[ms]} ${_STATUS_LABEL[ms]}</span></div>
+            </div>
+        </div>
+
+        <div class="section-header">📡 Sensörler</div>
+        <div class="detail-mini-grid">${sensorRows}</div>
+
+        <div class="section-header">📈 Nem Trendi</div>
+        <div class="chart-box"><canvas id="fieldReadingsChart"></canvas></div>
+
+        <div class="section-header">🦠 Hastalık Tespiti — Yaprak Fotoğrafı Yükle</div>
+        <div class="form-box">
+            <div class="form-group">
+                <label for="fieldLeafFile">Yaprak Görseli (JPG/PNG/WebP, max 5 MB)</label>
+                <input type="file" id="fieldLeafFile" accept="image/jpeg,image/png,image/webp" />
+            </div>
+            <div id="fieldLeafPreviewWrap" style="display:none;text-align:center;margin:12px 0;">
+                <img id="fieldLeafPreview" alt="Önizleme" style="max-width:240px;max-height:180px;border-radius:12px;border:1px solid var(--border);" />
+            </div>
+            <button class="btn-primary" id="fieldLeafBtn" onclick="analyzeFieldLeaf()">🔬 Hastalığı Tespit Et</button>
+            <div id="fieldLeafResult" style="display:none;margin-top:16px;"></div>
+        </div>
+
+        <div class="section-header">🚿 Sulama Geçmişi
+            <button class="btn-mini" style="float:right;" onclick="addFieldIrrigation(${d.id})">➕ Sulama programı ekle</button>
+        </div>
+        <div class="table-box"><table class="detail-table"><thead><tr><th>Tarih</th><th>Su</th><th>Süre</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>${irrRows}</tbody></table></div>
+
+        <div class="section-header">🩺 Hastalık Geçmişi</div>
+        <div class="table-box"><table class="detail-table"><thead><tr><th>Tarih</th><th>Teşhis</th><th>Güven</th><th>Şiddet</th></tr></thead><tbody>${disRows}</tbody></table></div>
+
+        <div class="section-header">🪨 Toprak Analizi</div>
+        <div class="form-box">${soilHtml}</div>
+
+        <div class="section-header">🚨 Açık Uyarılar</div>
+        <div>${alertRows}</div>
+    `;
+}
+
+async function loadFieldReadingsChart(fieldId) {
+    const readings = await apiAuth(`/api/fields/${fieldId}/readings?limit=50`);
+    const canvas = document.getElementById('fieldReadingsChart');
+    if (!canvas || !readings) return;
+    const labels = readings.map(r => new Date(r.reading_timestamp).toLocaleDateString('tr'));
+    const values = readings.map(r => r.moisture_percent);
+    if (charts.fieldReadings) charts.fieldReadings.destroy();
+    charts.fieldReadings = new Chart(canvas, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Nem %', data: values, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .4, pointRadius: 2 }] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
+            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+    });
+}
+
+// Tarla detayında yaprak foto upload — field_id sabit (currentFieldId).
+async function analyzeFieldLeaf() {
+    const fileInput = document.getElementById('fieldLeafFile');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showToast('Lütfen bir görsel seç', 'warning');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (file.size > 5 * 1024 * 1024) { showToast('Dosya 5 MB\'dan büyük', 'error'); return; }
+    const token = getAuthToken();
+    if (!token) { showToast('Giriş yapman gerekiyor', 'warning'); location.hash = '#auth'; return; }
+    const btn = document.getElementById('fieldLeafBtn');
+    btn.disabled = true; btn.textContent = '⏳ Analiz ediliyor...';
+    const fd = new FormData();
+    fd.append('field_id', currentFieldId);
+    fd.append('image', file);
+    try {
+        const resp = await fetch(`${API_BASE}/api/plants/health-images/analyze`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fd,
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || `Hata ${resp.status}`, 'error');
+            return;
+        }
+        const data = await resp.json();
+        const sev = data.severity || 'none';
+        const sevColor = sev === 'severe' ? '#ef4444' : sev === 'moderate' ? '#f97316' : sev === 'mild' ? '#eab308' : '#22c55e';
+        const box = document.getElementById('fieldLeafResult');
+        box.innerHTML = `<div style="border-left:4px solid ${sevColor};padding-left:12px;">
+            <h4 style="margin:0 0 6px;">🧪 ${_escAttr(data.diagnosis)}</h4>
+            <p style="margin:2px 0;">Güven: <strong>%${_fmtNumber(data.confidence_score * 100, 0)}</strong> · Şiddet: <strong style="color:${sevColor};">${_escAttr(sev)}</strong></p>
+        </div>`;
+        box.style.display = 'block';
+        showToast('Analiz tamamlandı ✅', 'success');
+        // Detayı yenile — hastalık geçmişine yeni kayıt düşsün.
+        loadFieldDetail(currentFieldId);
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = '🔬 Hastalığı Tespit Et';
+    }
 }
 
 function renderMoistureChart(data) {
@@ -307,6 +907,23 @@ async function loadIrrigation(page = 1) {
     _setBusy('irrigationTable', false);
 }
 
+let _lastIrrigationRec = null;  // son tahminin önerilen su miktarı (onay için)
+
+/** Kullanıcının tarlalarını <option> HTML'i olarak getir (onay dropdown'ı için). */
+async function _myFieldOptions() {
+    const farms = await apiAuth('/api/farms/?limit=100');
+    if (!farms || farms.length === 0) return '';
+    const details = await Promise.all(farms.map(f => apiAuth(`/api/farms/${f.id}`)));
+    let opts = '';
+    for (const farm of details) {
+        if (!farm) continue;
+        for (const f of (farm.fields || [])) {
+            opts += `<option value="${f.id}">${_escAttr(farm.name)} › ${_escAttr(f.name)}</option>`;
+        }
+    }
+    return opts;
+}
+
 async function predictIrrigation() {
     const body = {
         soil_moisture: +document.getElementById('irr_moisture').value,
@@ -317,18 +934,71 @@ async function predictIrrigation() {
     };
     const result = await api('/api/irrigation/predict', { method: 'POST', body: JSON.stringify(body) });
     if (result) {
+        _lastIrrigationRec = result.recommended_water_liters;
         const color = result.irrigation_needed ? 'var(--accent-amber)' : 'var(--primary)';
+        const fieldOpts = await _myFieldOptions();
+        const approveBlock = fieldOpts
+            ? `<div class="irr-approve">
+                   <label for="irrApproveField">Tarla seç:</label>
+                   <select id="irrApproveField">${fieldOpts}</select>
+                   <button class="btn-primary" onclick="approveIrrigation()">✅ Onayla ve programa ekle</button>
+               </div>`
+            : `<p style="font-size:.8rem;color:var(--text-dim)">Programa eklemek için önce <a href="#fields">tarla ekle</a>.</p>`;
         document.getElementById('irrigationResult').innerHTML = `
             <div class="result-card">
                 <h4>${result.irrigation_needed ? '⚠️ Sulama Gerekli' : '✅ Sulama Gerekmiyor'}</h4>
                 <div class="value" style="color:${color}">${result.recommended_water_liters} L</div>
                 <p style="margin-top:8px;color:var(--text-muted)">${result.message}</p>
                 <p style="margin-top:4px;font-size:.8rem;color:var(--text-dim)">Güven: %${(result.confidence*100).toFixed(0)}</p>
+                ${approveBlock}
             </div>`;
         showToast('Sulama tahmini tamamlandı', 'success');
     } else {
         showToast('Tahmin başarısız', 'error');
     }
+}
+
+/** Tahmin sonucunu seçili tarla için sulama programına ekle (POST /schedules). */
+async function approveIrrigation() {
+    const sel = document.getElementById('irrApproveField');
+    if (!sel || !sel.value) { showToast('Lütfen bir tarla seç', 'warning'); return; }
+    const body = {
+        field_id: parseInt(sel.value, 10),
+        scheduled_date: new Date().toISOString(),
+        water_amount_liters: _lastIrrigationRec ?? 0,
+    };
+    const res = await apiAuth('/api/irrigation/schedules', { method: 'POST', body: JSON.stringify(body) });
+    if (res) {
+        showToast('Sulama programa eklendi ✅ (durum: pending)', 'success');
+        irrigationTotal = 0;  // sayacı tazele
+        loadIrrigation(1);
+    }
+}
+
+/** Sulama programı durumunu güncelle (field detail tamamla/iptal butonları). */
+async function updateIrrigationStatus(scheduleId, status) {
+    const res = await apiAuth(`/api/irrigation/schedules/${scheduleId}/status`, {
+        method: 'PATCH', body: JSON.stringify({ status }),
+    });
+    if (res) {
+        showToast(`Sulama durumu: ${status}`, 'success');
+        if (currentFieldId) loadFieldDetail(currentFieldId);
+    }
+}
+
+/** Tarla detayından hızlı sulama programı ekle (bugün, su miktarı sorulur). */
+async function addFieldIrrigation(fieldId) {
+    const liters = prompt('Su miktarı (litre):', '200');
+    if (liters === null) return;
+    const amount = parseFloat(liters);
+    if (!Number.isFinite(amount) || amount <= 0) { showToast('Geçerli bir su miktarı gir', 'warning'); return; }
+    const body = {
+        field_id: fieldId,
+        scheduled_date: new Date().toISOString(),
+        water_amount_liters: amount,
+    };
+    const res = await apiAuth('/api/irrigation/schedules', { method: 'POST', body: JSON.stringify(body) });
+    if (res) { showToast('Sulama programı eklendi ✅', 'success'); loadFieldDetail(fieldId); }
 }
 
 // ─── FERTILIZER ───────────────────────────────────────────────
@@ -433,7 +1103,7 @@ function renderSensorTypeChart(dist) {
 
 function renderFarmTempChart(comparison) {
     if (!comparison.length) return;
-    // Bölge bazlı gruplama (81 il → 7 bölge)
+    // Bölge bazlı gruplama (il → 7 coğrafi bölge)
     const regionMap = {};
     comparison.forEach(f => {
         const region = f.region || 'Diğer';
@@ -655,7 +1325,7 @@ async function analyzePlantImage() {
     try {
         const resp = await fetch(`${API_BASE}/api/plants/health-images/analyze`, {
             method: 'POST',
-            headers: { 'X-API-Key': 'dev-api-key' },
+            headers: { ..._authHeaders() },  // Bearer (RBAC) — yoksa X-API-Key fallback
             body: fd,
         });
         if (!resp.ok) {
@@ -695,12 +1365,21 @@ function renderPlantResult(data) {
     box.style.display = 'block';
 }
 
-// File input preview
+// File input preview — hem plants sayfası hem tarla detayı leaf upload'ı.
 document.addEventListener('change', (e) => {
-    if (e.target && e.target.id === 'plantsFile') {
+    if (!e.target) return;
+    if (e.target.id === 'plantsFile') {
         const file = e.target.files && e.target.files[0];
         const wrap = document.getElementById('plantsPreviewWrap');
         const img = document.getElementById('plantsPreview');
+        if (!file) { wrap.style.display = 'none'; return; }
+        img.src = URL.createObjectURL(file);
+        wrap.style.display = 'block';
+    } else if (e.target.id === 'fieldLeafFile') {
+        const file = e.target.files && e.target.files[0];
+        const wrap = document.getElementById('fieldLeafPreviewWrap');
+        const img = document.getElementById('fieldLeafPreview');
+        if (!wrap || !img) return;
         if (!file) { wrap.style.display = 'none'; return; }
         img.src = URL.createObjectURL(file);
         wrap.style.display = 'block';
@@ -784,19 +1463,86 @@ async function resolveAlert(id) {
 }
 
 // ─── AUTH (KULLANICI GİRİŞİ) ──────────────────────────────────
-const AUTH_TOKEN_KEY = 'sfdap_auth_token';
+// `AUTH_TOKEN_KEY` constant'ı dosyanın başında tanımlı (top-level state ile birlikte).
 
 function getAuthToken() { return localStorage.getItem(AUTH_TOKEN_KEY); }
 function setAuthToken(t) { localStorage.setItem(AUTH_TOKEN_KEY, t); }
 function clearAuthToken() { localStorage.removeItem(AUTH_TOKEN_KEY); }
 
+// Rol → kullanıcı dostu Türkçe etiket
+const ROLE_LABELS = {
+    farmer: 'çiftçi',
+    developer: 'geliştirici',
+    overseer: 'gözetmen',
+    admin: 'yönetici',
+};
+
+/**
+ * Header user badge'ini doldur veya gizle. `user` null ise badge gizlenir
+ * (anonim akış). Login/logout sonrası ve refreshAuthState içinde çağırılır.
+ */
+function _renderUserBadge(user) {
+    const badge = document.getElementById('userBadge');
+    if (!badge) return;
+    if (!user) {
+        badge.style.display = 'none';
+        return;
+    }
+    badge.style.display = 'inline-flex';
+    document.getElementById('userBadgeName').textContent = user.name || 'kullanıcı';
+    const roleEl = document.getElementById('userBadgeRole');
+    roleEl.textContent = ROLE_LABELS[user.role] || user.role;
+    roleEl.dataset.role = user.role;
+    const farmCount = user.owned_farms_count ?? 0;
+    document.getElementById('userBadgeFarms').textContent = `🚜 ${farmCount}`;
+}
+
+/**
+ * Auth gate — REBUILD Faz 3.5. `user` varsa app shell'i göster + landing'i gizle;
+ * yoksa tersi. Tek kaynak: refreshAuthState her durumda çağırır.
+ */
+function _applyAuthGate(user) {
+    const landing = document.getElementById('landing');
+    const app = document.querySelector('.app');
+    if (!landing || !app) return;
+    if (user) {
+        landing.style.display = 'none';
+        app.style.display = '';  // flex (CSS default)
+    } else {
+        landing.style.display = 'flex';
+        app.style.display = 'none';
+    }
+}
+
+/**
+ * Rol-aware nav görünürlüğü — `[data-role]` taşıyan nav item'ları yalnız
+ * eşleşen role gösterir (örn. admin "Kullanıcılar"). user null ise hepsi gizli.
+ */
+function _applyRoleVisibility(user) {
+    document.querySelectorAll('[data-role]').forEach(el => {
+        const need = el.getAttribute('data-role');
+        el.style.display = (user && user.role === need) ? '' : 'none';
+    });
+}
+
+/** Landing'de giriş ↔ kayıt formu geçişi. */
+function toggleLandingForm(which) {
+    const login = document.getElementById('landingLogin');
+    const register = document.getElementById('landingRegister');
+    if (!login || !register) return;
+    login.style.display = which === 'register' ? 'none' : 'block';
+    register.style.display = which === 'register' ? 'block' : 'none';
+}
+
 async function refreshAuthState() {
     const token = getAuthToken();
-    const loggedOut = document.getElementById('authLoggedOut');
     const loggedIn = document.getElementById('authLoggedIn');
     if (!token) {
-        loggedOut.style.display = 'block';
-        loggedIn.style.display = 'none';
+        currentUser = null;
+        _renderUserBadge(null);
+        _applyRoleVisibility(null);
+        _applyAuthGate(null);
+        _hideBell();
         return;
     }
     try {
@@ -805,16 +1551,102 @@ async function refreshAuthState() {
         });
         if (!resp.ok) { clearAuthToken(); refreshAuthState(); return; }
         const me = await resp.json();
-        document.getElementById('authName').textContent = me.name;
-        document.getElementById('authEmail').textContent = me.email;
-        document.getElementById('authRole').textContent = me.role;
-        loggedOut.style.display = 'none';
-        loggedIn.style.display = 'block';
+        currentUser = me;
+        _renderUserBadge(me);
+        _applyRoleVisibility(me);
+        _applyAuthGate(me);
+        refreshBell();
+        // Hesabım sayfası alanları — null-safe (page-auth artık yalnız logged-in).
+        const nameEl = document.getElementById('authName');
+        if (nameEl) nameEl.textContent = me.name;
+        const emailEl = document.getElementById('authEmail');
+        if (emailEl) emailEl.textContent = me.email;
+        const roleEl = document.getElementById('authRole');
+        if (roleEl) roleEl.textContent = ROLE_LABELS[me.role] || me.role;
+        const phoneEl = document.getElementById('authPhone');
+        if (phoneEl) phoneEl.textContent = me.phone || '—';
+        const farmsEl = document.getElementById('authOwnedFarms');
+        if (farmsEl) farmsEl.textContent = me.owned_farms_count ?? 0;
+        if (loggedIn) loggedIn.style.display = 'block';
     } catch (e) {
-        loggedOut.style.display = 'block';
-        loggedIn.style.display = 'none';
+        currentUser = null;
+        _renderUserBadge(null);
+        _applyRoleVisibility(null);
+        _applyAuthGate(null);
+        _hideBell();
     }
 }
+
+// ─── BİLDİRİM ÇANI (REBUILD Faz 5) ────────────────────────────
+function _hideBell() {
+    const wrap = document.getElementById('notifWrap');
+    if (wrap) wrap.style.display = 'none';
+    const dd = document.getElementById('notifDropdown');
+    if (dd) dd.style.display = 'none';
+}
+
+/** Açık uyarıları çek, çan sayısını + dropdown listesini güncelle. */
+async function refreshBell() {
+    const wrap = document.getElementById('notifWrap');
+    if (!wrap) return;
+    wrap.style.display = 'inline-flex';
+    const alerts = await apiAuth('/api/alerts/?is_resolved=false&limit=20');
+    const countEl = document.getElementById('notifCount');
+    const listEl = document.getElementById('notifList');
+    const open = alerts || [];
+    if (countEl) {
+        countEl.textContent = open.length > 9 ? '9+' : String(open.length);
+        countEl.style.display = open.length > 0 ? 'inline-flex' : 'none';
+    }
+    document.getElementById('notifBell')?.classList.toggle('has-unread', open.length > 0);
+    if (listEl) {
+        listEl.innerHTML = open.length === 0
+            ? '<div class="notif-empty">Açık uyarı yok ✅</div>'
+            : open.slice(0, 10).map(a => `
+                <div class="notif-item severity-${_escAttr(a.severity)}">
+                    <div class="notif-item-msg">${_escAttr(a.message)}</div>
+                    <div class="notif-item-foot">
+                        <span class="notif-item-sev">${_escAttr(a.severity)}</span>
+                        <button class="btn-mini" onclick="resolveFromBell(${a.id})">Çöz</button>
+                    </div>
+                </div>`).join('');
+    }
+}
+
+function toggleBell() {
+    const dd = document.getElementById('notifDropdown');
+    const bell = document.getElementById('notifBell');
+    if (!dd) return;
+    const open = dd.style.display !== 'none' && dd.style.display !== '';
+    dd.style.display = open ? 'none' : 'block';
+    if (bell) bell.setAttribute('aria-expanded', open ? 'false' : 'true');
+    if (!open) refreshBell();  // açarken tazele
+}
+
+/** "Kontrol et" — tarlaları tara, uyarı üret, çanı tazele. */
+async function runAlertCheck() {
+    const res = await apiAuth('/api/alerts/check', { method: 'POST' });
+    if (res) {
+        showToast(res.created > 0 ? `${res.created} yeni uyarı üretildi` : 'Yeni uyarı yok ✅', res.created > 0 ? 'warning' : 'success');
+        refreshBell();
+    }
+}
+
+/** Çan dropdown'ından uyarı çöz. */
+async function resolveFromBell(alertId) {
+    const res = await apiAuth(`/api/alerts/${alertId}`, { method: 'PATCH', body: JSON.stringify({ is_resolved: true }) });
+    if (res) { showToast('Uyarı çözüldü', 'success'); refreshBell(); }
+}
+
+// Dropdown dışına tıklayınca kapat
+document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('notifWrap');
+    const dd = document.getElementById('notifDropdown');
+    if (wrap && dd && !wrap.contains(e.target) && dd.style.display === 'block') {
+        dd.style.display = 'none';
+        document.getElementById('notifBell')?.setAttribute('aria-expanded', 'false');
+    }
+});
 
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
@@ -834,7 +1666,8 @@ async function doLogin() {
         const data = await resp.json();
         setAuthToken(data.access_token);
         showToast('Giriş yapıldı', 'success');
-        refreshAuthState();
+        await refreshAuthState();   // gate'i açar (app görünür)
+        navigate('dashboard');      // gerçek bir sayfaya in
     } catch (e) {
         showToast('Sunucuya ulaşılamadı', 'error');
     }
@@ -867,6 +1700,154 @@ async function doRegister() {
     }
 }
 
+async function doChangePassword() {
+    const current = document.getElementById('pwCurrent').value;
+    const next = document.getElementById('pwNew').value;
+    const confirm = document.getElementById('pwConfirm').value;
+    if (!current || !next || !confirm) {
+        showToast('Tüm alanlar gerekli', 'warning');
+        return;
+    }
+    if (next.length < 8) {
+        showToast('Yeni şifre en az 8 karakter olmalı', 'warning');
+        return;
+    }
+    if (next !== confirm) {
+        showToast('Yeni şifreler eşleşmiyor', 'warning');
+        return;
+    }
+    if (next === current) {
+        showToast('Yeni şifre mevcuttan farklı olmalı', 'warning');
+        return;
+    }
+    const token = getAuthToken();
+    if (!token) { showToast('Giriş yapman gerekiyor', 'warning'); location.hash = '#auth'; return; }
+    try {
+        const resp = await fetch(`${API_BASE}/api/auth/me/password`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ current_password: current, new_password: next }),
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || 'Şifre güncellenemedi', 'error');
+            return;
+        }
+        showToast('Şifre güncellendi ✅', 'success');
+        // Form temizliği
+        document.getElementById('pwCurrent').value = '';
+        document.getElementById('pwNew').value = '';
+        document.getElementById('pwConfirm').value = '';
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    }
+}
+
+// ─── ADMIN KULLANICI YÖNETİMİ (REBUILD Faz 3.5) ───────────────
+// Tüm çağrılar apiAuth (401→login, 403→yetki toast). Yalnız admin nav görür.
+
+async function loadUsers() {
+    const tbl = document.getElementById('usersTable');
+    tbl.innerHTML = _skeletonBlock(5);
+    _setBusy('usersTable', true);
+    const list = await apiAuth('/api/auth/users?limit=500');
+    if (!list) {
+        tbl.innerHTML = '<p class="detail-empty">Kullanıcı listesi alınamadı (yetki gerekli).</p>';
+        _setBusy('usersTable', false);
+        return;
+    }
+    const roleOpts = (sel) => ['farmer', 'developer', 'overseer', 'admin']
+        .map(r => `<option value="${r}"${r === sel ? ' selected' : ''}>${ROLE_LABELS[r]}</option>`).join('');
+    let html = '<table class="detail-table"><caption class="sr-only">Kullanıcı listesi</caption><thead><tr>'
+        + '<th>Ad</th><th>E-posta</th><th>Rol</th><th>Çiftlik</th><th>Kayıt</th><th>İşlem</th></tr></thead><tbody>';
+    for (const u of list) {
+        html += `<tr>
+            <td>${_escAttr(u.name)}</td>
+            <td>${_escAttr(u.email)}</td>
+            <td><select class="user-role-select" onchange="changeUserRole(${u.id}, this.value)">${roleOpts(u.role)}</select></td>
+            <td>${u.owned_farms_count ?? 0}</td>
+            <td>${_fmtDate(u.created_at)}</td>
+            <td class="user-actions">
+                <button class="btn-mini" onclick="resetUserPassword(${u.id}, '${_escAttr(u.email)}')">🔑 Şifre</button>
+                <button class="btn-mini btn-danger" onclick="deleteUser(${u.id}, '${_escAttr(u.email)}')">🗑 Sil</button>
+            </td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    tbl.innerHTML = html;
+    _setBusy('usersTable', false);
+}
+
+async function createUser() {
+    const name = document.getElementById('newUserName').value.trim();
+    const email = document.getElementById('newUserEmail').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    const role = document.getElementById('newUserRole').value;
+    if (!name || !email || !password) { showToast('Ad, e-posta ve şifre gerekli', 'warning'); return; }
+    if (password.length < 8) { showToast('Şifre en az 8 karakter olmalı', 'warning'); return; }
+    const res = await apiAuth('/api/auth/users', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password, role }),
+    });
+    if (res) {
+        showToast(`${ROLE_LABELS[role]} oluşturuldu ✅`, 'success');
+        document.getElementById('newUserName').value = '';
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUserPassword').value = '';
+        loadUsers();
+    }
+    // apiAuth 409/400'de null döner + toast; ek mesaj gerekmiyor.
+}
+
+async function changeUserRole(userId, role) {
+    const res = await apiAuth(`/api/auth/users/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+    });
+    if (res) {
+        showToast(`Rol güncellendi: ${ROLE_LABELS[role]}`, 'success');
+        loadUsers();
+    } else {
+        // 409 (kendi rolü) vb. — listeyi eski haline çek
+        loadUsers();
+    }
+}
+
+async function resetUserPassword(userId, email) {
+    const np = prompt(`${email} için yeni şifre (min 8 karakter):`);
+    if (np === null) return;  // iptal
+    if (np.length < 8) { showToast('Şifre en az 8 karakter olmalı', 'warning'); return; }
+    const res = await apiAuth(`/api/auth/users/${userId}/password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ new_password: np }),
+    });
+    if (res) showToast('Şifre sıfırlandı ✅', 'success');
+}
+
+async function deleteUser(userId, email) {
+    if (!confirm(`${email} kullanıcısını silmek istediğine emin misin? Bu geri alınamaz.`)) return;
+    const token = getAuthToken();
+    if (!token) { location.hash = '#auth'; return; }
+    try {
+        const resp = await fetch(`${API_BASE}/api/auth/users/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (resp.status === 204) {
+            showToast('Kullanıcı silindi', 'success');
+            loadUsers();
+        } else {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || `Silinemedi (${resp.status})`, 'error');
+        }
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    }
+}
+
 async function doLogout() {
     const token = getAuthToken();
     if (token) {
@@ -879,7 +1860,9 @@ async function doLogout() {
     }
     clearAuthToken();
     showToast('Çıkış yapıldı', 'info');
-    refreshAuthState();
+    await refreshAuthState();    // gate landing'i geri getirir
+    toggleLandingForm('login');  // login formuna dön
+    if (location.hash) location.hash = '';  // deep route'tan temizle
 }
 
 // ─── STATUS & UTILITIES ───────────────────────────────────────
@@ -925,9 +1908,23 @@ async function init() {
     if (apiOnline) showToast('Sistem aktif — veriler güncel', 'success');
     else showToast('Bağlantı yok — son kayıtlı veriler gösteriliyor', 'error');
 
-    // Load initial page
-    const page = location.hash.slice(1) || 'dashboard';
-    if (pageTitles[page]) navigate(page); else navigate('dashboard');
+    // Auth state ilk yükleme — gate uygular (login yoksa landing, app gizli).
+    await refreshAuthState();
+
+    // REBUILD Faz 3.5: girişsizse hiçbir sayfaya navigate etme — landing kalır.
+    // Giriş yapılınca doLogin() navigate('dashboard') çağırır.
+    if (currentUser) {
+        const raw = location.hash.slice(1) || 'dashboard';
+        if (raw.startsWith('field/')) {
+            const id = parseInt(raw.split('/')[1], 10);
+            if (Number.isFinite(id)) openFieldDetail(id);
+            else navigate('dashboard');
+        } else if (pageTitles[raw]) {
+            navigate(raw);
+        } else {
+            navigate('dashboard');
+        }
+    }
 
     // Auto-refresh every 30s
     refreshInterval = setInterval(() => {
@@ -1246,9 +2243,34 @@ Object.assign(window, {
     fertilizerSchedule,
     analyzePlantImage,
     loadAlerts,
+    loadDashboard,
+    loadDemoData,
+    loadFields,
+    openFieldDetail,
+    analyzeFieldLeaf,
+    toggleForm,
+    submitNewFarm,
+    submitNewField,
+    editFarm,
+    deleteFarm,
+    editField,
+    deleteField,
+    approveIrrigation,
+    updateIrrigationStatus,
+    addFieldIrrigation,
+    toggleBell,
+    runAlertCheck,
+    resolveFromBell,
+    loadUsers,
+    createUser,
+    changeUserRole,
+    resetUserPassword,
+    deleteUser,
     doLogin,
     doRegister,
     doLogout,
+    doChangePassword,
+    toggleLandingForm,
     // Status panel ve alerts bridge için (showToast başka modüllerden çağrılıyor)
     showToast,
     resolveAlert,

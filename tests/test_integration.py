@@ -70,11 +70,11 @@ class TestWeatherFlow:
         assert len(weather.json()) >= 3
 
     def test_latest_weather(self, client):
-        # Veri ekle
-        client.post("/api/weather/", json={"farm_id": 99, "temperature_c": 25.0, "humidity_percent": 60.0})
+        # RBAC sonrası: farm_id sahip olunan farm olmalı; conftest default farm id=1
+        client.post("/api/weather/", json={"farm_id": 1, "temperature_c": 25.0, "humidity_percent": 60.0})
 
         # En son kaydı al
-        latest = client.get("/api/weather/latest/99")
+        latest = client.get("/api/weather/latest/1")
         assert latest.status_code == 200
         assert latest.json()["temperature_c"] == 25.0
 
@@ -162,37 +162,38 @@ class TestFertilizerFlow:
 class TestCrossEndpointSecurity:
     """Farklı endpoint'lerde güvenlik kontrolü."""
 
-    def test_protected_endpoints_need_key(self):
-        """Tüm korumalı endpoint'ler API key gerektirir."""
-        from fastapi.testclient import TestClient
+    def test_protected_endpoints_need_bearer(self, anon_client):
+        """REBUILD Faz 1 RBAC sonrası: korumalı endpoint'ler Bearer JWT ister.
 
-        from app.main import app
+        Auth-aware endpoint'ler: sensors/farms/weather/irrigation/alerts/
+        analytics. Public kalan: /api/health, /api/irrigation/predict
+        (stateless ML inference).
+        """
+        # POST sensör — Bearer şart
+        r1 = anon_client.post("/api/sensors/", json={"field_id": 1, "sensor_type": "t", "serial_number": "X"})
+        assert r1.status_code == 401
 
-        with TestClient(app) as c:
-            # POST sensör — key gerekir
-            r1 = c.post("/api/sensors/", json={"field_id": 1, "sensor_type": "t", "serial_number": "X"})
-            assert r1.status_code == 401
+        # POST weather — Bearer şart (Adım 9'a kadar X-API-Key fallback olabilir;
+        # şu an sensors zaten Bearer-required pattern'inde, weather aynısı olacak)
+        r2 = anon_client.post("/api/weather/", json={"farm_id": 1})
+        assert r2.status_code == 401
 
-            # POST weather — key gerekir
-            r2 = c.post("/api/weather/", json={"farm_id": 1})
-            assert r2.status_code == 401
+        # GET sensör — artık Bearer şart (Faz 1 / Adım 8)
+        r3 = anon_client.get("/api/sensors/")
+        assert r3.status_code == 401
 
-            # GET sensör — key gerekmez
-            r3 = c.get("/api/sensors/")
-            assert r3.status_code == 200
-
-            # POST predict — key gerekmez
-            r4 = c.post(
-                "/api/irrigation/predict",
-                json={
-                    "soil_moisture": 50,
-                    "soil_temperature": 20,
-                    "humidity": 60,
-                    "temperature": 25,
-                    "precipitation": 0,
-                },
-            )
-            assert r4.status_code == 200
+        # POST predict — public kalır (stateless ML)
+        r4 = anon_client.post(
+            "/api/irrigation/predict",
+            json={
+                "soil_moisture": 50,
+                "soil_temperature": 20,
+                "humidity": 60,
+                "temperature": 25,
+                "precipitation": 0,
+            },
+        )
+        assert r4.status_code == 200
 
 
 class TestAPIDocumentation:

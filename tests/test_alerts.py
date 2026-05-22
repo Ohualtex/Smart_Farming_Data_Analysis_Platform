@@ -111,3 +111,100 @@ class TestAlertUpdate:
     def test_update_nonexistent_returns_404(self, client):
         resp = client.patch("/api/alerts/99999", json={"is_resolved": True})
         assert resp.status_code == 404
+
+
+# ─── REBUILD Faz 5 — POST /api/alerts/check (otomatik tarama) ────────────
+class TestAlertsCheck:
+    """Tarla tarama → düşük nem / hastalık hatırlatması üretimi (dedup'lı, rol-aware)."""
+
+    def _seed_field(self, db, user_id, moisture=None, disease_recent=False, name="Tarla"):
+        from datetime import UTC, datetime, timedelta
+
+        from app.models.models import (
+            Farm,
+            Field,
+            PlantHealthImage,
+            Sensor,
+            SoilMoistureReading,
+        )
+
+        farm = Farm(user_id=user_id, name=f"{name} Çiftlik", region="Ege")
+        db.add(farm)
+        db.flush()
+        field = Field(farm_id=farm.id, name=name, soil_type="killi")
+        db.add(field)
+        db.flush()
+        if moisture is not None:
+            sensor = Sensor(field_id=field.id, sensor_type="soil_moisture", serial_number=f"SN-{field.id}")
+            db.add(sensor)
+            db.flush()
+            db.add(
+                SoilMoistureReading(
+                    sensor_id=sensor.id,
+                    moisture_percent=moisture,
+                    reading_timestamp=datetime.now(UTC) - timedelta(hours=1),
+                )
+            )
+        if disease_recent:
+            db.add(
+                PlantHealthImage(
+                    field_id=field.id,
+                    image_url="x.jpg",
+                    captured_at=datetime.now(UTC) - timedelta(days=1),
+                    diagnosis="healthy",
+                )
+            )
+        db.commit()
+        return field.id
+
+    def test_check_creates_low_moisture_alert(self, farmer_client, db):
+        client, user = farmer_client
+        self._seed_field(db, user.id, moisture=18.0, disease_recent=True, name="Susuz")
+        resp = client.post("/api/alerts/check")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["created"] >= 1
+        types = [a["alert_type"] for a in data["alerts"]]
+        assert "low_moisture" in types
+        # %18 < 20 → critical
+        lm = next(a for a in data["alerts"] if a["alert_type"] == "low_moisture")
+        assert lm["severity"] == "critical"
+
+    def test_check_is_idempotent_dedup(self, farmer_client, db):
+        client, user = farmer_client
+        self._seed_field(db, user.id, moisture=25.0, disease_recent=True)
+        first = client.post("/api/alerts/check").json()
+        assert first["created"] >= 1
+        second = client.post("/api/alerts/check").json()
+        # Aynı açık alert tekrar üretilmez
+        assert second["created"] == 0
+
+    def test_check_disease_reminder(self, farmer_client, db):
+        client, user = farmer_client
+        # Nem yok (low_moisture tetiklenmez), hastalık analizi de yok → reminder
+        self._seed_field(db, user.id, moisture=None, disease_recent=False)
+        data = client.post("/api/alerts/check").json()
+        types = [a["alert_type"] for a in data["alerts"]]
+        assert "disease_reminder" in types
+
+    def test_check_no_alert_for_healthy_field(self, farmer_client, db):
+        client, user = farmer_client
+        # Yüksek nem + yakın hastalık analizi → uyarı yok
+        self._seed_field(db, user.id, moisture=55.0, disease_recent=True)
+        data = client.post("/api/alerts/check").json()
+        assert data["created"] == 0
+
+    def test_check_overseer_forbidden_403(self, overseer_client):
+        client, _ = overseer_client
+        assert client.post("/api/alerts/check").status_code == 403
+
+    def test_check_anon_401(self, anon_client):
+        assert anon_client.post("/api/alerts/check").status_code == 401
+
+    def test_check_farmer_scope_only_own(self, farmer_client, db):
+        client, user = farmer_client
+        # Başka kullanıcının susuz tarlası — taranmamalı
+        self._seed_field(db, 9999, moisture=10.0, disease_recent=True, name="Başka")
+        data = client.post("/api/alerts/check").json()
+        assert data["checked_fields"] == 0
+        assert data["created"] == 0

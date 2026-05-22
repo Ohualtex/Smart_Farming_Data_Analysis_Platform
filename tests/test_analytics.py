@@ -119,30 +119,39 @@ def _seed_demo_data(db):
 
 
 def test_analytics_summary_empty(client):
-    """Boş veritabanında analytics endpoint'i 200 döner."""
+    """Boş veritabanında analytics endpoint'i 200 döner.
+
+    NOT: conftest `client` fixture'ı 1 default farm + 1 field seed eder
+    (RBAC pivot sonrası eski `field_id=1` varsayımını korumak için).
+    "Boş" durumu buna göre 1 farm + 0 sensor + 0 reading.
+    """
     response = client.get("/api/analytics/summary")
     assert response.status_code == 200
     data = response.json()
-    assert data["counts"]["farms"] == 0
+    assert data["counts"]["farms"] == 1  # conftest default farm
     assert data["counts"]["sensors"] == 0
     assert data["sensor_type_distribution"] == []
-    assert data["farm_weather_comparison"] == []
+    # farm_weather_comparison default farm için boş — weather verisi yok
     assert data["irrigation_status_distribution"] == []
     assert "npk_profiles" in data
     assert len(data["npk_profiles"]) == 8
 
 
 def test_analytics_summary_with_data(client, db):
-    """Demo veri ile analytics endpoint'i doğru istatistik döner."""
+    """Demo veri ile analytics endpoint'i doğru istatistik döner.
+
+    NOT: conftest 1 default farm + 1 field seed ediyor; _seed_demo_data
+    1 farm + 1 field daha ekler → toplam 2 farm + 2 field.
+    """
     _seed_demo_data(db)
 
     response = client.get("/api/analytics/summary")
     assert response.status_code == 200
     data = response.json()
 
-    # Sayaçlar
-    assert data["counts"]["farms"] == 1
-    assert data["counts"]["fields"] == 1
+    # Sayaçlar (conftest 1 + demo 1)
+    assert data["counts"]["farms"] == 2
+    assert data["counts"]["fields"] == 2
     assert data["counts"]["sensors"] == 2
     assert data["counts"]["readings"] == 10
     assert data["counts"]["weather_records"] == 10
@@ -236,10 +245,10 @@ def test_analytics_summary_avoids_n_plus_one(client, db):
     """N+1 regresyon koruması — farm başına ek WeatherData sorgusu yapılmamalı.
 
     Önceki implementasyon her çiftlik için 2 ayrı WeatherData sorgusu atıyordu
-    (81 il × 2 = ~162 sorgu). Refactor sonrası tüm WeatherData kayıtları tek
+    (çok-çiftlik × 2 ≈ 1+2N sorgu). Refactor sonrası tüm WeatherData kayıtları tek
     sorguda alınmalı.
 
-    EN: Regression guard — was 1+2N WeatherData queries (≈162 for 81 farms);
+    EN: Regression guard — was 1+2N WeatherData queries;
     after the refactor only one WeatherData SELECT is allowed per request.
     """
     from sqlalchemy import event

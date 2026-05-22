@@ -91,9 +91,9 @@ class TestHealthImageUpload:
         assert resp.status_code == 422
 
     def test_upload_persists_to_db(self, client, db):
-        client.post("/api/plants/health-images?field_id=42&image_url=https://x.com/leaf.jpg")
-        # DB'den doğrula
-        record = db.query(PlantHealthImage).filter_by(field_id=42).first()
+        # RBAC: field_id sahip olunmalı; conftest default field id=1
+        client.post("/api/plants/health-images?field_id=1&image_url=https://x.com/leaf.jpg")
+        record = db.query(PlantHealthImage).filter_by(field_id=1).first()
         assert record is not None
         assert record.image_url == "https://x.com/leaf.jpg"
 
@@ -120,11 +120,11 @@ class TestHealthImageAnalyze:
         files = {"image": ("leaf.png", _png_bytes((40, 180, 60)), "image/png")}
         resp = client.post(
             "/api/plants/health-images/analyze",
-            data={"field_id": 7},
+            data={"field_id": 1},  # RBAC: default field id=1 (conftest)
             files=files,
         )
         assert resp.status_code == 201
-        record = db.query(PlantHealthImage).filter_by(field_id=7).first()
+        record = db.query(PlantHealthImage).filter_by(field_id=1).first()
         assert record is not None
         assert record.diagnosis == "healthy"
 

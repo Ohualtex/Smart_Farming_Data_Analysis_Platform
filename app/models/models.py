@@ -5,6 +5,18 @@ from sqlalchemy.orm import relationship
 
 from app.database import Base
 
+# ─── RBAC (REBUILD Faz 1) ──────────────────────────────────────────
+# 4 rollü access control — bkz. `docs/REBUILD_ROADMAP.md` Faz 1.
+#   farmer    : kendi çiftliği/tarlası/sensörü; register default
+#   developer : API key + Swagger + test endpoint'leri; admin promote eder
+#   overseer  : tüm sistem read-only (analytics + harita); admin promote eder
+#   admin     : tüm sistem + kullanıcı/rol yönetimi
+# `role` field'ı için DB-side CHECK constraint Alembic migration ile gelir
+# (Adım 2). Python tarafında Pydantic `Literal[...]` validation auth
+# schema'larında çalışır (Adım 3-4).
+USER_ROLES: tuple[str, ...] = ("farmer", "developer", "overseer", "admin")
+DEFAULT_USER_ROLE = "farmer"
+
 
 class User(Base):
     """ORM model for `users` table."""
@@ -14,7 +26,17 @@ class User(Base):
     name = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
-    role = Column(String(20), default="farmer")
+    # 4-rol RBAC: USER_ROLES içinden biri. `index=True` farmer/admin
+    # filter'larında full-scan'ı engeller; `server_default` PG/MySQL'de
+    # mevcut satırlara da uygulanır (SQLite no-op, Alembic backfill ile
+    # gelir — Adım 2).
+    role = Column(
+        String(20),
+        nullable=False,
+        default=DEFAULT_USER_ROLE,
+        server_default=DEFAULT_USER_ROLE,
+        index=True,
+    )
     phone = Column(String(20))
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     farms = relationship("Farm", back_populates="owner")

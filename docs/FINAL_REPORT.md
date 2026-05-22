@@ -33,7 +33,7 @@
 
 **Tek satır:** SFDAP, sensör ve hava durumu verilerini ML modelleriyle birleştirerek çiftçilere sulama, gübreleme ve bitki sağlığı önerileri sunan kapsamlı bir veri analizi ve karar destek platformudur.
 
-**Ölçek:** 81 Türk ili × 2 tarla = 162 tarla, 324 sensör, ~4 860 sensör okuması, 1 215 hava durumu kaydı (seed verisi).
+**Ölçek:** Çiftçi-odaklı demo seed — 5 kullanıcı (3 çiftçi + admin + gözetmen), 3 çiftlik (farklı bölgeler), 6 tarla, 6 sensör, ~90 sensör okuması, hava/sulama/hastalık/toprak/uyarı kayıtları. (Üretim ölçeği kullanıcı sayısıyla doğrusal büyür; sistem 81-il "ulusal" iddiasından vazgeçti.)
 
 ## 2. Hedefler ve Kapsam
 
@@ -50,8 +50,8 @@ vermeli:
 4. **"Komşulara göre durumum nasıl?"**
 5. **"Bir sorun çıkarsa haberim olacak mı?"**
 
-İkincil persona: **Tarım Bakanlığı analisti** — 81 il düzeyinde toplu
-gözetim için harita + analytics + raporlama panosu (admin rolü).
+İkincil persona: **sistem gözetmeni** (admin/overseer rolü) — tüm çiftliklerde
+read-only gözetim için harita + analytics + raporlama panosu.
 
 ### İşlevsel hedefler
 
@@ -60,7 +60,7 @@ gözetim için harita + analytics + raporlama panosu (admin rolü).
 - 🦠 CNN tabanlı yaprak hastalığı analizi (heuristic + ONNX-ready) + tarla bağlamlı kayıt
 - 📡 IoT/MQTT sensör stream + 30 günden eski okumaların aylık aggregate'e arşivlenmesi
 - 🔔 Per-user bildirim akışı (toprak nemi düşüklüğü, hastalık kontrolü hatırlatması)
-- 🗺️ Bakanlık panosu: 81 il çiftlik dağılım haritası + bölge bazlı analytics
+- 🗺️ Gözetmen panosu: sistemdeki çiftliklerin dağılım haritası + bölge bazlı analytics
 
 ### İşlevsel olmayan hedefler
 
@@ -75,7 +75,7 @@ gözetim için harita + analytics + raporlama panosu (admin rolü).
 
 - E-posta/SMS bildirim gönderimi (alerts dashboard'da görünür ama push yok)
 - Mobil native uygulama (PWA roadmap'te)
-- Çoklu-tenant SaaS (cooperatif/bakanlık paylaşımı)
+- Çoklu-tenant SaaS (kurumsal/kooperatif paylaşımı)
 - Gerçek CNN model eğitimi (PlantVillage dataset)
 
 ## 3. Geliştirme Süreci — 9 Cycle
@@ -93,10 +93,35 @@ gözetim için harita + analytics + raporlama panosu (admin rolü).
 | 7 | 3 – 10 May | İzleme + Gelişmiş | Filiz maskotu, Auth UI, Plants UI, Alerts panel, MQTT stream, plant_disease CNN |
 | 8 | 10 – 12 May | Üretim Hazırlığı (core) | Rate limit, N+1 fix, JWT auth, Alembic 14-tablo migration, nginx + Let's Encrypt |
 | shiftFinal | 13 – 17 May | Cila + Gözlemlenebilirlik | Sentry, Prometheus, structured logging, Vite bundling, a11y, backup/restore, edge tests, security headers, farms router, Türkiye haritası, Vitest scaffold |
-| REBUILD | 18 – 30 May | Kullanıcı-Odaklı Yeniden Yapılandırma *(solo, Miraç)* | RBAC + per-user data isolation, "Çiftliğim" dashboard, tarla detay sayfası, eylem akışları, bildirim, onboarding |
+| REBUILD | 18 – 22 May | Kullanıcı-Odaklı Yeniden Yapılandırma *(solo, Miraç)* | 4-rol RBAC, "Çiftliğim" dashboard, tarla detay, auth gate + admin kullanıcı yönetimi, çiftlik/tarla CRUD + sulama onay/status, bildirim çanı, onboarding; 81-il iddiası temizliği |
 | 9 | 1 – 7 Haz | Final Rapor + Sunum | **Bu doküman** + sunum slaytları + Q&A + akademik teslim |
 
 **Detay:** Her cycle için ayrı retrospective var (Cycle 8: [`CYCLE_8_RETROSPECTIVE.md`](CYCLE_8_RETROSPECTIVE.md)).
+
+### REBUILD özeti — çiftçi-odaklı yeniden yapılandırma (18-22 May 2026)
+
+shiftFinal'ın 3. gününde stratejik gözlem: teknik kalite yüksekti ama **UI hiçbir
+gerçek kullanıcı persona'sına yetmiyordu** (auth boş vaat, tablolar veri dump,
+eyleme yönelik akış yok). Karar: "81 il / ulusal bakanlık paneli" çerçevesinden
+**çiftçi-odaklı saha aracına** pivot. 7 fazın 6'sı + iddia temizliği tamamlandı:
+
+| Faz | Çıktı | Anahtar endpoint/özellik |
+|:-:|:--|:--|
+| 1 | 4-rol RBAC + per-user izolasyon | `USER_ROLES`, `rbac.py`, CHECK constraint, 8 router RBAC'a geçti |
+| 2 | "Çiftliğim" dashboard | `GET /api/dashboard/summary` (rol-aware 4 metrik) + Bearer helper + user-badge |
+| 3 | Tarla detay sayfası | `GET /api/fields/{id}` aggregated + `/readings` trend + yaprak foto akışı |
+| 3.5 | Ön panel + admin user mgmt | auth gate (`#landing`) + `GET/POST/DELETE /api/auth/users` |
+| 4 | Eyleme yönelik CRUD | çiftlik/tarla CRUD (cascade guard) + irrigation RBAC açığı + sulama onay/status |
+| 5 | Per-user bildirim | `POST /api/alerts/check` (dedup'lı otomatik uyarı) + header çanı |
+| 6 | Onboarding | `POST /api/onboarding/demo` tek-tık + boş hesap banner |
+
+**Demo persona "Çiftçi Ahmet"in 5 sorusu artık uçtan uca cevaplanıyor:** susuz mu
+(dashboard + sulama önerisi), hastalık var mı (yaprak foto → CNN tanı), gübre ne
+zaman (fertilizer), komşulara göre durum (admin/gözetmen analytics), haberim olur mu
+(bildirim çanı). **Geri-dönüş güvencesi:** `v0.9.0-pre-rebuild` tag'i.
+
+**Metrikler (REBUILD sonu):** pytest **622/622** · Vitest 32/32 · ruff+format temiz ·
+bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla).
 
 ## 4. Mimari
 
@@ -104,7 +129,7 @@ gözetim için harita + analytics + raporlama panosu (admin rolü).
 
 **Üst düzey:**
 - **Frontend katmanı:** Tek dosyalı SPA (`frontend/index.html` ≈ 3 100 satır + Vite scaffold) — shiftFinal A3'te a11y/skeleton refactor + Vite build pipeline iskeleti eklendi; ES module split Cycle 9 sonrası kademeli
-- **API katmanı:** FastAPI Gateway → 11 router × 43 endpoint (pagination count endpoint'leri dahil)
+- **API katmanı:** FastAPI Gateway → 15 router × ~65 endpoint (REBUILD sonrası: dashboard/fields/onboarding router'ları + CRUD + RBAC user mgmt eklendi)
 - **İş katmanı:** Servisler (`weather_service`, `fertilizer_service`, `mqtt_listener`, `sensor_archiver`, `report_service`, `data_quality`)
 - **ML katmanı:** RandomForest (sulama) + heuristic+ONNX (bitki hastalığı) + APScheduler periyodik görevler
 - **Veri katmanı:** SQLAlchemy 2.0 ORM, SQLite (dev) / PostgreSQL (prod), Alembic migration
@@ -126,7 +151,7 @@ gözetim için harita + analytics + raporlama panosu (admin rolü).
 
 ## 6. API Endpoint'leri
 
-**~47 endpoint × 12 router:**
+**~65 endpoint × 15 router** (REBUILD sonrası dashboard/fields/onboarding + CRUD + RBAC user mgmt dahil)**:**
 
 | Router | Endpoint | Anahtar Yetenek |
 |:--|:--:|:--|
@@ -207,12 +232,11 @@ gözetim için harita + analytics + raporlama panosu (admin rolü).
 ## 10. Test, Coverage ve CI/CD
 
 ```
-Test sayısı:        462 backend (29 dosya) + 14 frontend (Vitest)
-                    246 → 313 → 350 → 365 (A2) → 372 (A4) → 400 (A3)
-                    → 425 (Ayşe ilk paket) → 446 (auth-aware POST/PATCH/
-                    DELETE fuzz `61c64e4` + 7. int64 fix `4a0308a`)
-                    → 462 (Cycle 9 prep: `farms` router 13 test)
-Coverage:           %95.04
+Test sayısı:        622 backend + 32 frontend (Vitest)
+                    246 → 313 → 425 → 485 (shiftFinal kapanış)
+                    → 499 (REBUILD Faz 1 RBAC) → 565 (Faz 3.5 admin user mgmt)
+                    → 605 (Faz 4 CRUD) → 613 (Faz 5 bildirim) → 622 (Faz 6 onboarding)
+Coverage:           %95+ (CI gate %80; Cycle 8 ölçümü %95.04)
 Linter:             Ruff (17 kural grubu) — All checks passed
 Source security:    Bandit medium+ — 0 issue
 API fuzz:           Schemathesis property-based — 25 GET + auth-aware

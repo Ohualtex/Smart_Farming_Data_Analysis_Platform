@@ -201,8 +201,14 @@ class TestWeatherCleanEndpoint:
 
 class TestWeatherStatsEndpoint:
     def test_stats_empty_farm(self, client):
-        """Veri olmayan çiftlik için bilgi mesajı dönmeli."""
-        response = client.get("/api/weather/stats/999?days=7")
+        """Veri olmayan çiftlik için bilgi mesajı dönmeli.
+
+        RBAC sonrası: olmayan farm_id artık 404 — testin amacı "weather
+        verisi olmayan ama mevcut farm" senaryosu olduğu için default
+        farm (id=1, conftest seed) kullanılır. Hiç weather kaydı eklenmediği
+        için record_count=0 beklenir.
+        """
+        response = client.get("/api/weather/stats/1?days=7")
         assert response.status_code == 200
         body = response.json()
         assert body["record_count"] == 0

@@ -29,7 +29,59 @@
     <div class="bg-leaf"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg></div>
 </div>
 
-<div class="app">
+<!-- ═══ ÖN PANEL (LANDING / AUTH GATE) ═══════════════════════════
+     REBUILD Faz 3.5: giriş yapmadan app shell görünmez. JS auth kontrolü
+     sonrası `_applyAuthGate()` ya bu paneli ya da `.app`'i gösterir. -->
+<div id="landing" class="landing">
+    <div class="landing-card">
+        <div class="landing-brand">
+            <h1>🌾 SFDAP</h1>
+            <p>Akıllı Tarım Veri Analizi Platformu</p>
+        </div>
+
+        <!-- Giriş kartı (öncelikli) -->
+        <div id="landingLogin" class="landing-form">
+            <h2>Giriş Yap</h2>
+            <div class="form-group">
+                <label for="loginEmail">E-posta</label>
+                <input type="email" id="loginEmail" placeholder="ornek@eposta.com" autocomplete="username" />
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Şifre</label>
+                <input type="password" id="loginPassword" placeholder="Şifren" autocomplete="current-password" />
+            </div>
+            <button class="btn-primary btn-block" onclick="doLogin()">Giriş Yap</button>
+            <p class="landing-toggle">Hesabın yok mu?
+                <a href="#" id="showRegisterLink" onclick="toggleLandingForm('register');return false;">Kayıt ol</a>
+            </p>
+        </div>
+
+        <!-- Kayıt kartı (gizli — "Kayıt ol" linkiyle açılır) -->
+        <div id="landingRegister" class="landing-form" style="display:none;">
+            <h2>Yeni Hesap</h2>
+            <div class="form-group">
+                <label for="regName">Ad Soyad</label>
+                <input type="text" id="regName" placeholder="Ahmet Yılmaz" autocomplete="name" />
+            </div>
+            <div class="form-group">
+                <label for="regEmail">E-posta</label>
+                <input type="email" id="regEmail" placeholder="ornek@eposta.com" autocomplete="email" />
+            </div>
+            <div class="form-group">
+                <label for="regPassword">Şifre</label>
+                <input type="password" id="regPassword" placeholder="En az 8 karakter" autocomplete="new-password" />
+            </div>
+            <button class="btn-primary btn-block" onclick="doRegister()">Hesap Oluştur</button>
+            <p class="landing-toggle">Zaten hesabın var mı?
+                <a href="#" id="showLoginLink" onclick="toggleLandingForm('login');return false;">Giriş yap</a>
+            </p>
+        </div>
+
+        <p class="landing-hint">Çiftçi · Geliştirici · Gözetmen · Yönetici rolleriyle giriş.</p>
+    </div>
+</div>
+
+<div class="app" style="display:none;">
     <!-- ═══ SIDEBAR ═══ -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
@@ -39,6 +91,9 @@
         <nav class="sidebar-nav" aria-label="Ana menü">
             <a class="nav-item active" href="#dashboard" onclick="navigate('dashboard')" aria-current="page">
                 <span class="icon" aria-hidden="true">📊</span> Genel Bakış
+            </a>
+            <a class="nav-item" href="#fields" onclick="navigate('fields')">
+                <span class="icon" aria-hidden="true">🌱</span> Tarlalarım
             </a>
             <a class="nav-item" href="#weather" onclick="navigate('weather')">
                 <span class="icon" aria-hidden="true">🌤️</span> Hava Durumu
@@ -64,6 +119,9 @@
             <a class="nav-item" href="#alerts" onclick="navigate('alerts')">
                 <span class="icon" aria-hidden="true">🚨</span> Uyarılar
             </a>
+            <a class="nav-item" href="#users" onclick="navigate('users')" data-role="admin" style="display:none;">
+                <span class="icon" aria-hidden="true">👥</span> Kullanıcılar
+            </a>
             <a class="nav-item" href="#auth" onclick="navigate('auth')">
                 <span class="icon" aria-hidden="true">👤</span> Hesabım
             </a>
@@ -88,6 +146,32 @@
                 </div>
             </div>
             <div class="header-right">
+                <!-- Bildirim çanı — REBUILD Faz 5: açık uyarı sayısı + dropdown.
+                     refreshBell() doldurur; login yoksa gizli. -->
+                <div class="notif-wrap" id="notifWrap" style="display:none;">
+                    <button class="notif-bell" id="notifBell" onclick="toggleBell()"
+                            aria-label="Bildirimler" aria-haspopup="true" aria-expanded="false" title="Bildirimler">
+                        🔔<span class="notif-count" id="notifCount" style="display:none;">0</span>
+                    </button>
+                    <div class="notif-dropdown" id="notifDropdown" role="region" aria-label="Bildirimler" style="display:none;">
+                        <div class="notif-head">
+                            <strong>Bildirimler</strong>
+                            <button class="btn-mini" onclick="runAlertCheck()" title="Tarlaları tara">🔄 Kontrol et</button>
+                        </div>
+                        <div class="notif-list" id="notifList" aria-live="polite"></div>
+                        <a class="notif-footer" href="#alerts" onclick="navigate('alerts')">Tümünü gör →</a>
+                    </div>
+                </div>
+                <!-- Kullanıcı rozeti — login sonrası refreshAuthState() doldurur.
+                     REBUILD Faz 2 / Adım 7: rol-aware badge. Tıklayınca Hesabım. -->
+                <a class="user-badge" id="userBadge" href="#auth" style="display:none;"
+                   aria-label="Hesap özeti — tıkla Hesabım sayfasına git"
+                   title="Hesabım">
+                    <span class="user-badge-role" id="userBadgeRole" data-role="farmer">çiftçi</span>
+                    <span class="user-badge-name" id="userBadgeName">—</span>
+                    <span class="user-badge-farms" id="userBadgeFarms"
+                          aria-label="Sahip olunan çiftlik sayısı" title="Çiftlikler">🚜&nbsp;0</span>
+                </a>
                 <a class="dev-link" href="/docs" target="_blank" rel="noopener"
                    aria-label="API Rehberi (Geliştiriciler için)"
                    title="API Rehberi · Geliştiriciler için (Swagger /docs)">&lt;/&gt;</a>
@@ -143,11 +227,11 @@
             <section class="page active" id="page-dashboard">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌾</span> Hoş geldin, çiftçi!</h1>
-                    <p>Türkiye'nin dört bir yanından toplanan toprak, hava ve sulama bilgilerini tek bir ekranda gör. Akıllı asistan seninle çalışıyor.</p>
+                    <p>Çiftliğinden toplanan toprak, hava ve sulama bilgilerini tek bir ekranda gör. Akıllı asistan seninle çalışıyor.</p>
                     <div class="hero-stats">
-                        <div class="hero-stat">🇹🇷 <strong id="heroFarms">81</strong> il</div>
-                        <div class="hero-stat">📡 <strong id="heroSensors">324</strong> sensör</div>
-                        <div class="hero-stat">📊 <strong id="heroReadings">4860</strong> okuma</div>
+                        <div class="hero-stat">🚜 <strong id="heroFarms">—</strong> çiftlik</div>
+                        <div class="hero-stat">📡 <strong id="heroSensors">—</strong> sensör</div>
+                        <div class="hero-stat">📊 <strong id="heroReadings">—</strong> okuma</div>
                         <div class="hero-stat">🌱 <strong>17</strong> bitki türü</div>
                     </div>
                 </div>
@@ -159,6 +243,22 @@
                     <div class="chart-box"><h3>🌡️ Sıcaklık & Nem</h3><canvas id="tempHumChart"></canvas></div>
                 </div>
                 <div class="chart-box"><h3>🌧️ Yağış (Son 30 Gün)</h3><canvas id="precipChart"></canvas></div>
+            </section>
+
+            <!-- ═══ TARLALARIM (FIELD LIST) PAGE ═══ -->
+            <section class="page" id="page-fields">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">🌱</span> Tarlalarım</h1>
+                    <p>Çiftliklerine bağlı tüm tarlalar. Bir tarlaya tıkla; sensör, sulama, hastalık ve toprak detayını gör, yaprak fotoğrafı yükle.</p>
+                </div>
+                <div class="section-header">🚜 Çiftlik &amp; Tarlalar</div>
+                <div id="fieldsListContainer" aria-busy="true" aria-live="polite"></div>
+            </section>
+
+            <!-- ═══ TARLA DETAYI (FIELD DETAIL) PAGE ═══ -->
+            <section class="page" id="page-field-detail">
+                <a class="back-link" href="#fields" onclick="navigate('fields')">← Tarlalarıma dön</a>
+                <div id="fieldDetailContainer" aria-busy="true" aria-live="polite"></div>
             </section>
 
             <!-- ═══ SENSORS PAGE ═══ -->
@@ -193,7 +293,7 @@
             <section class="page" id="page-weather">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌤️</span> Hava Durumu</h1>
-                    <p>81 ildeki çiftliklerden sıcaklık, nem, yağış ve rüzgar bilgilerini görebilirsin. Hava verileri her gün otomatik güncellenir.</p>
+                    <p>Çiftliğinin sıcaklık, nem, yağış ve rüzgar bilgilerini görebilirsin. Hava verileri her gün otomatik güncellenir.</p>
                 </div>
                 <div class="section-header">🌡️ Şu Anki Durum</div>
                 <div class="cards-grid" id="weatherCards" aria-busy="true" aria-live="polite"></div>
@@ -317,13 +417,13 @@
                 </div>
             </section>
 
-            <!-- ═══ MAP (TÜRKİYE HARİTASI) PAGE ═══ -->
-            <!-- shiftFinal Cycle 9 prep — Leaflet ile 81 il çiftlik dağılımı.
-                 Veri kaynağı: GET /api/farms/?limit=500 (yeni Cycle 9 router). -->
+            <!-- ═══ MAP (ÇİFTLİK HARİTASI) PAGE ═══ -->
+            <!-- Leaflet ile sistemdeki çiftliklerin coğrafi dağılımı (admin/gözetmen sistem özeti).
+                 Veri kaynağı: GET /api/farms/?limit=500. -->
             <section class="page" id="page-map">
                 <div class="hero-banner">
-                    <h1><span class="hero-emoji">🗺️</span> Türkiye Çiftlik Haritası</h1>
-                    <p>81 ildeki çiftliklerin coğrafi dağılımı. Marker rengi bölgeye göre kodlanmıştır; tıklayınca çiftlik detayları açılır.</p>
+                    <h1><span class="hero-emoji">🗺️</span> Çiftlik Haritası</h1>
+                    <p>Sistemdeki çiftliklerin coğrafi dağılımı. Marker rengi bölgeye göre kodlanmıştır; tıklayınca çiftlik detayları açılır.</p>
                 </div>
 
                 <div class="section-header">🎨 Bölge Renk Kodu</div>
@@ -406,50 +506,91 @@
                 <div class="table-box"><div id="alertsTable" aria-busy="true" aria-live="polite"></div></div>
             </section>
 
+            <!-- ═══ KULLANICILAR (ADMIN) PAGE ═══ -->
+            <section class="page" id="page-users">
+                <div class="hero-banner">
+                    <h1><span class="hero-emoji">👥</span> Kullanıcı Yönetimi</h1>
+                    <p>Tüm kullanıcıları görüntüle, rol değiştir, şifre sıfırla, yeni kullanıcı ekle veya sil. Yalnız yönetici erişebilir.</p>
+                </div>
+                <div class="section-header">➕ Yeni Kullanıcı Ekle</div>
+                <div class="form-box">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newUserName">Ad Soyad</label>
+                            <input type="text" id="newUserName" placeholder="Ad Soyad" />
+                        </div>
+                        <div class="form-group">
+                            <label for="newUserEmail">E-posta</label>
+                            <input type="email" id="newUserEmail" placeholder="ornek@eposta.com" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newUserPassword">Şifre</label>
+                            <input type="password" id="newUserPassword" placeholder="En az 8 karakter" autocomplete="new-password" />
+                        </div>
+                        <div class="form-group">
+                            <label for="newUserRole">Rol</label>
+                            <select id="newUserRole">
+                                <option value="farmer">Çiftçi</option>
+                                <option value="developer">Geliştirici</option>
+                                <option value="overseer">Gözetmen</option>
+                                <option value="admin">Yönetici</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="createUser()">Kullanıcı Oluştur</button>
+                </div>
+                <div class="section-header">📋 Tüm Kullanıcılar</div>
+                <div class="table-box"><div id="usersTable" aria-busy="true" aria-live="polite"></div></div>
+            </section>
+
             <!-- ═══ AUTH (GİRİŞ / KAYIT) PAGE ═══ -->
             <section class="page" id="page-auth">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">👤</span> Hesabım</h1>
-                    <p>Profil bilgisi, oturum açma ve yeni hesap oluşturma. Token 24 saat geçerlidir.</p>
+                    <p>Profil bilgisi ve şifre değişikliği. Giriş/kayıt ön panelde yapılır.</p>
                 </div>
-                <div id="authLoggedOut">
-                    <div class="charts-row" style="grid-template-columns:1fr 1fr;">
+                <div id="authLoggedIn">
+                    <div class="charts-row" style="grid-template-columns: 1fr 1fr;">
                         <div class="form-box">
-                            <h3 style="margin-top:0;">🔑 Giriş Yap</h3>
-                            <div class="form-group">
-                                <label for="loginEmail">E-posta</label>
-                                <input type="email" id="loginEmail" placeholder="ahmet@ornek.com" />
+                            <h3 style="margin-top:0;">👋 Hoş geldin, <span id="authName">çiftçi</span>!</h3>
+                            <div class="account-summary">
+                                <div class="account-row">
+                                    <span class="account-label">E-posta</span>
+                                    <span id="authEmail" class="account-value">—</span>
+                                </div>
+                                <div class="account-row">
+                                    <span class="account-label">Rol</span>
+                                    <span id="authRole" class="account-value">—</span>
+                                </div>
+                                <div class="account-row">
+                                    <span class="account-label">Telefon</span>
+                                    <span id="authPhone" class="account-value">—</span>
+                                </div>
+                                <div class="account-row">
+                                    <span class="account-label">Sahip olunan çiftlik</span>
+                                    <span id="authOwnedFarms" class="account-value">0</span>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="loginPassword">Şifre</label>
-                                <input type="password" id="loginPassword" placeholder="En az 8 karakter" />
-                            </div>
-                            <button class="btn-primary" onclick="doLogin()">Giriş Yap</button>
+                            <button class="btn-primary" onclick="doLogout()">Çıkış Yap</button>
                         </div>
                         <div class="form-box">
-                            <h3 style="margin-top:0;">📝 Yeni Hesap</h3>
+                            <h3 style="margin-top:0;">🔒 Şifre Değiştir</h3>
                             <div class="form-group">
-                                <label for="regName">Ad Soyad</label>
-                                <input type="text" id="regName" placeholder="Ahmet Yılmaz" />
+                                <label for="pwCurrent">Mevcut şifre</label>
+                                <input type="password" id="pwCurrent" placeholder="••••••••" autocomplete="current-password" />
                             </div>
                             <div class="form-group">
-                                <label for="regEmail">E-posta</label>
-                                <input type="email" id="regEmail" placeholder="ahmet@ornek.com" />
+                                <label for="pwNew">Yeni şifre</label>
+                                <input type="password" id="pwNew" placeholder="En az 8 karakter" autocomplete="new-password" />
                             </div>
                             <div class="form-group">
-                                <label for="regPassword">Şifre</label>
-                                <input type="password" id="regPassword" placeholder="En az 8 karakter" />
+                                <label for="pwConfirm">Yeni şifre (tekrar)</label>
+                                <input type="password" id="pwConfirm" placeholder="Tekrar gir" autocomplete="new-password" />
                             </div>
-                            <button class="btn-primary" onclick="doRegister()">Hesap Oluştur</button>
+                            <button class="btn-primary" onclick="doChangePassword()">Şifreyi Güncelle</button>
                         </div>
-                    </div>
-                </div>
-                <div id="authLoggedIn" style="display:none;">
-                    <div class="form-box">
-                        <h3 style="margin-top:0;">👋 Hoş geldin, <span id="authName">çiftçi</span>!</h3>
-                        <p><strong>E-posta:</strong> <span id="authEmail">—</span></p>
-                        <p><strong>Rol:</strong> <span id="authRole">—</span></p>
-                        <button class="btn-primary" onclick="doLogout()">Çıkış Yap</button>
                     </div>
                 </div>
             </section>
