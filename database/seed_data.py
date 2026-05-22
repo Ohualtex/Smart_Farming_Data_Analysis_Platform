@@ -1,20 +1,28 @@
 """
-SFDAP Demo Seed Data — 81 İl Kapsamlı Veri Seti
-==================================================
-Türkiye'nin 81 ili için gerçekçi tarım verileri:
-- 81 çiftlik (her ile 1)
-- 15 bitki türü
-- 162 tarla (her çiftlikte 2)
-- 324 sensör, ~4800 sensör okuması
-- ~1200 hava durumu kaydı
-- ~320 sulama programı
-- 162 toprak analizi, 162 ekim kaydı, 162 gübre önerisi
-- Sistem uyarıları ve model performans logları
+SFDAP Demo Seed Data — Çiftçi-Odaklı Demo Veri Seti
+====================================================
+REBUILD pivot sonrası seed: "81 il / ulusal ölçek" iddiası bırakıldı.
+Bunun yerine birkaç **demo çiftçi** + **admin/gözetmen** hesabıyla, onboarding
+ve sunum demosu için yeterli küçük bir veri seti üretir.
 
-Emirhan Günay & Miraç Duran — Cycle 6
+Üretilen:
+- 5 kullanıcı: admin, gözetmen (overseer) + 3 çiftçi (ahmet/ayşe/mehmet)
+- 3 çiftlik (farklı bölgeler) · 6 tarla
+- Tarla başına 1 sensör + ~15 diurnal toprak nemi okuması
+- Çiftlik başına hava durumu kayıtları
+- Sulama geçmişi, hastalık tanısı, toprak analizi, açık uyarı
+- 17 bitki türü referansı (turkey_data.CROP_DATA)
+
+Demo giriş bilgileri (script sonunda yazdırılır):
+    admin@demo.test     / DemoAdmin2026     (admin)
+    overseer@demo.test  / DemoGozetmen2026  (overseer — sistem özeti)
+    ahmet@demo.test     / DemoCiftci2026     (farmer — ana persona)
+    ayse@demo.test      / DemoCiftci2026     (farmer)
+    mehmet@demo.test    / DemoCiftci2026     (farmer)
 
 Kullanım:
     python database/seed_data.py
+    # Sıfırdan: önce sfdap_dev.db dosyasını sil.
 """
 
 import math
@@ -30,13 +38,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.database import Base, SessionLocal, engine
 from app.models.models import (
-    CropPlanting,
     CropType,
     Farm,
-    FertilizerRecommendationLog,
     Field,
     IrrigationSchedule,
-    ModelPerformanceLog,
+    PlantHealthImage,
     Sensor,
     SoilAnalysis,
     SoilMoistureReading,
@@ -44,20 +50,73 @@ from app.models.models import (
     User,
     WeatherData,
 )
-from database.turkey_data import CROP_DATA, PROVINCES, REGION_CROPS, SOIL_TYPES
+from app.routers.auth import _hash_password
+from database.turkey_data import CROP_DATA
+
+# ─── Demo kullanıcı + çiftlik tanımları ───────────────────────
+FARMER_PASSWORD = "DemoCiftci2026"  # noqa: S105 — demo seed, gerçek secret değil
+ADMIN_PASSWORD = "DemoAdmin2026"  # noqa: S105
+OVERSEER_PASSWORD = "DemoGozetmen2026"  # noqa: S105
+
+# Her tarla: (ad, bitki_adı, toprak_tipi, alan_ha, taban_nem%) — taban_nem
+# status'u belirler: <30 dry, 30-70 optimal, >70 wet.
+DEMO_FARMS = [
+    {
+        "email": "ahmet@demo.test",
+        "name": "Çiftçi Ahmet",
+        "phone": "0532 000 0001",
+        "farm_name": "Ahmet'in Çiftliği",
+        "city": "Konya",
+        "region": "İç Anadolu",
+        "lat": 37.87,
+        "lng": 32.48,
+        "area": 8.0,
+        "fields": [
+            ("Tarla A", "Buğday", "killi", 3.5, 22.0),  # susuz (dry)
+            ("Tarla B", "Domates", "tınlı", 2.0, 52.0),  # uygun (optimal)
+        ],
+    },
+    {
+        "email": "ayse@demo.test",
+        "name": "Çiftçi Ayşe",
+        "phone": "0532 000 0002",
+        "farm_name": "Ayşe Bahçe",
+        "city": "Antalya",
+        "region": "Akdeniz",
+        "lat": 36.88,
+        "lng": 30.71,
+        "area": 5.0,
+        "fields": [
+            ("Narenciye Bahçesi", "Narenciye", "kumlu-tınlı", 3.0, 48.0),
+            ("Biber Serası", "Biber", "tınlı", 1.0, 60.0),
+        ],
+    },
+    {
+        "email": "mehmet@demo.test",
+        "name": "Çiftçi Mehmet",
+        "phone": "0532 000 0003",
+        "farm_name": "Mehmet Tarım",
+        "city": "Samsun",
+        "region": "Karadeniz",
+        "lat": 41.29,
+        "lng": 36.33,
+        "area": 6.5,
+        "fields": [
+            ("Fındık Bahçesi", "Fındık", "killi-tınlı", 4.0, 65.0),
+            ("Mısır Tarlası", "Mısır", "tınlı", 2.5, 40.0),
+        ],
+    },
+]
 
 
 def _diurnal_factor(hour: int) -> float:
-    """
-    Günlük döngü faktörü: -1 (gece dip) ↔ +1 (öğle pik).
-    sin(2π·(h-6)/24) → 06:00 = 0, 12:00 = +1, 18:00 = 0, 00:00 = -1
-    """
+    """Günlük döngü faktörü: -1 (gece dip) ↔ +1 (öğle pik)."""
     return math.sin(2 * math.pi * (hour - 6) / 24)
 
 
 def seed_database():
-    """Veritabanını 81 il kapsamlı demo verilerle doldurur."""
-    logger.info("🌱 SFDAP 81 İl Seed Data yükleniyor...")
+    """Veritabanını çiftçi-odaklı demo verilerle doldurur (idempotent)."""
+    logger.info("🌱 SFDAP Çiftçi-Odaklı Demo Seed yükleniyor...")
 
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -71,370 +130,180 @@ def seed_database():
         rng = np.random.default_rng(42)
         now = datetime.now(UTC)
 
-        # ─── 1. KULLANICILAR ─────────────────────────────────────────
-        logger.info("  👤 Kullanıcılar oluşturuluyor...")
-        users = [
-            User(
-                name="Ahmet Yılmaz",
-                email="ahmet@sfdap.com",
-                password_hash="hashed_pw_1",
-                role="farmer",
-                phone="05321234567",
-            ),
-            User(
-                name="Fatma Demir",
-                email="fatma@sfdap.com",
-                password_hash="hashed_pw_2",
-                role="farmer",
-                phone="05339876543",
-            ),
-            User(
-                name="Miraç Duran",
-                email="mirac@sfdap.com",
-                password_hash="hashed_pw_3",
-                role="admin",
-                phone="05551112233",
-            ),
-            User(
-                name="Emirhan Günay",
-                email="emirhan@sfdap.com",
-                password_hash="hashed_pw_4",
-                role="farmer",
-                phone="05441112233",
-            ),
-            User(
-                name="Ecenur Üner",
-                email="ecenur@sfdap.com",
-                password_hash="hashed_pw_5",
-                role="farmer",
-                phone="05361112233",
-            ),
-        ]
-        db.add_all(users)
-        db.flush()
-
-        # ─── 2. BİTKİ TÜRLERİ (15 adet) ─────────────────────────────
-        logger.info("  🌿 15 bitki türü oluşturuluyor...")
-        crop_types = []
+        # ─── 1. BİTKİ TÜRLERİ (referans, 17 bitki) ───────────────────
+        logger.info("  🌾 17 bitki türü oluşturuluyor...")
+        crop_by_name: dict[str, CropType] = {}
         for name, sci, ph_min, ph_max, t_min, t_max, water, days in CROP_DATA:
-            crop_types.append(
-                CropType(
-                    name=name,
-                    scientific_name=sci,
-                    optimal_ph_min=ph_min,
-                    optimal_ph_max=ph_max,
-                    optimal_temp_min=float(t_min),
-                    optimal_temp_max=float(t_max),
-                    water_need_mm_per_day=water,
-                    growth_duration_days=days,
-                )
+            crop = CropType(
+                name=name,
+                scientific_name=sci,
+                optimal_ph_min=ph_min,
+                optimal_ph_max=ph_max,
+                optimal_temp_min=t_min,
+                optimal_temp_max=t_max,
+                water_need_mm_per_day=water,
+                growth_duration_days=days,
             )
-        db.add_all(crop_types)
+            db.add(crop)
+            crop_by_name[name] = crop
         db.flush()
 
-        # ─── 3. ÇİFTLİKLER (81 il) & TARLALAR (162) ─────────────────
-        logger.info("  🏡 81 il çiftliği ve 162 tarla oluşturuluyor...")
-        all_farms = []
-        all_fields = []
+        # ─── 2. KULLANICILAR (admin + gözetmen) ──────────────────────
+        logger.info("  👤 Kullanıcılar oluşturuluyor (admin + gözetmen + 3 çiftçi)...")
+        db.add(
+            User(
+                name="Yönetici Demo",
+                email="admin@demo.test",
+                password_hash=_hash_password(ADMIN_PASSWORD),
+                role="admin",
+            )
+        )
+        db.add(
+            User(
+                name="Gözetmen Demo",
+                email="overseer@demo.test",
+                password_hash=_hash_password(OVERSEER_PASSWORD),
+                role="overseer",
+            )
+        )
 
-        for idx, (city, lat, lng, region, _base_temp, _base_hum) in enumerate(PROVINCES):
-            user = users[idx % len(users)]
+        # ─── 3. ÇİFTÇİLER + ÇİFTLİK/TARLA/SENSÖR ZİNCİRİ ─────────────
+        total_fields = total_sensors = total_readings = 0
+        for spec in DEMO_FARMS:
+            farmer = User(
+                name=spec["name"],
+                email=spec["email"],
+                password_hash=_hash_password(FARMER_PASSWORD),
+                role="farmer",
+                phone=spec["phone"],
+            )
+            db.add(farmer)
+            db.flush()
+
             farm = Farm(
-                user_id=user.id,
-                name=f"{city} Tarım Çiftliği",
-                location_lat=lat,
-                location_lng=lng,
-                area_hectares=round(float(rng.uniform(30, 300)), 1),
-                city=city,
-                region=region,
+                user_id=farmer.id,
+                name=spec["farm_name"],
+                city=spec["city"],
+                region=spec["region"],
+                location_lat=spec["lat"],
+                location_lng=spec["lng"],
+                area_hectares=spec["area"],
             )
-            all_farms.append(farm)
+            db.add(farm)
+            db.flush()
 
-        db.add_all(all_farms)
-        db.flush()
-
-        for idx, farm in enumerate(all_farms):
-            region = PROVINCES[idx][3]
-            crop_indices = REGION_CROPS[region]
-            soil = rng.choice(SOIL_TYPES)
-
-            for j in range(2):
-                ci = crop_indices[j % len(crop_indices)]
-                field = Field(
-                    farm_id=farm.id,
-                    name=f"{crop_types[ci].name} Tarlası {j + 1}",
-                    area_hectares=round(float(rng.uniform(10, 80)), 1),
-                    soil_type=soil if j == 0 else rng.choice(SOIL_TYPES),
-                    elevation_m=round(float(rng.uniform(5, 1800)), 0),
-                    crop_id=crop_types[ci].id,
-                )
-                all_fields.append(field)
-
-        db.add_all(all_fields)
-        db.flush()
-
-        # ─── 4. SENSÖRLER (324) ──────────────────────────────────────
-        logger.info("  📡 324 sensör oluşturuluyor...")
-        all_sensors = []
-        for i, field in enumerate(all_fields):
-            for st_idx, stype in enumerate(["soil_moisture", "soil_temperature"]):
-                s = Sensor(
-                    field_id=field.id,
-                    sensor_type=stype,
-                    serial_number=f"SN-{i:04d}-{st_idx}",
-                    installation_date=now - timedelta(days=int(rng.integers(30, 365))),
-                    depth_cm=round(float(rng.uniform(10, 30)), 0),
-                    status="active",
-                )
-                all_sensors.append(s)
-        db.add_all(all_sensors)
-        db.flush()
-
-        # ─── 5. SENSÖR OKUMALARI (~4800) ──────────────────────────────
-        # Sezonsal (mevsim) + diurnal (gece-gündüz) pattern ile gerçekçi veri
-        logger.info("  📊 Sensör okumaları oluşturuluyor (diurnal pattern)...")
-        readings = []
-        for sensor in all_sensors:
-            # Sensörün baz değerleri (sensör-bazlı küçük varyasyon)
-            base_soil_temp = 18.0 + float(rng.uniform(-2, 2))  # ~16-20°C ortalama
-            base_moisture = 50.0 + float(rng.uniform(-8, 8))  # %42-58 ortalama
-            for day in range(15):
-                hour = int(rng.integers(0, 24))
-                ts = now - timedelta(days=day, hours=hour)
-                d = _diurnal_factor(hour)  # -1 ↔ +1
-                # Toprak sıcaklığı: 6°C diurnal + ±1.5°C noise
-                soil_temp = base_soil_temp + 6.0 * d + float(rng.uniform(-1.5, 1.5))
-                # Nem: tersine + sulama jitteri (sulama sonrası ani artış simülasyonu)
-                irrigation_boost = 12.0 if rng.random() < 0.08 else 0.0
-                moisture = base_moisture - 8.0 * d + irrigation_boost + float(rng.uniform(-3, 3))
-                moisture = max(15.0, min(90.0, moisture))  # fiziksel sınır
-                readings.append(
-                    SoilMoistureReading(
-                        sensor_id=sensor.id,
-                        reading_timestamp=ts,
-                        moisture_percent=round(moisture, 1),
-                        depth_cm=sensor.depth_cm,
-                        soil_temperature_c=round(soil_temp, 1),
-                        electrical_conductivity=round(float(rng.uniform(0.4, 2.5)), 2),
-                    )
-                )
-        db.add_all(readings)
-        db.flush()
-        logger.info(f"    → {len(readings)} okuma oluşturuldu (diurnal pattern uygulandı)")
-
-        # ─── 6. HAVA DURUMU (~1200) — bölge baz + diurnal pattern ────
-        logger.info("  🌤️ Hava durumu verileri oluşturuluyor (diurnal pattern)...")
-        weather = []
-        for idx, farm in enumerate(all_farms):
-            base_temp = PROVINCES[idx][4]
-            base_hum = PROVINCES[idx][5]
-            for day in range(15):
-                hour = int(rng.integers(0, 24))
-                ts = now - timedelta(days=day, hours=hour)
-                d = _diurnal_factor(hour)
-                # Hava sıcaklığı: 7°C diurnal + ±2°C noise
-                temp = base_temp + 7.0 * d + float(rng.uniform(-2, 2))
-                # Nem: ters phase, gündüz düşer
-                hum = base_hum - 12.0 * d + float(rng.uniform(-5, 5))
-                hum = max(20.0, min(95.0, hum))
-                # Solar: sadece gündüz var (saat 6-18 arası)
-                solar = max(0.0, 800.0 * max(0.0, d) + float(rng.uniform(-50, 50)))
-                # UV index: gündüz yüksek
-                uv = max(0.0, 9.0 * max(0.0, d) + float(rng.uniform(-1, 1)))
-                weather.append(
+            # Çiftlik başına birkaç hava durumu kaydı (son 5 gün)
+            for d in range(5):
+                db.add(
                     WeatherData(
                         farm_id=farm.id,
-                        recorded_at=ts,
-                        temperature_c=round(temp, 1),
-                        humidity_percent=round(hum, 1),
-                        precipitation_mm=round(float(rng.choice([0, 0, 0, 0, rng.uniform(0.5, 15)])), 1),
-                        wind_speed_kmh=round(float(rng.uniform(2, 35)), 1),
-                        solar_radiation=round(solar, 1),
-                        uv_index=round(uv, 1),
+                        recorded_at=now - timedelta(days=d),
+                        temperature_c=round(float(rng.uniform(14, 30)), 1),
+                        humidity_percent=round(float(rng.uniform(40, 80)), 1),
+                        precipitation_mm=round(float(rng.uniform(0, 8)), 1),
+                        wind_speed_kmh=round(float(rng.uniform(3, 25)), 1),
                     )
                 )
-        db.add_all(weather)
-        db.flush()
-        logger.info(f"    → {len(weather)} hava durumu kaydı oluşturuldu (diurnal pattern uygulandı)")
 
-        # ─── 7. SULAMA PROGRAMLARI (~320) ─────────────────────────────
-        logger.info("  💧 Sulama programları oluşturuluyor...")
-        statuses = ["completed", "completed", "completed", "pending", "cancelled"]
-        irrigations = [
-            IrrigationSchedule(
-                field_id=field.id,
-                scheduled_date=now - timedelta(days=int(rng.integers(1, 25))),
-                duration_min=int(rng.integers(30, 120)),
-                water_amount_liters=round(float(rng.uniform(500, 5000)), 0),
-                source=rng.choice(["model", "manual"]),
-                status=rng.choice(statuses),
-            )
-            for field in all_fields
-            for _ in range(2)
-        ]
-        db.add_all(irrigations)
-        db.flush()
-        logger.info(f"    → {len(irrigations)} sulama programı oluşturuldu")
-
-        # ─── 8. TOPRAK ANALİZLERİ (162) ──────────────────────────────
-        logger.info("  🧪 Toprak analizleri oluşturuluyor...")
-        soil_analyses = [
-            SoilAnalysis(
-                field_id=field.id,
-                analysis_date=now - timedelta(days=int(rng.integers(10, 90))),
-                ph_level=round(float(rng.uniform(5.0, 8.5)), 1),
-                organic_matter_pct=round(float(rng.uniform(1.0, 5.0)), 1),
-                nitrogen_mg_kg=round(float(rng.uniform(5, 80)), 1),
-                phosphorus_mg_kg=round(float(rng.uniform(3, 50)), 1),
-                potassium_mg_kg=round(float(rng.uniform(50, 300)), 1),
-                calcium_mg_kg=round(float(rng.uniform(500, 5000)), 0),
-                magnesium_mg_kg=round(float(rng.uniform(50, 500)), 0),
-                texture_class=field.soil_type,
-                notes=f"{field.name} tarlası için lab analiz sonuçları.",
-            )
-            for field in all_fields
-        ]
-        db.add_all(soil_analyses)
-        db.flush()
-        logger.info(f"    → {len(soil_analyses)} toprak analizi oluşturuldu")
-
-        # ─── 9. EKİM TAKİBİ (162) ────────────────────────────────────
-        logger.info("  🌾 Ekim kayıtları oluşturuluyor...")
-        plantings = []
-        for field in all_fields:
-            plant_date = now - timedelta(days=int(rng.integers(30, 120)))
-            duration = crop_types[0].growth_duration_days or 90
-            if field.crop_id:
-                for ct in crop_types:
-                    if ct.id == field.crop_id:
-                        duration = ct.growth_duration_days or 90
-                        break
-            plantings.append(
-                CropPlanting(
-                    field_id=field.id,
-                    crop_id=field.crop_id or crop_types[0].id,
-                    planting_date=plant_date,
-                    expected_harvest_date=plant_date + timedelta(days=duration),
-                    season="2025-2026",
-                    status=rng.choice(["growing", "growing", "harvested"]),
-                )
-            )
-        db.add_all(plantings)
-        db.flush()
-        logger.info(f"    → {len(plantings)} ekim kaydı oluşturuldu")
-
-        # ─── 10. GÜBRE ÖNERİLERİ (162) ───────────────────────────────
-        logger.info("  🧬 Gübre önerileri oluşturuluyor...")
-        fert_recs = []
-        for field in all_fields:
-            n = round(float(rng.uniform(10, 60)), 1)
-            p = round(float(rng.uniform(5, 30)), 1)
-            k = round(float(rng.uniform(10, 50)), 1)
-            fert_recs.append(
-                FertilizerRecommendationLog(
-                    field_id=field.id,
-                    crop_id=field.crop_id or crop_types[0].id,
-                    recommended_at=now - timedelta(days=int(rng.integers(5, 30))),
-                    nitrogen_kg=n,
-                    phosphorus_kg=p,
-                    potassium_kg=k,
-                    total_fertilizer_kg=round(n + p + k, 1),
-                    recommendation_text=f"NPK {n:.0f}-{p:.0f}-{k:.0f} uygulanması önerilir.",
-                    is_applied=bool(rng.choice([True, False])),
-                )
-            )
-        db.add_all(fert_recs)
-        db.flush()
-        logger.info(f"    → {len(fert_recs)} gübre önerisi oluşturuldu")
-
-        # ─── 11. SİSTEM UYARILARI & MODEL LOGLAR ─────────────────────
-        # Az sayıda gerçekçi uyarı: çoğu çözülmüş, sadece 1-2 aktif kritik
-        # alert_seeds tuple şeması: alert_type, severity, message_template, is_resolved, hours_ago
-        logger.info("  🚨 Sistem uyarıları ve model logları oluşturuluyor...")
-        alert_seeds = [
-            ("sensor_anomaly", "medium", "Sensör okumalarında geçici anomali", True, 168),  # 1 hafta önce, çözülmüş
-            ("system_error", "low", "Sensör bağlantısı geçici olarak kesildi", True, 240),  # 10 gün önce, çözülmüş
-            ("weather_warning", "critical", "Şiddetli yağış uyarısı verildi", True, 96),  # 4 gün önce, çözülmüş
-            ("sensor_anomaly", "medium", "Toprak nemi beklenmedik düşüş", True, 48),  # 2 gün önce, çözülmüş
-            ("system_error", "low", "API zaman aşımı (geçici)", True, 36),  # geçen gün, çözülmüş
-            # Aktif uyarılar (az sayıda, gerçekçi):
-            ("sensor_anomaly", "medium", "Sensör batarya seviyesi %15", False, 6),  # 6 saat önce, aktif
-            (
-                "weather_warning",
-                "critical",
-                "48 saat içinde dolu yağışı bekleniyor",
-                False,
-                2,
-            ),  # 2 saat önce, aktif kritik
-            ("system_error", "low", "Hava verisi son senkronu yapılamadı", False, 1),  # 1 saat önce, aktif
-        ]
-        alerts = []
-        for i, (atype, sev, msg_template, resolved, hours_ago) in enumerate(alert_seeds):
-            farm = all_farms[i % len(all_farms)]
-            alerts.append(
-                SystemAlert(
+            for fname, crop_name, soil, area, base_moisture in spec["fields"]:
+                crop = crop_by_name.get(crop_name)
+                field = Field(
                     farm_id=farm.id,
-                    field_id=all_fields[i].id if i < len(all_fields) else None,
-                    alert_type=atype,
-                    severity=sev,
-                    message=f"{farm.city}: {msg_template}",
-                    is_resolved=resolved,
-                    created_at=now - timedelta(hours=hours_ago),
+                    name=fname,
+                    soil_type=soil,
+                    area_hectares=area,
+                    elevation_m=round(float(rng.uniform(50, 1100)), 0),
+                    crop_id=crop.id if crop else None,
                 )
-            )
-        db.add_all(alerts)
+                db.add(field)
+                db.flush()
+                total_fields += 1
 
-        perf_logs = [
-            ModelPerformanceLog(
-                model_name=rng.choice(["irrigation_rf", "plant_disease_cnn"]),
-                prediction_data=f'{{"prediction": {round(float(rng.uniform(0.5, 1.0)), 2)}}}',
-                actual_data=f'{{"actual": {round(float(rng.uniform(0.5, 1.0)), 2)}}}',
-                accuracy_score=round(float(rng.uniform(0.75, 1.0)), 3),
-                logged_at=now - timedelta(days=int(rng.integers(1, 30))),
-            )
-            for _ in range(20)
-        ]
-        db.add_all(perf_logs)
-        db.flush()
+                sensor = Sensor(
+                    field_id=field.id,
+                    sensor_type="soil_moisture",
+                    serial_number=f"SN-{farm.id}-{field.id}",
+                    installation_date=now - timedelta(days=120),
+                    depth_cm=20.0,
+                    lat=spec["lat"],
+                    lng=spec["lng"],
+                    status="active",
+                )
+                db.add(sensor)
+                db.flush()
+                total_sensors += 1
 
-        # ─── COMMIT ──────────────────────────────────────────────────
+                # ~15 diurnal okuma (son ~30 saat, 2 saatte bir)
+                for h in range(0, 30, 2):
+                    moisture = base_moisture + _diurnal_factor((now.hour - h) % 24) * 4 + float(rng.normal(0, 1.5))
+                    db.add(
+                        SoilMoistureReading(
+                            sensor_id=sensor.id,
+                            reading_timestamp=now - timedelta(hours=h),
+                            moisture_percent=round(max(0.0, min(100.0, moisture)), 1),
+                            soil_temperature_c=round(float(rng.uniform(14, 22)), 1),
+                            depth_cm=20.0,
+                        )
+                    )
+                    total_readings += 1
+
+                # Sulama geçmişi (son 2 kayıt)
+                db.add(
+                    IrrigationSchedule(
+                        field_id=field.id,
+                        scheduled_date=now - timedelta(days=1),
+                        water_amount_liters=round(float(rng.uniform(150, 350)), 0),
+                        duration_min=int(rng.integers(30, 60)),
+                        status="completed",
+                        source="model",
+                    )
+                )
+
+                # Toprak analizi (her tarlaya 1)
+                db.add(
+                    SoilAnalysis(
+                        field_id=field.id,
+                        analysis_date=now - timedelta(days=int(rng.integers(5, 30))),
+                        ph_level=round(float(rng.uniform(6.0, 7.5)), 1),
+                        nitrogen_mg_kg=round(float(rng.uniform(30, 60)), 0),
+                        phosphorus_mg_kg=round(float(rng.uniform(15, 35)), 0),
+                        potassium_mg_kg=round(float(rng.uniform(120, 200)), 0),
+                        texture_class=soil,
+                    )
+                )
+
+            # Ahmet'in Tarla A'sı için demo hastalık + kritik uyarı (susuz)
+            if spec["email"] == "ahmet@demo.test":
+                tarla_a = db.query(Field).filter(Field.farm_id == farm.id, Field.name == "Tarla A").first()
+                db.add(
+                    PlantHealthImage(
+                        field_id=tarla_a.id,
+                        image_url="/static/plant_uploads/demo_leaf.jpg",
+                        captured_at=now - timedelta(hours=6),
+                        diagnosis="leaf_rust",
+                        confidence_score=0.84,
+                        severity="moderate",
+                    )
+                )
+                db.add(
+                    SystemAlert(
+                        farm_id=farm.id,
+                        field_id=tarla_a.id,
+                        alert_type="sensor_anomaly",
+                        severity="critical",
+                        message="Tarla A toprak nemi kritik düşük — sulama önerilir.",
+                        is_resolved=False,
+                    )
+                )
+
         db.commit()
 
-        # ─── ÖZET ────────────────────────────────────────────────────
-        total = (
-            len(users)
-            + len(crop_types)
-            + len(all_farms)
-            + len(all_fields)
-            + len(all_sensors)
-            + len(readings)
-            + len(weather)
-            + len(irrigations)
-            + len(soil_analyses)
-            + len(plantings)
-            + len(fert_recs)
-            + len(alerts)
-            + len(perf_logs)
-        )
-        logger.info(f"\n✅ Seed data başarıyla yüklendi! (Toplam: {total} kayıt)")
-        logger.info(f"   👤 {len(users)} kullanıcı")
-        logger.info(f"   🌿 {len(crop_types)} bitki türü")
-        logger.info(f"   🏡 {len(all_farms)} çiftlik (81 il)")
-        logger.info(f"   🌾 {len(all_fields)} tarla")
-        logger.info(f"   📡 {len(all_sensors)} sensör")
-        logger.info(f"   📊 {len(readings)} sensör okuması")
-        logger.info(f"   🌤️ {len(weather)} hava durumu kaydı")
-        logger.info(f"   💧 {len(irrigations)} sulama programı")
-        logger.info(f"   🧪 {len(soil_analyses)} toprak analizi")
-        logger.info(f"   🌾 {len(plantings)} ekim kaydı")
-        logger.info(f"   🧬 {len(fert_recs)} gübre önerisi")
-        logger.info(f"   🚨 {len(alerts)} sistem uyarısı")
-        logger.info(f"   📈 {len(perf_logs)} performans logu")
-
-    except Exception as e:
-        db.rollback()
-        logger.info(f"❌ Hata: {e}")
-        raise
+        # ─── Özet ────────────────────────────────────────────────────
+        logger.info("✅ Demo seed tamamlandı:")
+        logger.info(f"   👤 {db.query(User).count()} kullanıcı (admin + gözetmen + 3 çiftçi)")
+        logger.info(f"   🚜 {db.query(Farm).count()} çiftlik · 🌱 {total_fields} tarla")
+        logger.info(f"   📡 {total_sensors} sensör · 📊 {total_readings} okuma")
+        logger.info("   🔑 Giriş: ahmet@demo.test / DemoCiftci2026 (çiftçi), admin@demo.test / DemoAdmin2026")
     finally:
         db.close()
 

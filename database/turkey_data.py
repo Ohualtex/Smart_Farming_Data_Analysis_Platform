@@ -1,7 +1,14 @@
 """
-Türkiye 81 İl Veritabanı — Koordinat, Bölge ve İklim Verileri
-================================================================
-Her il için: isim, enlem, boylam, bölge, iklim parametreleri, uygun bitkiler
+Türkiye İl Koordinat + Bitki/Toprak Referans Verileri
+======================================================
+Demo seed (`seed_data.py`) ve çiftlik haritası için referans/lookup tablosu —
+"ulusal ölçek" iddiası değil, koordinat ve tarımsal sabitler kütüphanesi.
+
+İçerik:
+- PROVINCES: il → (enlem, boylam, bölge, taban sıcaklık/nem) koordinat lookup'ı
+- REGION_CROPS: bölge → uygun bitki indeksleri
+- CROP_DATA: 17 bitki türü (pH, sıcaklık, su, gün) — fertilizer_service ile uyumlu
+- SOIL_TYPES: toprak tipi isimleri
 """
 
 # fmt: off
