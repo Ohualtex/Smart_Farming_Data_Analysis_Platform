@@ -120,6 +120,12 @@ TAGS_METADATA = [
         "upload → tanı demo akışının merkezi. Farmer yalnız kendi tarlasını görür.",
     },
     {
+        "name": "Kullanıcı Yönetimi",
+        "description": "👥 **Admin-only kullanıcı yönetimi** — tüm kullanıcıları listele, rol "
+        "değiştir, yeni kullanıcı oluştur (rol seçerek), şifre sıfırla, sil. Yalnız `admin` "
+        "rolü erişir; diğer roller 403 alır.",
+    },
+    {
         "name": "Sistem Uyarıları",
         "description": "🚨 **SystemAlert kayıtları** — sensör anomalisi, hava uyarısı, sistem "
         "hatalarının tutulduğu yer. Severity (low/medium/critical) ile filtrelenebilir.",

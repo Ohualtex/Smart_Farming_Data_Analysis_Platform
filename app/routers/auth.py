@@ -32,7 +32,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict
@@ -44,6 +44,7 @@ from app.config import settings
 from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.models.models import USER_ROLES, Farm, User  # USER_ROLES: tek kaynak referansı
+from app.schemas.schemas import UtcDateTime  # UTC-suffix'li date-time serializer (OpenAPI kontratı)
 
 # Pydantic Literal alias — USER_ROLES (models.py) ile birebir eşleşmek zorunda.
 # Schema validation ile DB CHECK constraint iki-katlı koruma: invalid rol
@@ -162,6 +163,53 @@ class PasswordChangeResponse(BaseModel):
     """Şifre değişikliği başarı yanıtı."""
 
     detail: str = "Sifre guncellendi"
+
+
+# ─── Admin kullanıcı yönetimi şemaları (REBUILD Faz 3.5) ──────────────
+class AdminUserListItem(BaseModel):
+    """Admin kullanıcı listesi satırı — `password_hash` asla expose edilmez."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    email: str
+    role: str
+    phone: str | None = None
+    created_at: UtcDateTime
+    owned_farms_count: int = 0
+
+
+class AdminUserCreateRequest(BaseModel):
+    """Admin'in rol seçerek kullanıcı oluşturması — register'dan farkı: rol seçilebilir."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "Yeni Çiftçi",
+                "email": "yeni@ornek.com",
+                "password": "GuvenliSifre2026",  # noqa: S106 — örnek, gerçek secret değil
+                "role": "farmer",
+                "phone": "05321234567",
+            }
+        }
+    )
+
+    name: str
+    email: str
+    password: str
+    role: UserRole = "farmer"
+    phone: str | None = None
+
+
+class AdminPasswordResetRequest(BaseModel):
+    """Admin'in bir kullanıcının şifresini sıfırlaması — current şifre istemez (override)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"new_password": "YeniGecici2026"}}  # noqa: S106 — örnek
+    )
+
+    new_password: str
 
 
 # ─── Yardımcılar ─────────────────────────────────────────────────────
@@ -500,3 +548,210 @@ def change_password(
     user.password_hash = _hash_password(payload.new_password)
     db.commit()
     return PasswordChangeResponse(detail="Sifre guncellendi")
+
+
+# ─── ADMIN KULLANICI YÖNETİMİ (REBUILD Faz 3.5) ──────────────────────
+# Tüm endpoint'ler admin-only (require_role("admin") → 403/401). Mevcut
+# `/api/auth/users/{id}/role` ile aynı namespace; tag "Kullanıcı Yönetimi".
+
+
+def _owned_farms_map(db: Session, user_ids: list[int]) -> dict[int, int]:
+    """user_id → owned farm count map (tek group-by, N+1 önler)."""
+    if not user_ids:
+        return {}
+    rows = db.query(Farm.user_id, func.count(Farm.id)).filter(Farm.user_id.in_(user_ids)).group_by(Farm.user_id).all()
+    return dict(rows)
+
+
+@router.get(
+    "/users",
+    response_model=list[AdminUserListItem],
+    tags=["Kullanıcı Yönetimi"],
+    summary="Tüm kullanıcıları listele (admin-only)",
+    description=(
+        "Sistemdeki tüm kullanıcıları döner — `role` ile filtrelenebilir, "
+        "`skip`/`limit` ile sayfalanır. `password_hash` asla expose edilmez; "
+        "`owned_farms_count` her kullanıcı için hesaplanır. Yalnız `admin`."
+    ),
+    responses={
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "Caller admin değil"},
+    },
+)
+def list_users(
+    role: UserRole | None = Query(default=None, description="Rol filtresi"),
+    skip: int = Query(default=0, ge=0, le=MAX_SQLITE_INT),
+    limit: int = Query(default=100, ge=1, le=500),
+    _caller: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+) -> list[AdminUserListItem]:
+    """Tüm kullanıcılar (admin) — owned_farms_count tek group-by ile."""
+    q = db.query(User)
+    if role is not None:
+        q = q.filter(User.role == role)
+    users = q.order_by(User.id).offset(skip).limit(limit).all()
+    farm_map = _owned_farms_map(db, [u.id for u in users])
+    return [
+        AdminUserListItem(
+            id=u.id,
+            name=u.name,
+            email=u.email,
+            role=u.role,
+            phone=u.phone,
+            created_at=u.created_at,
+            owned_farms_count=farm_map.get(u.id, 0),
+        )
+        for u in users
+    ]
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=AdminUserListItem,
+    tags=["Kullanıcı Yönetimi"],
+    summary="Tek kullanıcı detayı (admin-only)",
+    responses={
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "Caller admin değil"},
+        404: {"description": "Kullanıcı bulunamadı"},
+    },
+)
+def get_user(
+    user_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Hedef kullanıcı ID"),
+    _caller: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+) -> AdminUserListItem:
+    """Tek kullanıcının admin görünümü."""
+    target = db.query(User).filter(User.id == user_id).first()
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanici bulunamadi")
+    owned = db.query(func.count(Farm.id)).filter(Farm.user_id == target.id).scalar() or 0
+    return AdminUserListItem(
+        id=target.id,
+        name=target.name,
+        email=target.email,
+        role=target.role,
+        phone=target.phone,
+        created_at=target.created_at,
+        owned_farms_count=owned,
+    )
+
+
+@router.post(
+    "/users",
+    response_model=CurrentUserResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Kullanıcı Yönetimi"],
+    summary="Yeni kullanıcı oluştur — rol seçilebilir (admin-only)",
+    description=(
+        "Admin, rol belirterek (`farmer`/`developer`/`overseer`/`admin`) yeni "
+        "kullanıcı oluşturur. Şifre bcrypt'le hash'lenir, min 8 karakter. "
+        "Self-register'dan farkı: rol seçilebilir."
+    ),
+    responses={
+        400: {"description": "Şifre 8 karakterden kısa"},
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "Caller admin değil"},
+        409: {"description": "E-posta zaten kayıtlı"},
+    },
+)
+@limiter.limit(AUTH_RATE)
+def admin_create_user(
+    request: Request,
+    payload: AdminUserCreateRequest,
+    _caller: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+) -> User:
+    """Admin rol seçerek kullanıcı yaratır."""
+    if db.query(User).filter(User.email == payload.email).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta zaten kayitli")
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sifre en az 8 karakter olmali")
+    user = User(
+        name=payload.name,
+        email=payload.email,
+        password_hash=_hash_password(payload.password),
+        role=payload.role,
+        phone=payload.phone,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.patch(
+    "/users/{user_id}/password",
+    response_model=PasswordChangeResponse,
+    tags=["Kullanıcı Yönetimi"],
+    summary="Kullanıcının şifresini sıfırla (admin-only)",
+    description=(
+        "Admin, hedef kullanıcının şifresini sıfırlar — mevcut şifre istenmez "
+        "(override). Yeni şifre min 8 karakter. Kullanıcının aktif token'ları "
+        "geçerli kalır (logout yapılmaz)."
+    ),
+    responses={
+        400: {"description": "Yeni şifre 8 karakterden kısa"},
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "Caller admin değil"},
+        404: {"description": "Kullanıcı bulunamadı"},
+    },
+)
+@limiter.limit(AUTH_RATE)
+def admin_reset_password(
+    request: Request,
+    payload: AdminPasswordResetRequest,
+    user_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Hedef kullanıcı ID"),
+    _caller: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+) -> PasswordChangeResponse:
+    """Admin override — hedef kullanıcının şifresini sıfırla."""
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Yeni sifre en az 8 karakter olmali")
+    target = db.query(User).filter(User.id == user_id).first()
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanici bulunamadi")
+    target.password_hash = _hash_password(payload.new_password)
+    db.commit()
+    return PasswordChangeResponse(detail="Sifre sifirlandi")
+
+
+@router.delete(
+    "/users/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Kullanıcı Yönetimi"],
+    summary="Kullanıcı sil (admin-only)",
+    description=(
+        "Admin bir kullanıcıyı siler. Guard'lar: admin kendini silemez (409, "
+        "lock-out koruması); çiftliği olan kullanıcı silinemez (409, yetim FK "
+        "verisi önleme — önce çiftlikleri sil/devret)."
+    ),
+    responses={
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "Caller admin değil"},
+        404: {"description": "Kullanıcı bulunamadı"},
+        409: {"description": "Self-delete veya çiftliği olan kullanıcı"},
+    },
+)
+def admin_delete_user(
+    user_id: int = Path(..., ge=1, le=MAX_SQLITE_INT, description="Hedef kullanıcı ID"),
+    caller: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+) -> None:
+    """Kullanıcı sil — self + farm-owner guard'larıyla."""
+    if user_id == caller.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Admin kendini silemez (lock-out koruması). Başka bir admin silmeli.",
+        )
+    target = db.query(User).filter(User.id == user_id).first()
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanici bulunamadi")
+    farm_count = db.query(func.count(Farm.id)).filter(Farm.user_id == user_id).scalar() or 0
+    if farm_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Bu kullanicinin {farm_count} ciftligi var; once ciftlikleri sil veya devret.",
+        )
+    db.delete(target)
+    db.commit()
