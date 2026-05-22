@@ -101,7 +101,8 @@ const pageTitles = {
     map: ['Türkiye Haritası', 'Çiftliklerin coğrafi dağılımı'],
     plants: ['Bitki Sağlığı', 'Yapraktan hastalık tespiti'],
     alerts: ['Uyarılar', 'Sistem ve sensör uyarıları'],
-    auth: ['Hesabım', 'Giriş, kayıt ve profil'],
+    users: ['Kullanıcı Yönetimi', 'Tüm kullanıcılar (admin)'],
+    auth: ['Hesabım', 'Profil ve şifre'],
 };
 
 function navigate(page) {
@@ -133,6 +134,7 @@ function navigate(page) {
     else if (page === 'map') loadMap();
     else if (page === 'plants') loadPlants();
     else if (page === 'alerts') loadAlerts();
+    else if (page === 'users') loadUsers();
     else if (page === 'auth') refreshAuthState();
     // 'field-detail' navigate() ile değil openFieldDetail(id) ile yüklenir.
     // Close sidebar on mobile (a11y: hamburger aria-expanded sync)
@@ -1258,15 +1260,51 @@ function _renderUserBadge(user) {
     document.getElementById('userBadgeFarms').textContent = `🚜 ${farmCount}`;
 }
 
+/**
+ * Auth gate — REBUILD Faz 3.5. `user` varsa app shell'i göster + landing'i gizle;
+ * yoksa tersi. Tek kaynak: refreshAuthState her durumda çağırır.
+ */
+function _applyAuthGate(user) {
+    const landing = document.getElementById('landing');
+    const app = document.querySelector('.app');
+    if (!landing || !app) return;
+    if (user) {
+        landing.style.display = 'none';
+        app.style.display = '';  // flex (CSS default)
+    } else {
+        landing.style.display = 'flex';
+        app.style.display = 'none';
+    }
+}
+
+/**
+ * Rol-aware nav görünürlüğü — `[data-role]` taşıyan nav item'ları yalnız
+ * eşleşen role gösterir (örn. admin "Kullanıcılar"). user null ise hepsi gizli.
+ */
+function _applyRoleVisibility(user) {
+    document.querySelectorAll('[data-role]').forEach(el => {
+        const need = el.getAttribute('data-role');
+        el.style.display = (user && user.role === need) ? '' : 'none';
+    });
+}
+
+/** Landing'de giriş ↔ kayıt formu geçişi. */
+function toggleLandingForm(which) {
+    const login = document.getElementById('landingLogin');
+    const register = document.getElementById('landingRegister');
+    if (!login || !register) return;
+    login.style.display = which === 'register' ? 'none' : 'block';
+    register.style.display = which === 'register' ? 'block' : 'none';
+}
+
 async function refreshAuthState() {
     const token = getAuthToken();
-    const loggedOut = document.getElementById('authLoggedOut');
     const loggedIn = document.getElementById('authLoggedIn');
     if (!token) {
         currentUser = null;
         _renderUserBadge(null);
-        loggedOut.style.display = 'block';
-        loggedIn.style.display = 'none';
+        _applyRoleVisibility(null);
+        _applyAuthGate(null);
         return;
     }
     try {
@@ -1277,21 +1315,25 @@ async function refreshAuthState() {
         const me = await resp.json();
         currentUser = me;
         _renderUserBadge(me);
-        document.getElementById('authName').textContent = me.name;
-        document.getElementById('authEmail').textContent = me.email;
-        document.getElementById('authRole').textContent = ROLE_LABELS[me.role] || me.role;
-        // Faz 2: hesabım sayfasında detay alanları (varsa) doldur — null-safe.
+        _applyRoleVisibility(me);
+        _applyAuthGate(me);
+        // Hesabım sayfası alanları — null-safe (page-auth artık yalnız logged-in).
+        const nameEl = document.getElementById('authName');
+        if (nameEl) nameEl.textContent = me.name;
+        const emailEl = document.getElementById('authEmail');
+        if (emailEl) emailEl.textContent = me.email;
+        const roleEl = document.getElementById('authRole');
+        if (roleEl) roleEl.textContent = ROLE_LABELS[me.role] || me.role;
         const phoneEl = document.getElementById('authPhone');
         if (phoneEl) phoneEl.textContent = me.phone || '—';
         const farmsEl = document.getElementById('authOwnedFarms');
         if (farmsEl) farmsEl.textContent = me.owned_farms_count ?? 0;
-        loggedOut.style.display = 'none';
-        loggedIn.style.display = 'block';
+        if (loggedIn) loggedIn.style.display = 'block';
     } catch (e) {
         currentUser = null;
         _renderUserBadge(null);
-        loggedOut.style.display = 'block';
-        loggedIn.style.display = 'none';
+        _applyRoleVisibility(null);
+        _applyAuthGate(null);
     }
 }
 
@@ -1313,7 +1355,8 @@ async function doLogin() {
         const data = await resp.json();
         setAuthToken(data.access_token);
         showToast('Giriş yapıldı', 'success');
-        refreshAuthState();
+        await refreshAuthState();   // gate'i açar (app görünür)
+        navigate('dashboard');      // gerçek bir sayfaya in
     } catch (e) {
         showToast('Sunucuya ulaşılamadı', 'error');
     }
@@ -1392,6 +1435,108 @@ async function doChangePassword() {
     }
 }
 
+// ─── ADMIN KULLANICI YÖNETİMİ (REBUILD Faz 3.5) ───────────────
+// Tüm çağrılar apiAuth (401→login, 403→yetki toast). Yalnız admin nav görür.
+
+async function loadUsers() {
+    const tbl = document.getElementById('usersTable');
+    tbl.innerHTML = _skeletonBlock(5);
+    _setBusy('usersTable', true);
+    const list = await apiAuth('/api/auth/users?limit=500');
+    if (!list) {
+        tbl.innerHTML = '<p class="detail-empty">Kullanıcı listesi alınamadı (yetki gerekli).</p>';
+        _setBusy('usersTable', false);
+        return;
+    }
+    const roleOpts = (sel) => ['farmer', 'developer', 'overseer', 'admin']
+        .map(r => `<option value="${r}"${r === sel ? ' selected' : ''}>${ROLE_LABELS[r]}</option>`).join('');
+    let html = '<table class="detail-table"><caption class="sr-only">Kullanıcı listesi</caption><thead><tr>'
+        + '<th>Ad</th><th>E-posta</th><th>Rol</th><th>Çiftlik</th><th>Kayıt</th><th>İşlem</th></tr></thead><tbody>';
+    for (const u of list) {
+        html += `<tr>
+            <td>${_escAttr(u.name)}</td>
+            <td>${_escAttr(u.email)}</td>
+            <td><select class="user-role-select" onchange="changeUserRole(${u.id}, this.value)">${roleOpts(u.role)}</select></td>
+            <td>${u.owned_farms_count ?? 0}</td>
+            <td>${_fmtDate(u.created_at)}</td>
+            <td class="user-actions">
+                <button class="btn-mini" onclick="resetUserPassword(${u.id}, '${_escAttr(u.email)}')">🔑 Şifre</button>
+                <button class="btn-mini btn-danger" onclick="deleteUser(${u.id}, '${_escAttr(u.email)}')">🗑 Sil</button>
+            </td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    tbl.innerHTML = html;
+    _setBusy('usersTable', false);
+}
+
+async function createUser() {
+    const name = document.getElementById('newUserName').value.trim();
+    const email = document.getElementById('newUserEmail').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    const role = document.getElementById('newUserRole').value;
+    if (!name || !email || !password) { showToast('Ad, e-posta ve şifre gerekli', 'warning'); return; }
+    if (password.length < 8) { showToast('Şifre en az 8 karakter olmalı', 'warning'); return; }
+    const res = await apiAuth('/api/auth/users', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password, role }),
+    });
+    if (res) {
+        showToast(`${ROLE_LABELS[role]} oluşturuldu ✅`, 'success');
+        document.getElementById('newUserName').value = '';
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUserPassword').value = '';
+        loadUsers();
+    }
+    // apiAuth 409/400'de null döner + toast; ek mesaj gerekmiyor.
+}
+
+async function changeUserRole(userId, role) {
+    const res = await apiAuth(`/api/auth/users/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+    });
+    if (res) {
+        showToast(`Rol güncellendi: ${ROLE_LABELS[role]}`, 'success');
+        loadUsers();
+    } else {
+        // 409 (kendi rolü) vb. — listeyi eski haline çek
+        loadUsers();
+    }
+}
+
+async function resetUserPassword(userId, email) {
+    const np = prompt(`${email} için yeni şifre (min 8 karakter):`);
+    if (np === null) return;  // iptal
+    if (np.length < 8) { showToast('Şifre en az 8 karakter olmalı', 'warning'); return; }
+    const res = await apiAuth(`/api/auth/users/${userId}/password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ new_password: np }),
+    });
+    if (res) showToast('Şifre sıfırlandı ✅', 'success');
+}
+
+async function deleteUser(userId, email) {
+    if (!confirm(`${email} kullanıcısını silmek istediğine emin misin? Bu geri alınamaz.`)) return;
+    const token = getAuthToken();
+    if (!token) { location.hash = '#auth'; return; }
+    try {
+        const resp = await fetch(`${API_BASE}/api/auth/users/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (resp.status === 204) {
+            showToast('Kullanıcı silindi', 'success');
+            loadUsers();
+        } else {
+            const err = await resp.json().catch(() => ({}));
+            showToast(err.detail || `Silinemedi (${resp.status})`, 'error');
+        }
+    } catch (e) {
+        showToast('Sunucuya ulaşılamadı', 'error');
+    }
+}
+
 async function doLogout() {
     const token = getAuthToken();
     if (token) {
@@ -1404,7 +1549,9 @@ async function doLogout() {
     }
     clearAuthToken();
     showToast('Çıkış yapıldı', 'info');
-    refreshAuthState();
+    await refreshAuthState();    // gate landing'i geri getirir
+    toggleLandingForm('login');  // login formuna dön
+    if (location.hash) location.hash = '';  // deep route'tan temizle
 }
 
 // ─── STATUS & UTILITIES ───────────────────────────────────────
@@ -1450,21 +1597,22 @@ async function init() {
     if (apiOnline) showToast('Sistem aktif — veriler güncel', 'success');
     else showToast('Bağlantı yok — son kayıtlı veriler gösteriliyor', 'error');
 
-    // Auth state ilk yükleme — header user badge + currentUser cache'i kurulur.
-    // navigate('dashboard')'tan önce çağrılır; dashboard role-aware UI guard'lar
-    // currentUser snapshot'ına bakacak.
+    // Auth state ilk yükleme — gate uygular (login yoksa landing, app gizli).
     await refreshAuthState();
 
-    // Load initial page — parametrik #field/{id} route'u da destekle.
-    const raw = location.hash.slice(1) || 'dashboard';
-    if (raw.startsWith('field/')) {
-        const id = parseInt(raw.split('/')[1], 10);
-        if (Number.isFinite(id)) openFieldDetail(id);
-        else navigate('dashboard');
-    } else if (pageTitles[raw]) {
-        navigate(raw);
-    } else {
-        navigate('dashboard');
+    // REBUILD Faz 3.5: girişsizse hiçbir sayfaya navigate etme — landing kalır.
+    // Giriş yapılınca doLogin() navigate('dashboard') çağırır.
+    if (currentUser) {
+        const raw = location.hash.slice(1) || 'dashboard';
+        if (raw.startsWith('field/')) {
+            const id = parseInt(raw.split('/')[1], 10);
+            if (Number.isFinite(id)) openFieldDetail(id);
+            else navigate('dashboard');
+        } else if (pageTitles[raw]) {
+            navigate(raw);
+        } else {
+            navigate('dashboard');
+        }
     }
 
     // Auto-refresh every 30s
@@ -1788,10 +1936,16 @@ Object.assign(window, {
     loadFields,
     openFieldDetail,
     analyzeFieldLeaf,
+    loadUsers,
+    createUser,
+    changeUserRole,
+    resetUserPassword,
+    deleteUser,
     doLogin,
     doRegister,
     doLogout,
     doChangePassword,
+    toggleLandingForm,
     // Status panel ve alerts bridge için (showToast başka modüllerden çağrılıyor)
     showToast,
     resolveAlert,

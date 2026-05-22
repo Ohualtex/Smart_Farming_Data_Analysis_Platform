@@ -169,6 +169,57 @@ input, select { font-family: var(--font); }
 .account-label { color: var(--text-muted); font-size: .82rem; }
 .account-value { font-weight: 600; color: var(--text); }
 
+/* ═══ REBUILD Faz 3.5 — ÖN PANEL (LANDING / AUTH GATE) ════════ */
+.landing {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background:
+        radial-gradient(1200px 600px at 50% -10%, var(--primary-glow), transparent),
+        var(--bg);
+}
+.landing-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 32px 28px;
+    box-shadow: var(--shadow);
+}
+.landing-brand { text-align: center; margin-bottom: 24px; }
+.landing-brand h1 { margin: 0; font-size: 2rem; }
+.landing-brand p { margin: 6px 0 0; color: var(--text-muted); font-size: .9rem; }
+.landing-form h2 { margin: 0 0 16px; font-size: 1.2rem; }
+.btn-block { width: 100%; margin-top: 4px; }
+.landing-toggle { text-align: center; margin: 14px 0 0; font-size: .85rem; color: var(--text-muted); }
+.landing-toggle a { color: var(--primary); text-decoration: none; font-weight: 600; }
+.landing-toggle a:hover { text-decoration: underline; }
+.landing-hint {
+    text-align: center; margin: 20px 0 0; padding-top: 16px;
+    border-top: 1px dashed var(--border);
+    font-size: .72rem; color: var(--text-dim);
+}
+
+/* Admin Kullanıcılar tablosu — rol select + aksiyon butonları */
+.user-role-select {
+    padding: 4px 8px; border-radius: 6px; font-size: .8rem;
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+}
+.user-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn-mini {
+    padding: 4px 10px; border-radius: 6px; font-size: .75rem; cursor: pointer;
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    transition: border-color .2s ease, background .2s ease;
+}
+.btn-mini:hover { border-color: var(--primary); background: var(--primary-glow); }
+.btn-mini.btn-danger { color: #ef4444; }
+.btn-mini.btn-danger:hover { border-color: #ef4444; background: rgba(239,68,68,.12); }
+
 /* ═══ REBUILD Faz 3 / Adım 6 — TARLALARIM + TARLA DETAYI ════════ */
 /* Tarlalarım listesi — çiftlik grupları + tarla kartları */
 .farm-group { margin-bottom: 28px; }
