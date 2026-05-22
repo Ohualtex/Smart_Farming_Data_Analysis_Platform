@@ -378,12 +378,14 @@ tarlada bağlanır. 5 sorusuna cevap arar:
 |:-:|:-:|:--|:-:|:-:|
 | 0 | 1g | Branch + plan doc + snapshot | 🟢 | ✅ |
 | 1 | 3g | 4-rol RBAC (farmer/developer/overseer/admin) + per-user data isolation | 🔴 zorunlu | ✅ (18 May) |
-| 2 | 2g | "Çiftliğim" dashboard + hesabım yenile | 🔴 zorunlu | ⏳ sırada |
-| 3 | 2g | Tarla detay sayfası | 🔴 zorunlu | ⏳ |
-| 4 | 2g | Eyleme yönelik CRUD UI | 🟡 önemli | ⏳ |
-| 5 | 1g | Per-user bildirim akışı | 🟡 önemli | ⏳ |
-| 6 | 1g | Onboarding wizard + demo seed | 🟢 cila | ⏳ |
-| 7 | 2g | Doc + sunum metni (FINAL_REPORT framing) | 🔴 zorunlu | ⏳ |
+| 2 | 2g | "Çiftliğim" dashboard + hesabım yenile | 🔴 zorunlu | ✅ (19 May) |
+| 3 | 2g | Tarla detay sayfası | 🔴 zorunlu | ✅ (20 May) |
+| 3.5 | 1g | Ön panel (auth gate) + admin kullanıcı yönetimi | 🔴 zorunlu | ✅ (21 May) |
+| — | 1g | 81-il/ulusal-ölçek iddiası temizliği → çiftçi-odaklı | 🟡 önemli | ✅ (22 May) |
+| 4 | 2g | Eyleme yönelik CRUD UI (çiftlik/tarla + sulama onay/status) | 🟡 önemli | ✅ (22 May) |
+| 5 | 1g | Per-user bildirim akışı (çan + otomatik tarama) | 🟡 önemli | ✅ (22 May) |
+| 6 | 1g | Onboarding banner + per-user demo seed | 🟢 cila | ✅ (22 May) |
+| 7 | 2g | Doc + sunum metni (FINAL_REPORT framing) | 🔴 zorunlu | ⏳ devam |
 
 **Geri-dönüş:** `v0.9.0-pre-rebuild` tag'i shiftFinal kapanışında atıldı; pivot başarısız olursa `git checkout v0.9.0-pre-rebuild` ile 5 dakikada Yol A'ya (mevcut bakanlık paneli olarak teslim) dönülür.
 
@@ -432,7 +434,31 @@ ve `c2051c8` (Adım 9-14: kalan 6 router + alerts audit fix).
 
 > Adım 17 smoke matriks farmer × 23 + developer × 23 + overseer × 23 + admin × 23 + anon × 23 senaryosu koştu; 2 sahte negatif FastAPI body-validation'ın RBAC Depends'ten önce çalışıp 422 döndürmesinden kaynaklıydı (davranış doğru).
 
-**Sıradaki (Faz 2, 19-20 May):** "Çiftliğim" dashboard — farmer için `/api/dashboard/farmer` (4 metric: bugünün toprak nemi ortalaması, son sulama, açık alert, son hastalık tanısı), `/api/auth/me` UI binding, hesabım sayfası (şifre değişikliği + farm sayımı).
+### REBUILD Faz 2-6 kapanışı (19-22 May 2026)
+
+Faz 1 (RBAC) sonrası çiftçi-odaklı ürün akışı uçtan uca tamamlandı (detay:
+[`CHANGELOG.md`](CHANGELOG.md) [Unreleased]):
+
+- **Faz 2 — "Çiftliğim" dashboard:** `GET /api/dashboard/summary` rol-aware özet
+  (4 metrik) + frontend metric kartları + Bearer helper + header user-badge +
+  Hesabım sayfası (şifre değiştir).
+- **Faz 3 — Tarla detay:** `GET /api/fields/{id}` aggregated + `/readings` trend;
+  "Tarlalarım" + parametrik detay sayfası + yaprak foto upload akışı. (Flaky JWT
+  testi de deterministik düzeltildi.)
+- **Faz 3.5 — Ön panel + admin kullanıcı yönetimi:** auth gate (login yapmadan app
+  görünmez) + admin `GET/POST/DELETE /api/auth/users` + şifre reset + Kullanıcılar sayfası.
+- **81-il temizliği:** "81 il / 7500+ / bakanlık" iddiası çiftçi-odaklı çerçeveye
+  çekildi; seed çiftçi-odaklı hale getirildi (5 kullanıcı / 3 çiftlik / 6 tarla).
+- **Faz 4 — CRUD UI:** çiftlik/tarla ekle-düzenle-sil (cascade guard) + irrigation
+  RBAC açığı kapatıldı + sulama onay/status akışı.
+- **Faz 5 — Bildirim:** `POST /api/alerts/check` (dedup'lı otomatik uyarı) + header çanı.
+- **Faz 6 — Onboarding:** `POST /api/onboarding/demo` tek-tık demo veri + boş hesap banner.
+
+**Metrikler:** pytest 622/622 · vitest 32/32 · ruff+bandit temiz. Çiftçi Ahmet'in
+5 sorusu da uçtan uca cevaplanır hale geldi.
+
+**Sıradaki (Faz 7):** FINAL_REPORT zenginleştirme + demo script güncelleme +
+README/CHANGELOG/projeakisi senkron (bu doc dahil).
 
 ### Demo hedefi (Cycle 9 sunumu için)
 
