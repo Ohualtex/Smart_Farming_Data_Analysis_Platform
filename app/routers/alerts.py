@@ -19,17 +19,26 @@ Audit bug fix (REBUILD Faz 1 / Adım 13):
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.rate_limiter import STRICT_RATE, limiter
-from app.middleware.rbac import _WRITE_ROLES, assert_farm_ownership
-from app.models.models import Farm, SystemAlert, User
+from app.middleware.rbac import _BYPASS_ROLES, _WRITE_ROLES, assert_farm_ownership
+from app.models.models import Farm, Field, PlantHealthImage, Sensor, SoilMoistureReading, SystemAlert, User
 from app.routers.auth import get_current_user_or_403
 from app.schemas.schemas import SystemAlertCreate, SystemAlertResponse, SystemAlertUpdate
 
 router = APIRouter(prefix="/api/alerts", tags=["Sistem Uyarıları"])
+
+# ─── Otomatik uyarı tarama eşikleri (REBUILD Faz 5) ──────────────
+LOW_MOISTURE_THRESHOLD = 30.0  # < bu → "low_moisture" uyarısı
+CRITICAL_MOISTURE_THRESHOLD = 20.0  # < bu → severity critical
+MOISTURE_WINDOW_HOURS = 24  # son okuma penceresi
+DISEASE_REMINDER_DAYS = 14  # bu süredir hastalık analizi yoksa hatırlat
 
 
 def _require_write(user: User) -> None:
@@ -185,3 +194,102 @@ def update_alert(
     db.commit()
     db.refresh(alert)
     return alert
+
+
+@router.post(
+    "/check",
+    summary="Tarlaları tara, otomatik uyarı üret (rol-aware, dedup'lı)",
+    description=(
+        "On-demand bildirim tarama. Kapsamdaki tarlalarda iki koşulu kontrol eder: "
+        "(1) son 24 saat ortalama toprak nemi < %30 → 'low_moisture' (kritik < %20); "
+        "(2) son 14 gündür hastalık analizi yoksa → 'disease_reminder' (low). "
+        "Açık (resolved=False) aynı tip+tarla uyarısı varsa tekrar üretmez (dedup). "
+        "Farmer kendi tarlalarını tarar; admin tüm sistem; overseer/developer 403."
+    ),
+    responses={
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "Yazma yetkisi yok (overseer/developer)"},
+    },
+)
+@limiter.limit(STRICT_RATE)
+def check_alerts(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_403),
+) -> dict:
+    """Kapsamdaki tarlaları tara; düşük nem / hastalık hatırlatması üret (dedup'lı)."""
+    _require_write(current_user)
+    now = datetime.now(UTC)
+    since = now - timedelta(hours=MOISTURE_WINDOW_HOURS)
+    disease_cutoff = now - timedelta(days=DISEASE_REMINDER_DAYS)
+
+    # Kapsamdaki tarlalar (farmer: kendi; admin: tümü)
+    fields_q = db.query(Field.id, Field.name, Field.farm_id).join(Farm, Field.farm_id == Farm.id)
+    if current_user.role not in _BYPASS_ROLES:
+        fields_q = fields_q.filter(Farm.user_id == current_user.id)
+    fields = fields_q.all()
+
+    # Dedup: kapsamdaki açık alert'lerin (field_id, alert_type) set'i
+    open_alerts = (
+        _scope_alerts_to_user(db.query(SystemAlert.field_id, SystemAlert.alert_type), current_user)
+        .filter(SystemAlert.is_resolved.is_(False))
+        .all()
+    )
+    existing = {(fid, atype) for fid, atype in open_alerts}
+
+    created: list[SystemAlert] = []
+    for field_id, field_name, farm_id in fields:
+        # ─── Koşul 1: düşük toprak nemi ──────────────────────────
+        avg_moisture = (
+            db.query(func.avg(SoilMoistureReading.moisture_percent))
+            .join(Sensor, SoilMoistureReading.sensor_id == Sensor.id)
+            .filter(Sensor.field_id == field_id, SoilMoistureReading.reading_timestamp >= since)
+            .scalar()
+        )
+        if (
+            avg_moisture is not None
+            and avg_moisture < LOW_MOISTURE_THRESHOLD
+            and (field_id, "low_moisture") not in existing
+        ):
+            severity = "critical" if avg_moisture < CRITICAL_MOISTURE_THRESHOLD else "medium"
+            alert = SystemAlert(
+                farm_id=farm_id,
+                field_id=field_id,
+                alert_type="low_moisture",
+                severity=severity,
+                message=f"{field_name}: toprak nemi düşük (%{round(avg_moisture, 1)}) — sulama önerilir.",
+                is_resolved=False,
+            )
+            db.add(alert)
+            created.append(alert)
+            existing.add((field_id, "low_moisture"))
+
+        # ─── Koşul 2: hastalık kontrolü hatırlatması ─────────────
+        last_disease = (
+            db.query(func.max(PlantHealthImage.captured_at)).filter(PlantHealthImage.field_id == field_id).scalar()
+        )
+        needs_reminder = (
+            last_disease is None
+            or (last_disease.replace(tzinfo=UTC) if last_disease.tzinfo is None else last_disease) < disease_cutoff
+        )
+        if needs_reminder and (field_id, "disease_reminder") not in existing:
+            alert = SystemAlert(
+                farm_id=farm_id,
+                field_id=field_id,
+                alert_type="disease_reminder",
+                severity="low",
+                message=f"{field_name}: {DISEASE_REMINDER_DAYS} gündür hastalık kontrolü yapılmadı — yaprak fotoğrafı yükle.",
+                is_resolved=False,
+            )
+            db.add(alert)
+            created.append(alert)
+            existing.add((field_id, "disease_reminder"))
+
+    db.commit()
+    for a in created:
+        db.refresh(a)
+    return {
+        "checked_fields": len(fields),
+        "created": len(created),
+        "alerts": [SystemAlertResponse.model_validate(a).model_dump(mode="json") for a in created],
+    }
