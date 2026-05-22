@@ -33,7 +33,7 @@
 
 **Tek satır:** SFDAP, sensör ve hava durumu verilerini ML modelleriyle birleştirerek çiftçilere sulama, gübreleme ve bitki sağlığı önerileri sunan kapsamlı bir veri analizi ve karar destek platformudur.
 
-**Ölçek:** 81 Türk ili × 2 tarla = 162 tarla, 324 sensör, ~4 860 sensör okuması, 1 215 hava durumu kaydı (seed verisi).
+**Ölçek:** Çiftçi-odaklı demo seed — 5 kullanıcı (3 çiftçi + admin + gözetmen), 3 çiftlik (farklı bölgeler), 6 tarla, 6 sensör, ~90 sensör okuması, hava/sulama/hastalık/toprak/uyarı kayıtları. (Üretim ölçeği kullanıcı sayısıyla doğrusal büyür; sistem 81-il "ulusal" iddiasından vazgeçti.)
 
 ## 2. Hedefler ve Kapsam
 
@@ -50,8 +50,8 @@ vermeli:
 4. **"Komşulara göre durumum nasıl?"**
 5. **"Bir sorun çıkarsa haberim olacak mı?"**
 
-İkincil persona: **Tarım Bakanlığı analisti** — 81 il düzeyinde toplu
-gözetim için harita + analytics + raporlama panosu (admin rolü).
+İkincil persona: **sistem gözetmeni** (admin/overseer rolü) — tüm çiftliklerde
+read-only gözetim için harita + analytics + raporlama panosu.
 
 ### İşlevsel hedefler
 
@@ -60,7 +60,7 @@ gözetim için harita + analytics + raporlama panosu (admin rolü).
 - 🦠 CNN tabanlı yaprak hastalığı analizi (heuristic + ONNX-ready) + tarla bağlamlı kayıt
 - 📡 IoT/MQTT sensör stream + 30 günden eski okumaların aylık aggregate'e arşivlenmesi
 - 🔔 Per-user bildirim akışı (toprak nemi düşüklüğü, hastalık kontrolü hatırlatması)
-- 🗺️ Bakanlık panosu: 81 il çiftlik dağılım haritası + bölge bazlı analytics
+- 🗺️ Gözetmen panosu: sistemdeki çiftliklerin dağılım haritası + bölge bazlı analytics
 
 ### İşlevsel olmayan hedefler
 
@@ -75,7 +75,7 @@ gözetim için harita + analytics + raporlama panosu (admin rolü).
 
 - E-posta/SMS bildirim gönderimi (alerts dashboard'da görünür ama push yok)
 - Mobil native uygulama (PWA roadmap'te)
-- Çoklu-tenant SaaS (cooperatif/bakanlık paylaşımı)
+- Çoklu-tenant SaaS (kurumsal/kooperatif paylaşımı)
 - Gerçek CNN model eğitimi (PlantVillage dataset)
 
 ## 3. Geliştirme Süreci — 9 Cycle

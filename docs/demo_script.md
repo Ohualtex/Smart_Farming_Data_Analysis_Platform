@@ -22,7 +22,7 @@ make run                 # ya da: .venv/bin/uvicorn app.main:app --port 8000
 **DB hazırlığı (eğer ilk demo değilse):**
 ```bash
 rm sfdap_dev.db
-python database/seed_data.py    # 7500+ kayıtlık seed yüklenir, ~5 sn
+python database/seed_data.py    # çiftçi-odaklı demo seed (5 kullanıcı, 3 çiftlik, 6 tarla), ~2 sn
 ```
 
 ---
@@ -31,13 +31,14 @@ python database/seed_data.py    # 7500+ kayıtlık seed yüklenir, ~5 sn
 
 ### Adım 1 — Açılış & Bağlam (1 dk)
 
-> *"Merhaba. Bu, **SFDAP — Akıllı Tarım Veri Analizi Platformu**. Türkiye'nin
-> tüm 81 ilinde toprak sensörleri, hava durumu ve makine öğrenimi
-> tahminlerini tek panelde birleştiren bir akademik proje. 5 kişilik bir
-> ekiple Scrum metodolojisiyle 6 ay içinde geliştirdik."*
+> *"Merhaba. Bu, **SFDAP — Akıllı Tarım Veri Analizi Platformu**. Çiftçinin
+> kendi tarlalarındaki toprak sensörleri, hava durumu ve makine öğrenimi
+> tahminlerini tek panelde birleştiren bir akademik proje; admin/gözetmen
+> rolleri sistem-geneli gözetim sağlar. 5 kişilik bir ekiple Scrum
+> metodolojisiyle 6 ay içinde geliştirdik."*
 
-**Göster:** Dashboard ana sayfa
-- Hero banner: "81 il · 324 sensör · 4860 okuma · 17 bitki türü"
+**Göster:** Dashboard ana sayfa (çiftçi girişiyle)
+- Hero banner: çiftlik · sensör · okuma sayıları (giriş yapan çiftçiye göre) · 17 bitki türü
 - Üst kartlar: günlük genel durum
 - Filiz maskotu sağ alt köşede karşılar
 

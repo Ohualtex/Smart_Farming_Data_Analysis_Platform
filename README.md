@@ -38,7 +38,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
 |:--|:--|:--|
 | 🧑‍🌾 **Çiftçi** | Yalnız kendi çiftliği, tarlaları, sensörleri | Tarla başına sulama önerisi, yaprak hastalığı tespiti, gübre takvimi |
 | 🛠️ **Geliştirici** | API key + Swagger + test endpoint'leri | Sistem entegrasyonu, IoT cihaz bağlama, fuzz/load test |
-| 🏛️ **Genel Gözetmen** | Tüm çiftliklere read-only, harita + analytics | Bakanlık/araştırmacı: 81 il düzeyinde gözetim ve raporlama |
+| 🏛️ **Genel Gözetmen** | Tüm çiftliklere read-only, harita + analytics | Sistem-geneli gözetim ve raporlama (tüm çiftlikler, salt-okunur) |
 | 👑 **Admin** | Tüm sistem + kullanıcı yönetimi + audit log | Operasyonel kontrol, rol atama, kritik alert yönetimi |
 
 > **`rebuild` branch — aktif geliştirme:** 4-rollü RBAC, rol-spesifik dashboard'lar, eyleme yönelik akışlar ve onboarding burada inşa ediliyor. Detaylı plan: [`docs/REBUILD_ROADMAP.md`](docs/REBUILD_ROADMAP.md).
@@ -60,7 +60,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
             └─ APScheduler (haftalık archive, günlük hava verisi fetch)
 ```
 
-**Ölçek:** 12 router · ~47 endpoint · 15 ORM tablo · 81 il × 7 bölge × 17 bitki = 7500+ kayıt seed verisi.
+**Ölçek:** 12 router · ~47 endpoint · 15 ORM tablo · çiftçi-odaklı demo seed (birkaç çiftçi · çoklu çiftlik/tarla · 17 bitki türü referansı).
 
 **Diyagram + ER şeması:** [`docs/architecture.md`](docs/architecture.md) · [`database/sfdap_schema.sql`](database/sfdap_schema.sql)
 

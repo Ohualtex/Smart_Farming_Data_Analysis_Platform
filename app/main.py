@@ -105,7 +105,7 @@ TAGS_METADATA = [
     {
         "name": "Analitik & Görselleştirme",
         "description": "📊 **Toplu istatistik, dönem karşılaştırma ve PDF/Excel rapor üretimi.** "
-        "81 il × 7 bölge bazlı kırılımlar, dashboard'un veri kaynağıdır.",
+        "Sistemdeki çiftliklerin bölge bazlı kırılımları (admin/gözetmen sistem özeti).",
     },
     {
         "name": "Çiftliğim",
@@ -157,8 +157,9 @@ app = FastAPI(
     description="""
 ## 🌾 Akıllı Tarım Veri Analizi Platformu
 
-Bu API, **çiftçilerin tarımsal verimliliğini artırmak** için 81 il genelinden toplanan
-toprak sensörleri, hava durumu verileri ve makine öğrenimi tahminlerini birleştirir.
+Bu API, **çiftçilerin tarımsal verimliliğini artırmak** için çiftçinin kendi tarlalarından
+toplanan toprak sensörleri, hava durumu verileri ve makine öğrenimi tahminlerini birleştirir.
+Çiftçi yalnız kendi çiftliğini görür; admin/gözetmen tüm çiftliklerde sistem-geneli özet alır.
 
 ### 🎯 Ne sunuyoruz?
 
@@ -187,7 +188,7 @@ Yukarıdaki **🔒 Authorize** butonuna tıklayıp şu anahtarı girin: `dev-api
 ### 👥 Bu Platform Hakkında
 
 **SFDAP**, 5 kişilik öğrenci ekibi tarafından geliştirilen Scrum tabanlı bir projedir.
-Türkiye'nin tüm illerinde geçerli verilerle çalışır.
+Çiftçi-odaklı bir saha aracıdır; admin/gözetmen rolleri sistem-geneli gözetim sağlar.
 """,
     docs_url="/docs",
     redoc_url="/redoc",

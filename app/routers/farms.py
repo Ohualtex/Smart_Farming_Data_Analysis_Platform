@@ -42,7 +42,7 @@ MAX_SKIP = 1_000_000
     summary="Tüm çiftlikleri listele (rol-aware)",
     description=(
         "Farmer: yalnız kendi çiftlikleri. admin/overseer/developer: tüm sistem. "
-        "Region (7 coğrafi bölge) ve city (81 il) ile filtrelenebilir; "
+        "Region (7 coğrafi bölge) ve city (il adı) ile filtrelenebilir; "
         "pagination `skip` + `limit` ile."
     ),
     responses={401: {"description": "Bearer token gerekli"}},

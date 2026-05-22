@@ -20,7 +20,7 @@ Rol semantik:
     farmer    — kendi farm/field/sensor zinciri (write + read)
     developer — test/integration namespace (geliştirici aracı; prod
                 yazılarına dokunamaz, ama read için sistem-geneli)
-    overseer  — sistem-geneli read-only (bakanlık/araştırmacı)
+    overseer  — sistem-geneli read-only (sistem gözetmeni)
     admin     — tüm sistem read + write + kullanıcı yönetimi
 """
 

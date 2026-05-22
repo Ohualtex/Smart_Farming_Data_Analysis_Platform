@@ -64,7 +64,7 @@ describe("TURKEY_CENTER / TURKEY_ZOOM — harita merkez sabitleri", () => {
     expect(lng).toBeLessThanOrEqual(45);
   });
 
-  it("default zoom ulusal ölçek için makul (5-7)", () => {
+  it("default zoom Türkiye geneli görünüm için makul (5-7)", () => {
     expect(TURKEY_ZOOM).toBeGreaterThanOrEqual(5);
     expect(TURKEY_ZOOM).toBeLessThanOrEqual(7);
   });

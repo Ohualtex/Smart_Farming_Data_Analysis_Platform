@@ -76,9 +76,9 @@ def get_analytics_summary(
 
     # ─── HAVA DURUMU VERİLERİNİ TEK SORGUDA ÇEK ──────────────────
     # N+1 önleme: Önceki yaklaşım her çiftlik için ayrı sorgu yapıyordu
-    # (81 il × 2 döngü ≈ 162 query). Şimdi tüm 'since' sonrası WeatherData
-    # kayıtlarını tek sorguda alıp Python'da farm_id ile gruplandırıyoruz.
-    # EN: N+1 fix — was 1 + 2N queries (≈162 for 81 farms); now 1 + 1 = 2.
+    # (çok-çiftlik senaryosunda 1 + 2N query). Şimdi tüm 'since' sonrası
+    # WeatherData kayıtlarını tek sorguda alıp Python'da farm_id ile gruplandırıyoruz.
+    # EN: N+1 fix — was 1 + 2N queries; now 1 + 1 = 2.
     farms = db.query(Farm).all()
     all_weather_records = db.query(WeatherData).filter(WeatherData.recorded_at >= since).all()
 

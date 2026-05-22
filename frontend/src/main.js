@@ -866,7 +866,7 @@ function renderSensorTypeChart(dist) {
 
 function renderFarmTempChart(comparison) {
     if (!comparison.length) return;
-    // Bölge bazlı gruplama (81 il → 7 bölge)
+    // Bölge bazlı gruplama (il → 7 coğrafi bölge)
     const regionMap = {};
     comparison.forEach(f => {
         const region = f.region || 'Diğer';

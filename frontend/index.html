@@ -211,11 +211,11 @@
             <section class="page active" id="page-dashboard">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌾</span> Hoş geldin, çiftçi!</h1>
-                    <p>Türkiye'nin dört bir yanından toplanan toprak, hava ve sulama bilgilerini tek bir ekranda gör. Akıllı asistan seninle çalışıyor.</p>
+                    <p>Çiftliğinden toplanan toprak, hava ve sulama bilgilerini tek bir ekranda gör. Akıllı asistan seninle çalışıyor.</p>
                     <div class="hero-stats">
-                        <div class="hero-stat">🇹🇷 <strong id="heroFarms">81</strong> il</div>
-                        <div class="hero-stat">📡 <strong id="heroSensors">324</strong> sensör</div>
-                        <div class="hero-stat">📊 <strong id="heroReadings">4860</strong> okuma</div>
+                        <div class="hero-stat">🚜 <strong id="heroFarms">—</strong> çiftlik</div>
+                        <div class="hero-stat">📡 <strong id="heroSensors">—</strong> sensör</div>
+                        <div class="hero-stat">📊 <strong id="heroReadings">—</strong> okuma</div>
                         <div class="hero-stat">🌱 <strong>17</strong> bitki türü</div>
                     </div>
                 </div>
@@ -277,7 +277,7 @@
             <section class="page" id="page-weather">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌤️</span> Hava Durumu</h1>
-                    <p>81 ildeki çiftliklerden sıcaklık, nem, yağış ve rüzgar bilgilerini görebilirsin. Hava verileri her gün otomatik güncellenir.</p>
+                    <p>Çiftliğinin sıcaklık, nem, yağış ve rüzgar bilgilerini görebilirsin. Hava verileri her gün otomatik güncellenir.</p>
                 </div>
                 <div class="section-header">🌡️ Şu Anki Durum</div>
                 <div class="cards-grid" id="weatherCards" aria-busy="true" aria-live="polite"></div>
@@ -401,13 +401,13 @@
                 </div>
             </section>
 
-            <!-- ═══ MAP (TÜRKİYE HARİTASI) PAGE ═══ -->
-            <!-- shiftFinal Cycle 9 prep — Leaflet ile 81 il çiftlik dağılımı.
-                 Veri kaynağı: GET /api/farms/?limit=500 (yeni Cycle 9 router). -->
+            <!-- ═══ MAP (ÇİFTLİK HARİTASI) PAGE ═══ -->
+            <!-- Leaflet ile sistemdeki çiftliklerin coğrafi dağılımı (admin/gözetmen sistem özeti).
+                 Veri kaynağı: GET /api/farms/?limit=500. -->
             <section class="page" id="page-map">
                 <div class="hero-banner">
-                    <h1><span class="hero-emoji">🗺️</span> Türkiye Çiftlik Haritası</h1>
-                    <p>81 ildeki çiftliklerin coğrafi dağılımı. Marker rengi bölgeye göre kodlanmıştır; tıklayınca çiftlik detayları açılır.</p>
+                    <h1><span class="hero-emoji">🗺️</span> Çiftlik Haritası</h1>
+                    <p>Sistemdeki çiftliklerin coğrafi dağılımı. Marker rengi bölgeye göre kodlanmıştır; tıklayınca çiftlik detayları açılır.</p>
                 </div>
 
                 <div class="section-header">🎨 Bölge Renk Kodu</div>

@@ -245,10 +245,10 @@ def test_analytics_summary_avoids_n_plus_one(client, db):
     """N+1 regresyon koruması — farm başına ek WeatherData sorgusu yapılmamalı.
 
     Önceki implementasyon her çiftlik için 2 ayrı WeatherData sorgusu atıyordu
-    (81 il × 2 = ~162 sorgu). Refactor sonrası tüm WeatherData kayıtları tek
+    (çok-çiftlik × 2 ≈ 1+2N sorgu). Refactor sonrası tüm WeatherData kayıtları tek
     sorguda alınmalı.
 
-    EN: Regression guard — was 1+2N WeatherData queries (≈162 for 81 farms);
+    EN: Regression guard — was 1+2N WeatherData queries;
     after the refactor only one WeatherData SELECT is allowed per request.
     """
     from sqlalchemy import event
