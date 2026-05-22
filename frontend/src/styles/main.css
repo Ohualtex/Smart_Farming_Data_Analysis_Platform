@@ -264,6 +264,51 @@ input, select { font-family: var(--font); }
     color: var(--text); border: 1px solid var(--border);
 }
 
+/* ═══ REBUILD Faz 5 — Bildirim çanı ════════════════════════════ */
+.notif-wrap { position: relative; display: inline-flex; }
+.notif-bell {
+    position: relative; width: 38px; height: 30px; padding: 0;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer; font-size: 1rem; transition: border-color .2s ease, background .2s ease;
+}
+.notif-bell:hover { border-color: var(--primary); background: var(--primary-glow); }
+.notif-bell:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.notif-bell.has-unread { animation: bellPulse 2s ease-in-out infinite; }
+@keyframes bellPulse { 0%,100% { transform: rotate(0); } 4% { transform: rotate(-12deg); } 8% { transform: rotate(10deg); } 12% { transform: rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .notif-bell.has-unread { animation: none; } }
+.notif-count {
+    position: absolute; top: -6px; right: -6px; min-width: 17px; height: 17px;
+    padding: 0 4px; border-radius: 999px; background: #ef4444; color: #fff;
+    font-size: .65rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+}
+.notif-dropdown {
+    position: absolute; top: 38px; right: 0; width: 320px; max-height: 420px; overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow); z-index: 200; padding: 6px;
+}
+.notif-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+}
+.notif-list { display: flex; flex-direction: column; gap: 6px; }
+.notif-empty { text-align: center; color: var(--text-muted); padding: 20px; font-size: .85rem; }
+.notif-item {
+    padding: 8px 10px; border-radius: 8px; background: var(--surface-2);
+    border-left: 3px solid var(--border); font-size: .82rem;
+}
+.notif-item.severity-critical { border-left-color: #ef4444; }
+.notif-item.severity-medium { border-left-color: #f59e0b; }
+.notif-item.severity-low { border-left-color: #3b82f6; }
+.notif-item-msg { color: var(--text); margin-bottom: 6px; }
+.notif-item-foot { display: flex; justify-content: space-between; align-items: center; }
+.notif-item-sev { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); }
+.notif-footer {
+    display: block; text-align: center; padding: 8px; margin-top: 4px;
+    border-top: 1px solid var(--border); color: var(--primary);
+    text-decoration: none; font-size: .82rem; font-weight: 600;
+}
+.notif-footer:hover { background: var(--primary-glow); }
+
 /* ═══ REBUILD Faz 3 / Adım 6 — TARLALARIM + TARLA DETAYI ════════ */
 /* Tarlalarım listesi — çiftlik grupları + tarla kartları */
 .farm-group { margin-bottom: 28px; }

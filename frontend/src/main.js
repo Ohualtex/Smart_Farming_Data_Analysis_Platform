@@ -1505,6 +1505,7 @@ async function refreshAuthState() {
         _renderUserBadge(null);
         _applyRoleVisibility(null);
         _applyAuthGate(null);
+        _hideBell();
         return;
     }
     try {
@@ -1517,6 +1518,7 @@ async function refreshAuthState() {
         _renderUserBadge(me);
         _applyRoleVisibility(me);
         _applyAuthGate(me);
+        refreshBell();
         // Hesabım sayfası alanları — null-safe (page-auth artık yalnız logged-in).
         const nameEl = document.getElementById('authName');
         if (nameEl) nameEl.textContent = me.name;
@@ -1534,8 +1536,80 @@ async function refreshAuthState() {
         _renderUserBadge(null);
         _applyRoleVisibility(null);
         _applyAuthGate(null);
+        _hideBell();
     }
 }
+
+// ─── BİLDİRİM ÇANI (REBUILD Faz 5) ────────────────────────────
+function _hideBell() {
+    const wrap = document.getElementById('notifWrap');
+    if (wrap) wrap.style.display = 'none';
+    const dd = document.getElementById('notifDropdown');
+    if (dd) dd.style.display = 'none';
+}
+
+/** Açık uyarıları çek, çan sayısını + dropdown listesini güncelle. */
+async function refreshBell() {
+    const wrap = document.getElementById('notifWrap');
+    if (!wrap) return;
+    wrap.style.display = 'inline-flex';
+    const alerts = await apiAuth('/api/alerts/?is_resolved=false&limit=20');
+    const countEl = document.getElementById('notifCount');
+    const listEl = document.getElementById('notifList');
+    const open = alerts || [];
+    if (countEl) {
+        countEl.textContent = open.length > 9 ? '9+' : String(open.length);
+        countEl.style.display = open.length > 0 ? 'inline-flex' : 'none';
+    }
+    document.getElementById('notifBell')?.classList.toggle('has-unread', open.length > 0);
+    if (listEl) {
+        listEl.innerHTML = open.length === 0
+            ? '<div class="notif-empty">Açık uyarı yok ✅</div>'
+            : open.slice(0, 10).map(a => `
+                <div class="notif-item severity-${_escAttr(a.severity)}">
+                    <div class="notif-item-msg">${_escAttr(a.message)}</div>
+                    <div class="notif-item-foot">
+                        <span class="notif-item-sev">${_escAttr(a.severity)}</span>
+                        <button class="btn-mini" onclick="resolveFromBell(${a.id})">Çöz</button>
+                    </div>
+                </div>`).join('');
+    }
+}
+
+function toggleBell() {
+    const dd = document.getElementById('notifDropdown');
+    const bell = document.getElementById('notifBell');
+    if (!dd) return;
+    const open = dd.style.display !== 'none' && dd.style.display !== '';
+    dd.style.display = open ? 'none' : 'block';
+    if (bell) bell.setAttribute('aria-expanded', open ? 'false' : 'true');
+    if (!open) refreshBell();  // açarken tazele
+}
+
+/** "Kontrol et" — tarlaları tara, uyarı üret, çanı tazele. */
+async function runAlertCheck() {
+    const res = await apiAuth('/api/alerts/check', { method: 'POST' });
+    if (res) {
+        showToast(res.created > 0 ? `${res.created} yeni uyarı üretildi` : 'Yeni uyarı yok ✅', res.created > 0 ? 'warning' : 'success');
+        refreshBell();
+    }
+}
+
+/** Çan dropdown'ından uyarı çöz. */
+async function resolveFromBell(alertId) {
+    const res = await apiAuth(`/api/alerts/${alertId}`, { method: 'PATCH', body: JSON.stringify({ is_resolved: true }) });
+    if (res) { showToast('Uyarı çözüldü', 'success'); refreshBell(); }
+}
+
+// Dropdown dışına tıklayınca kapat
+document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('notifWrap');
+    const dd = document.getElementById('notifDropdown');
+    if (wrap && dd && !wrap.contains(e.target) && dd.style.display === 'block') {
+        dd.style.display = 'none';
+        document.getElementById('notifBell')?.setAttribute('aria-expanded', 'false');
+    }
+});
 
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
@@ -2146,6 +2220,9 @@ Object.assign(window, {
     approveIrrigation,
     updateIrrigationStatus,
     addFieldIrrigation,
+    toggleBell,
+    runAlertCheck,
+    resolveFromBell,
     loadUsers,
     createUser,
     changeUserRole,

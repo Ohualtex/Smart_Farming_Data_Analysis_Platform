@@ -146,6 +146,22 @@
                 </div>
             </div>
             <div class="header-right">
+                <!-- Bildirim çanı — REBUILD Faz 5: açık uyarı sayısı + dropdown.
+                     refreshBell() doldurur; login yoksa gizli. -->
+                <div class="notif-wrap" id="notifWrap" style="display:none;">
+                    <button class="notif-bell" id="notifBell" onclick="toggleBell()"
+                            aria-label="Bildirimler" aria-haspopup="true" aria-expanded="false" title="Bildirimler">
+                        🔔<span class="notif-count" id="notifCount" style="display:none;">0</span>
+                    </button>
+                    <div class="notif-dropdown" id="notifDropdown" role="region" aria-label="Bildirimler" style="display:none;">
+                        <div class="notif-head">
+                            <strong>Bildirimler</strong>
+                            <button class="btn-mini" onclick="runAlertCheck()" title="Tarlaları tara">🔄 Kontrol et</button>
+                        </div>
+                        <div class="notif-list" id="notifList" aria-live="polite"></div>
+                        <a class="notif-footer" href="#alerts" onclick="navigate('alerts')">Tümünü gör →</a>
+                    </div>
+                </div>
                 <!-- Kullanıcı rozeti — login sonrası refreshAuthState() doldurur.
                      REBUILD Faz 2 / Adım 7: rol-aware badge. Tıklayınca Hesabım. -->
                 <a class="user-badge" id="userBadge" href="#auth" style="display:none;"
