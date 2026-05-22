@@ -18,7 +18,7 @@ health, analytics and system alerts. Auth schemas live in app/routers/auth.py.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
 
@@ -161,6 +161,17 @@ class IrrigationResponse(BaseModel):
     scheduled_date: UtcDateTime
     water_amount_liters: float | None
     status: str
+
+
+class IrrigationStatusUpdate(BaseModel):
+    """Sulama programı durum güncelleme — REBUILD Faz 4 onay/takip akışı.
+
+    pending (öneri onaylandı, bekliyor) → completed (yapıldı) | cancelled (iptal).
+    """
+
+    model_config = ConfigDict(json_schema_extra={"example": {"status": "completed"}})
+
+    status: Literal["pending", "completed", "cancelled"]
 
 
 class IrrigationPredictionRequest(BaseModel):
@@ -422,6 +433,76 @@ class FarmDetailResponse(FarmResponse):
     """Farm detay yanıtı (`GET /api/farms/{farm_id}`) — `fields` nested."""
 
     fields: list[FieldSummary]
+
+
+# ========== FARM / FIELD WRITE (REBUILD Faz 4 — CRUD) ==========
+class FarmCreate(BaseModel):
+    """Yeni çiftlik oluşturma — `user_id` current_user'dan alınır (body'de yok)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "Ahmet'in Çiftliği",
+                "city": "Konya",
+                "region": "İç Anadolu",
+                "area_hectares": 8.0,
+                "location_lat": 37.87,
+                "location_lng": 32.48,
+            }
+        }
+    )
+
+    name: str
+    city: str | None = None
+    region: str | None = None
+    area_hectares: float | None = None
+    location_lat: float | None = None
+    location_lng: float | None = None
+
+
+class FarmUpdate(BaseModel):
+    """Çiftlik kısmi güncelleme — yalnız verilen alanlar değişir (exclude_unset)."""
+
+    name: str | None = None
+    city: str | None = None
+    region: str | None = None
+    area_hectares: float | None = None
+    location_lat: float | None = None
+    location_lng: float | None = None
+
+
+class FieldCreate(BaseModel):
+    """Yeni tarla oluşturma — `farm_id` sahiplik kontrolünden geçer."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "farm_id": 1,
+                "name": "Tarla A",
+                "soil_type": "killi",
+                "area_hectares": 3.5,
+                "elevation_m": 1020.0,
+                "crop_id": 1,
+            }
+        }
+    )
+
+    farm_id: SqliteSafeInt
+    name: str
+    soil_type: str | None = None
+    area_hectares: float | None = None
+    elevation_m: float | None = None
+    crop_id: SqliteSafeInt | None = None
+
+
+class FieldUpdate(BaseModel):
+    """Tarla kısmi güncelleme — yalnız verilen alanlar değişir."""
+
+    name: str | None = None
+    soil_type: str | None = None
+    area_hectares: float | None = None
+    elevation_m: float | None = None
+    crop_id: SqliteSafeInt | None = None
 
 
 class SoilAnalysisResponse(BaseModel):

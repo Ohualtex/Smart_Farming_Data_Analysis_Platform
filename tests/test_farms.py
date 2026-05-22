@@ -251,3 +251,83 @@ class TestOverseerAndDeveloperScope:
         r = client.get("/api/farms/")
         assert r.status_code == 200
         assert len(r.json()) == 3
+
+
+# ───── REBUILD Faz 4 — CRUD write testleri ──────────────────────────────
+class TestFarmWrite:
+    """POST/PATCH/DELETE /api/farms — rol-aware + cascade guard."""
+
+    def test_farmer_creates_own_farm(self, farmer_client):
+        client, user = farmer_client
+        r = client.post(
+            "/api/farms/",
+            json={"name": "Yeni Çiftlik", "city": "Konya", "region": "İç Anadolu", "area_hectares": 5.0},
+        )
+        assert r.status_code == 201
+        data = r.json()
+        assert data["name"] == "Yeni Çiftlik"
+        assert data["user_id"] == user.id  # sahip = current_user
+
+    def test_overseer_cannot_create_403(self, overseer_client):
+        client, _ = overseer_client
+        r = client.post("/api/farms/", json={"name": "X", "region": "Ege"})
+        assert r.status_code == 403
+
+    def test_developer_cannot_create_403(self, developer_client):
+        client, _ = developer_client
+        r = client.post("/api/farms/", json={"name": "X", "region": "Ege"})
+        assert r.status_code == 403
+
+    def test_anon_cannot_create_401(self, anon_client):
+        r = anon_client.post("/api/farms/", json={"name": "X", "region": "Ege"})
+        assert r.status_code == 401
+
+    def test_farmer_updates_own_farm(self, farmer_client, db):
+        client, user = farmer_client
+        farm = Farm(user_id=user.id, name="Eski Ad", region="Ege")
+        db.add(farm)
+        db.commit()
+        r = client.patch(f"/api/farms/{farm.id}", json={"name": "Yeni Ad", "area_hectares": 9.0})
+        assert r.status_code == 200
+        assert r.json()["name"] == "Yeni Ad"
+        assert r.json()["area_hectares"] == 9.0
+
+    def test_farmer_cannot_update_others_farm_403(self, farmer_client, db):
+        client, _ = farmer_client
+        other = Farm(user_id=9999, name="Başka", region="Marmara")
+        db.add(other)
+        db.commit()
+        r = client.patch(f"/api/farms/{other.id}", json={"name": "Hack"})
+        assert r.status_code == 403
+
+    def test_delete_farm_without_fields_204(self, farmer_client, db):
+        client, user = farmer_client
+        farm = Farm(user_id=user.id, name="Boş Çiftlik", region="Ege")
+        db.add(farm)
+        db.commit()
+        fid = farm.id
+        r = client.delete(f"/api/farms/{fid}")
+        assert r.status_code == 204
+        assert db.query(Farm).filter(Farm.id == fid).first() is None
+
+    def test_delete_farm_with_fields_409(self, farmer_client, db):
+        client, user = farmer_client
+        farm = Farm(user_id=user.id, name="Dolu Çiftlik", region="Ege")
+        db.add(farm)
+        db.flush()
+        db.add(Field(farm_id=farm.id, name="Tarla", soil_type="killi"))
+        db.commit()
+        r = client.delete(f"/api/farms/{farm.id}")
+        assert r.status_code == 409
+        assert db.query(Farm).filter(Farm.id == farm.id).first() is not None
+
+    def test_farmer_cannot_delete_others_farm_403(self, farmer_client, db):
+        client, _ = farmer_client
+        other = Farm(user_id=9999, name="Başka", region="Marmara")
+        db.add(other)
+        db.commit()
+        assert client.delete(f"/api/farms/{other.id}").status_code == 403
+
+    def test_update_missing_farm_404(self, farmer_client):
+        client, _ = farmer_client
+        assert client.patch("/api/farms/999999", json={"name": "X"}).status_code == 404
