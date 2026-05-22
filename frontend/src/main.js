@@ -1520,8 +1520,9 @@ function _applyAuthGate(user) {
  */
 function _applyRoleVisibility(user) {
     document.querySelectorAll('[data-role]').forEach(el => {
-        const need = el.getAttribute('data-role');
-        el.style.display = (user && user.role === need) ? '' : 'none';
+        // data-role tek rol ("admin") veya virgüllü çoklu rol ("admin,overseer,developer")
+        const roles = (el.getAttribute('data-role') || '').split(',').map(r => r.trim());
+        el.style.display = (user && roles.includes(user.role)) ? '' : 'none';
     });
 }
 
