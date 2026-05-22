@@ -220,6 +220,50 @@ input, select { font-family: var(--font); }
 .btn-mini.btn-danger { color: #ef4444; }
 .btn-mini.btn-danger:hover { border-color: #ef4444; background: rgba(239,68,68,.12); }
 
+/* ═══ REBUILD Faz 4 — CRUD UI (çiftlik/tarla/sulama) ════════════ */
+.crud-actionbar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.btn-secondary {
+    padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: .9rem; font-weight: 600;
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    transition: border-color .2s ease, background .2s ease;
+}
+.btn-secondary:hover { border-color: var(--primary); background: var(--primary-glow); }
+.crud-form { margin-bottom: 20px; }
+.crud-form h4 { margin-bottom: 12px; }
+
+/* Çiftlik grup başlığı — ad + aksiyon butonları */
+.farm-group-header {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.farm-actions { display: inline-flex; gap: 6px; flex-shrink: 0; }
+
+/* Tarla kartı + sil butonu sarmalayıcı */
+.field-card-wrap { position: relative; }
+.field-card-del {
+    position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity .2s ease;
+}
+.field-card-wrap:hover .field-card-del { opacity: 1; }
+
+/* Tarla detay aksiyonları (hero altı) */
+.field-detail-actions { display: flex; gap: 8px; margin-top: 14px; }
+
+/* Sulama durum rozeti */
+.irr-status { padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 700; }
+.irr-pending   { background: rgba(245,158,11,.14); color: #f59e0b; }
+.irr-completed { background: rgba(34,197,94,.14); color: #22c55e; }
+.irr-cancelled { background: rgba(107,114,128,.16); color: #9ca3af; }
+
+/* Sulama onay bloğu (predict sonucu) */
+.irr-approve {
+    margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border);
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.irr-approve label { font-size: .82rem; color: var(--text-muted); }
+.irr-approve select {
+    padding: 6px 10px; border-radius: 6px; background: var(--surface-2);
+    color: var(--text); border: 1px solid var(--border);
+}
+
 /* ═══ REBUILD Faz 3 / Adım 6 — TARLALARIM + TARLA DETAYI ════════ */
 /* Tarlalarım listesi — çiftlik grupları + tarla kartları */
 .farm-group { margin-bottom: 28px; }

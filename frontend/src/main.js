@@ -318,6 +318,9 @@ async function loadDashboard() {
 // ─── TARLALARIM (FIELD LIST) ──────────────────────────────────
 // REBUILD Faz 3 / Adım 6: çiftlik bazlı tarla listesi.
 // /api/farms/ → her farm için /api/farms/{id} (nested fields).
+// Tarlalarım sayfasında çiftlik dropdown'ı için son çekilen çiftlik listesi
+let _myFarms = [];
+
 async function loadFields() {
     const container = document.getElementById('fieldsListContainer');
     container.innerHTML = _skeletonBlock(3);
@@ -331,43 +334,160 @@ async function loadFields() {
     }
 
     const farms = await apiAuth('/api/farms/?limit=100');
-    if (!farms || farms.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>🌱 Henüz çiftliğin yok. Çiftlik/tarla ekleme Faz 4\'te gelecek.</p></div>';
+    if (farms === null) {
+        container.innerHTML = '<div class="empty-state"><p>⚠️ Çiftlikler alınamadı.</p></div>';
+        _setBusy('fieldsListContainer', false);
+        return;
+    }
+    _myFarms = farms;
+
+    // ─── Eylem çubuğu: çiftlik/tarla ekle (toggle formlar) ───
+    const farmOpts = farms.map(f => `<option value="${f.id}">${_escAttr(f.name)}</option>`).join('');
+    let html = `
+        <div class="crud-actionbar">
+            <button class="btn-primary" onclick="toggleForm('newFarmForm')">➕ Çiftlik Ekle</button>
+            ${farms.length ? `<button class="btn-secondary" onclick="toggleForm('newFieldForm')">➕ Tarla Ekle</button>` : ''}
+        </div>
+        <div class="form-box crud-form" id="newFarmForm" style="display:none;">
+            <h4 style="margin-top:0;">➕ Yeni Çiftlik</h4>
+            <div class="form-row">
+                <div class="form-group"><label>Ad *</label><input type="text" id="nfName" placeholder="Çiftlik adı" /></div>
+                <div class="form-group"><label>İl</label><input type="text" id="nfCity" placeholder="Konya" /></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Bölge</label><input type="text" id="nfRegion" placeholder="İç Anadolu" /></div>
+                <div class="form-group"><label>Alan (ha)</label><input type="number" id="nfArea" step="0.1" placeholder="8.0" /></div>
+            </div>
+            <button class="btn-primary" onclick="submitNewFarm()">Kaydet</button>
+        </div>
+        <div class="form-box crud-form" id="newFieldForm" style="display:none;">
+            <h4 style="margin-top:0;">➕ Yeni Tarla</h4>
+            <div class="form-row">
+                <div class="form-group"><label>Çiftlik *</label><select id="ndFarm">${farmOpts}</select></div>
+                <div class="form-group"><label>Ad *</label><input type="text" id="ndName" placeholder="Tarla A" /></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Toprak tipi</label><input type="text" id="ndSoil" placeholder="killi" /></div>
+                <div class="form-group"><label>Alan (ha)</label><input type="number" id="ndArea" step="0.1" placeholder="3.5" /></div>
+            </div>
+            <button class="btn-primary" onclick="submitNewField()">Kaydet</button>
+        </div>
+    `;
+
+    if (farms.length === 0) {
+        html += '<div class="empty-state"><p>🌱 Henüz çiftliğin yok. Yukarıdan "Çiftlik Ekle" ile başla.</p></div>';
+        container.innerHTML = html;
         _setBusy('fieldsListContainer', false);
         return;
     }
 
     // Her çiftliğin detayını çek (nested fields için). Küçük N (farmer 1-4 farm).
     const details = await Promise.all(farms.map(f => apiAuth(`/api/farms/${f.id}`)));
-    let html = '';
-    let totalFields = 0;
     for (const farm of details) {
         if (!farm) continue;
         const fields = farm.fields || [];
-        totalFields += fields.length;
         html += `<div class="farm-group">
-            <div class="farm-group-header">🚜 ${_escAttr(farm.name)}${farm.city ? ` · ${_escAttr(farm.city)}` : ''}${farm.region ? ` <span class="farm-region">${_escAttr(farm.region)}</span>` : ''}</div>`;
+            <div class="farm-group-header">
+                <span>🚜 ${_escAttr(farm.name)}${farm.city ? ` · ${_escAttr(farm.city)}` : ''}${farm.region ? ` <span class="farm-region">${_escAttr(farm.region)}</span>` : ''}</span>
+                <span class="farm-actions">
+                    <button class="btn-mini" onclick="editFarm(${farm.id}, '${_escAttr(farm.name)}')">✏️</button>
+                    <button class="btn-mini btn-danger" onclick="deleteFarm(${farm.id}, '${_escAttr(farm.name)}')">🗑</button>
+                </span>
+            </div>`;
         if (fields.length === 0) {
             html += '<p class="farm-no-fields">Bu çiftlikte tarla kaydı yok.</p>';
         } else {
             html += '<div class="field-cards">';
             for (const f of fields) {
                 const area = f.area_hectares != null ? `${_fmtNumber(f.area_hectares)} ha` : '—';
-                html += `<a class="field-card" href="#field/${f.id}" onclick="openFieldDetail(${f.id});return false;">
-                    <div class="field-card-name">🌱 ${_escAttr(f.name)}</div>
-                    <div class="field-card-meta">${_escAttr(f.soil_type || 'toprak —')} · ${area}</div>
-                    <div class="field-card-cta">Detayı gör →</div>
-                </a>`;
+                html += `<div class="field-card-wrap">
+                    <a class="field-card" href="#field/${f.id}" onclick="openFieldDetail(${f.id});return false;">
+                        <div class="field-card-name">🌱 ${_escAttr(f.name)}</div>
+                        <div class="field-card-meta">${_escAttr(f.soil_type || 'toprak —')} · ${area}</div>
+                        <div class="field-card-cta">Detayı gör →</div>
+                    </a>
+                    <button class="btn-mini btn-danger field-card-del" onclick="deleteField(${f.id}, '${_escAttr(f.name)}')" title="Tarlayı sil">🗑</button>
+                </div>`;
             }
             html += '</div>';
         }
         html += '</div>';
     }
-    if (totalFields === 0) {
-        html = '<div class="empty-state"><p>🌱 Çiftliğin var ama henüz tarla eklenmemiş.</p></div>';
-    }
     container.innerHTML = html;
     _setBusy('fieldsListContainer', false);
+}
+
+// ─── Çiftlik/Tarla CRUD aksiyonları (REBUILD Faz 4) ───────────
+function toggleForm(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitNewFarm() {
+    const name = document.getElementById('nfName').value.trim();
+    if (!name) { showToast('Çiftlik adı gerekli', 'warning'); return; }
+    const body = {
+        name,
+        city: document.getElementById('nfCity').value.trim() || null,
+        region: document.getElementById('nfRegion').value.trim() || null,
+        area_hectares: parseFloat(document.getElementById('nfArea').value) || null,
+    };
+    const res = await apiAuth('/api/farms/', { method: 'POST', body: JSON.stringify(body) });
+    if (res) { showToast('Çiftlik eklendi ✅', 'success'); loadFields(); }
+}
+
+async function submitNewField() {
+    const farmId = parseInt(document.getElementById('ndFarm').value, 10);
+    const name = document.getElementById('ndName').value.trim();
+    if (!farmId || !name) { showToast('Çiftlik ve tarla adı gerekli', 'warning'); return; }
+    const body = {
+        farm_id: farmId,
+        name,
+        soil_type: document.getElementById('ndSoil').value.trim() || null,
+        area_hectares: parseFloat(document.getElementById('ndArea').value) || null,
+    };
+    const res = await apiAuth('/api/fields', { method: 'POST', body: JSON.stringify(body) });
+    if (res) { showToast('Tarla eklendi ✅', 'success'); loadFields(); }
+}
+
+async function editFarm(farmId, currentName) {
+    const name = prompt('Yeni çiftlik adı:', currentName);
+    if (name === null) return;
+    if (!name.trim()) { showToast('Ad boş olamaz', 'warning'); return; }
+    const res = await apiAuth(`/api/farms/${farmId}`, { method: 'PATCH', body: JSON.stringify({ name: name.trim() }) });
+    if (res) { showToast('Çiftlik güncellendi', 'success'); loadFields(); }
+}
+
+async function deleteFarm(farmId, name) {
+    if (!confirm(`"${name}" çiftliğini silmek istiyor musun? (Tarlası varsa silinemez.)`)) return;
+    const token = getAuthToken();
+    try {
+        const resp = await fetch(`${API_BASE}/api/farms/${farmId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        if (resp.status === 204) { showToast('Çiftlik silindi', 'success'); loadFields(); }
+        else { const e = await resp.json().catch(() => ({})); showToast(e.detail || `Silinemedi (${resp.status})`, 'error'); }
+    } catch { showToast('Sunucuya ulaşılamadı', 'error'); }
+}
+
+async function editField(fieldId, currentName) {
+    const name = prompt('Yeni tarla adı:', currentName);
+    if (name === null) return;
+    if (!name.trim()) { showToast('Ad boş olamaz', 'warning'); return; }
+    const res = await apiAuth(`/api/fields/${fieldId}`, { method: 'PATCH', body: JSON.stringify({ name: name.trim() }) });
+    if (res) { showToast('Tarla güncellendi', 'success'); if (currentFieldId === fieldId) loadFieldDetail(fieldId); else loadFields(); }
+}
+
+async function deleteField(fieldId, name) {
+    if (!confirm(`"${name}" tarlasını silmek istiyor musun? (Sensörü varsa silinemez.)`)) return;
+    const token = getAuthToken();
+    try {
+        const resp = await fetch(`${API_BASE}/api/fields/${fieldId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        if (resp.status === 204) {
+            showToast('Tarla silindi', 'success');
+            // Detay sayfasındaysak listeye dön
+            if (currentFieldId === fieldId) { location.hash = '#fields'; navigate('fields'); }
+            else loadFields();
+        } else { const e = await resp.json().catch(() => ({})); showToast(e.detail || `Silinemedi (${resp.status})`, 'error'); }
+    } catch { showToast('Sunucuya ulaşılamadı', 'error'); }
 }
 
 // ─── TARLA DETAYI (FIELD DETAIL) ──────────────────────────────
@@ -419,11 +539,15 @@ function renderFieldDetail(d) {
         </div>`;
     }).join('') || '<p class="detail-empty">Bu tarlada sensör yok.</p>';
 
-    // Sulama geçmişi
+    // Sulama geçmişi — pending kayıtlarda tamamla/iptal butonları
     const irrRows = (d.recent_irrigations || []).map(i => {
         const amt = i.water_amount_liters != null ? `${_fmtNumber(i.water_amount_liters, 0)} L` : '—';
-        return `<tr><td>${_fmtDate(i.scheduled_date)}</td><td>${amt}</td><td>${i.duration_min ?? '—'} dk</td><td>${_escAttr(i.status)}</td></tr>`;
-    }).join('') || '<tr><td colspan="4" class="detail-empty">Sulama kaydı yok.</td></tr>';
+        const actions = i.status === 'pending'
+            ? `<button class="btn-mini" onclick="updateIrrigationStatus(${i.id}, 'completed')">✓ Tamamlandı</button>
+               <button class="btn-mini btn-danger" onclick="updateIrrigationStatus(${i.id}, 'cancelled')">✗ İptal</button>`
+            : '—';
+        return `<tr><td>${_fmtDate(i.scheduled_date)}</td><td>${amt}</td><td>${i.duration_min ?? '—'} dk</td><td><span class="irr-status irr-${_escAttr(i.status)}">${_escAttr(i.status)}</span></td><td class="user-actions">${actions}</td></tr>`;
+    }).join('') || '<tr><td colspan="5" class="detail-empty">Sulama kaydı yok.</td></tr>';
 
     // Hastalık geçmişi
     const disRows = (d.disease_history || []).map(h => {
@@ -452,6 +576,10 @@ function renderFieldDetail(d) {
                 <div class="hero-stat">🌾 ${_escAttr(cropName)}</div>
                 <div class="hero-stat">📐 ${d.area_hectares != null ? _fmtNumber(d.area_hectares) + ' ha' : '—'}</div>
                 <div class="hero-stat">🪨 ${_escAttr(d.soil_type || '—')}</div>
+            </div>
+            <div class="field-detail-actions">
+                <button class="btn-mini" onclick="editField(${d.id}, '${_escAttr(d.name)}')">✏️ Düzenle</button>
+                <button class="btn-mini btn-danger" onclick="deleteField(${d.id}, '${_escAttr(d.name)}')">🗑 Sil</button>
             </div>
         </div>
 
@@ -482,8 +610,10 @@ function renderFieldDetail(d) {
             <div id="fieldLeafResult" style="display:none;margin-top:16px;"></div>
         </div>
 
-        <div class="section-header">🚿 Sulama Geçmişi</div>
-        <div class="table-box"><table class="detail-table"><thead><tr><th>Tarih</th><th>Su</th><th>Süre</th><th>Durum</th></tr></thead><tbody>${irrRows}</tbody></table></div>
+        <div class="section-header">🚿 Sulama Geçmişi
+            <button class="btn-mini" style="float:right;" onclick="addFieldIrrigation(${d.id})">➕ Sulama programı ekle</button>
+        </div>
+        <div class="table-box"><table class="detail-table"><thead><tr><th>Tarih</th><th>Su</th><th>Süre</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>${irrRows}</tbody></table></div>
 
         <div class="section-header">🩺 Hastalık Geçmişi</div>
         <div class="table-box"><table class="detail-table"><thead><tr><th>Tarih</th><th>Teşhis</th><th>Güven</th><th>Şiddet</th></tr></thead><tbody>${disRows}</tbody></table></div>
@@ -740,6 +870,23 @@ async function loadIrrigation(page = 1) {
     _setBusy('irrigationTable', false);
 }
 
+let _lastIrrigationRec = null;  // son tahminin önerilen su miktarı (onay için)
+
+/** Kullanıcının tarlalarını <option> HTML'i olarak getir (onay dropdown'ı için). */
+async function _myFieldOptions() {
+    const farms = await apiAuth('/api/farms/?limit=100');
+    if (!farms || farms.length === 0) return '';
+    const details = await Promise.all(farms.map(f => apiAuth(`/api/farms/${f.id}`)));
+    let opts = '';
+    for (const farm of details) {
+        if (!farm) continue;
+        for (const f of (farm.fields || [])) {
+            opts += `<option value="${f.id}">${_escAttr(farm.name)} › ${_escAttr(f.name)}</option>`;
+        }
+    }
+    return opts;
+}
+
 async function predictIrrigation() {
     const body = {
         soil_moisture: +document.getElementById('irr_moisture').value,
@@ -750,18 +897,71 @@ async function predictIrrigation() {
     };
     const result = await api('/api/irrigation/predict', { method: 'POST', body: JSON.stringify(body) });
     if (result) {
+        _lastIrrigationRec = result.recommended_water_liters;
         const color = result.irrigation_needed ? 'var(--accent-amber)' : 'var(--primary)';
+        const fieldOpts = await _myFieldOptions();
+        const approveBlock = fieldOpts
+            ? `<div class="irr-approve">
+                   <label for="irrApproveField">Tarla seç:</label>
+                   <select id="irrApproveField">${fieldOpts}</select>
+                   <button class="btn-primary" onclick="approveIrrigation()">✅ Onayla ve programa ekle</button>
+               </div>`
+            : `<p style="font-size:.8rem;color:var(--text-dim)">Programa eklemek için önce <a href="#fields">tarla ekle</a>.</p>`;
         document.getElementById('irrigationResult').innerHTML = `
             <div class="result-card">
                 <h4>${result.irrigation_needed ? '⚠️ Sulama Gerekli' : '✅ Sulama Gerekmiyor'}</h4>
                 <div class="value" style="color:${color}">${result.recommended_water_liters} L</div>
                 <p style="margin-top:8px;color:var(--text-muted)">${result.message}</p>
                 <p style="margin-top:4px;font-size:.8rem;color:var(--text-dim)">Güven: %${(result.confidence*100).toFixed(0)}</p>
+                ${approveBlock}
             </div>`;
         showToast('Sulama tahmini tamamlandı', 'success');
     } else {
         showToast('Tahmin başarısız', 'error');
     }
+}
+
+/** Tahmin sonucunu seçili tarla için sulama programına ekle (POST /schedules). */
+async function approveIrrigation() {
+    const sel = document.getElementById('irrApproveField');
+    if (!sel || !sel.value) { showToast('Lütfen bir tarla seç', 'warning'); return; }
+    const body = {
+        field_id: parseInt(sel.value, 10),
+        scheduled_date: new Date().toISOString(),
+        water_amount_liters: _lastIrrigationRec ?? 0,
+    };
+    const res = await apiAuth('/api/irrigation/schedules', { method: 'POST', body: JSON.stringify(body) });
+    if (res) {
+        showToast('Sulama programa eklendi ✅ (durum: pending)', 'success');
+        irrigationTotal = 0;  // sayacı tazele
+        loadIrrigation(1);
+    }
+}
+
+/** Sulama programı durumunu güncelle (field detail tamamla/iptal butonları). */
+async function updateIrrigationStatus(scheduleId, status) {
+    const res = await apiAuth(`/api/irrigation/schedules/${scheduleId}/status`, {
+        method: 'PATCH', body: JSON.stringify({ status }),
+    });
+    if (res) {
+        showToast(`Sulama durumu: ${status}`, 'success');
+        if (currentFieldId) loadFieldDetail(currentFieldId);
+    }
+}
+
+/** Tarla detayından hızlı sulama programı ekle (bugün, su miktarı sorulur). */
+async function addFieldIrrigation(fieldId) {
+    const liters = prompt('Su miktarı (litre):', '200');
+    if (liters === null) return;
+    const amount = parseFloat(liters);
+    if (!Number.isFinite(amount) || amount <= 0) { showToast('Geçerli bir su miktarı gir', 'warning'); return; }
+    const body = {
+        field_id: fieldId,
+        scheduled_date: new Date().toISOString(),
+        water_amount_liters: amount,
+    };
+    const res = await apiAuth('/api/irrigation/schedules', { method: 'POST', body: JSON.stringify(body) });
+    if (res) { showToast('Sulama programı eklendi ✅', 'success'); loadFieldDetail(fieldId); }
 }
 
 // ─── FERTILIZER ───────────────────────────────────────────────
@@ -1936,6 +2136,16 @@ Object.assign(window, {
     loadFields,
     openFieldDetail,
     analyzeFieldLeaf,
+    toggleForm,
+    submitNewFarm,
+    submitNewField,
+    editFarm,
+    deleteFarm,
+    editField,
+    deleteField,
+    approveIrrigation,
+    updateIrrigationStatus,
+    addFieldIrrigation,
     loadUsers,
     createUser,
     changeUserRole,
