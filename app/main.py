@@ -47,6 +47,7 @@ from app.routers import (
     irrigation,
     metrics,
     model_performance,
+    onboarding,
     plants,
     sensors,
     weather,
@@ -118,6 +119,11 @@ TAGS_METADATA = [
         "description": "🌱 **Tek tarlanın tüm bağlamı** — sensörler (son okumalarıyla), sulama "
         "geçmişi, hastalık tanı geçmişi, toprak analizleri ve açık uyarılar. Yaprak foto "
         "upload → tanı demo akışının merkezi. Farmer yalnız kendi tarlasını görür.",
+    },
+    {
+        "name": "Onboarding",
+        "description": "🚀 **Yeni kullanıcı kurulumu** — boş hesaba tek-tık demo verisi "
+        "(çiftlik + tarla + sensör/okuma + uyarı) kurar; kullanıcı platformu anında keşfeder.",
     },
     {
         "name": "Kullanıcı Yönetimi",
@@ -243,6 +249,7 @@ app.include_router(plants.router)
 app.include_router(fertilizer.router)
 app.include_router(analytics.router)
 app.include_router(dashboard.router)
+app.include_router(onboarding.router)
 
 app.include_router(alerts.router)
 app.include_router(metrics.router)
