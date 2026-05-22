@@ -309,6 +309,17 @@ input, select { font-family: var(--font); }
 }
 .notif-footer:hover { background: var(--primary-glow); }
 
+/* ═══ REBUILD Faz 6 — Onboarding banner ════════════════════════ */
+.onboarding-banner {
+    text-align: center; padding: 40px 24px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); border-top: 4px solid var(--primary);
+}
+.onboarding-emoji { font-size: 3rem; margin-bottom: 8px; }
+.onboarding-banner h3 { margin: 8px 0; font-size: 1.3rem; }
+.onboarding-banner p { color: var(--text-muted); max-width: 520px; margin: 0 auto 20px; line-height: 1.5; }
+.onboarding-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
 /* ═══ REBUILD Faz 3 / Adım 6 — TARLALARIM + TARLA DETAYI ════════ */
 /* Tarlalarım listesi — çiftlik grupları + tarla kartları */
 .farm-group { margin-bottom: 28px; }

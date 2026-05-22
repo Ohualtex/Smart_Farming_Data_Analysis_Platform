@@ -264,6 +264,35 @@ function _renderSummaryCards(summary) {
     `;
 }
 
+// Onboarding banner — boş hesap (farm_count==0) için (REBUILD Faz 6)
+function _onboardingBannerHtml() {
+    return `
+        <div class="onboarding-banner" style="grid-column: 1 / -1;">
+            <div class="onboarding-emoji" aria-hidden="true">🌱</div>
+            <h3>Hoş geldin! Hadi başlayalım.</h3>
+            <p>Henüz çiftliğin yok. İlk çiftliğini ekleyerek başlayabilir ya da
+               tek tıkla örnek verilerle platformu hemen keşfedebilirsin.</p>
+            <div class="onboarding-actions">
+                <button class="btn-primary" onclick="navigate('fields');toggleForm('newFarmForm')">➕ İlk çiftliğimi ekle</button>
+                <button class="btn-secondary" id="loadDemoBtn" onclick="loadDemoData()">🎬 Demo verisi yükle</button>
+            </div>
+        </div>`;
+}
+
+/** Tek-tık demo veri kur (POST /api/onboarding/demo) → dashboard'u tazele. */
+async function loadDemoData() {
+    const btn = document.getElementById('loadDemoBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Kuruluyor...'; }
+    const res = await apiAuth('/api/onboarding/demo', { method: 'POST' });
+    if (res) {
+        showToast('Demo verisi kuruldu ✅ — keşfetmeye başla!', 'success');
+        await refreshAuthState();  // badge owned_farms_count + bell tazele
+        loadDashboard();
+    } else if (btn) {
+        btn.disabled = false; btn.textContent = '🎬 Demo verisi yükle';
+    }
+}
+
 async function loadDashboard() {
     const cards = document.getElementById('dashboardCards');
     cards.innerHTML = _skeletonCards(4);
@@ -289,7 +318,12 @@ async function loadDashboard() {
     apiOnline = summary !== null;
     updateStatus(apiOnline);
 
-    if (summary) {
+    if (summary && summary.scope === 'user' && summary.farm_count === 0) {
+        // Boş hesap — onboarding banner (REBUILD Faz 6)
+        cards.innerHTML = _onboardingBannerHtml();
+        const heroFarms = document.getElementById('heroFarms');
+        if (heroFarms) heroFarms.textContent = '0';
+    } else if (summary) {
         cards.innerHTML = _renderSummaryCards(summary);
         // Hero stats — rol-aware sayım. Farmer için "kendi" çiftlik/sensör;
         // admin için sistem geneli.
@@ -375,7 +409,10 @@ async function loadFields() {
     `;
 
     if (farms.length === 0) {
-        html += '<div class="empty-state"><p>🌱 Henüz çiftliğin yok. Yukarıdan "Çiftlik Ekle" ile başla.</p></div>';
+        html += `<div class="empty-state">
+            <p>🌱 Henüz çiftliğin yok. Yukarıdan "Çiftlik Ekle" ile başla
+               ya da <button class="btn-link" onclick="loadDemoData()">demo verisi yükle</button>.</p>
+        </div>`;
         container.innerHTML = html;
         _setBusy('fieldsListContainer', false);
         return;
@@ -2207,6 +2244,7 @@ Object.assign(window, {
     analyzePlantImage,
     loadAlerts,
     loadDashboard,
+    loadDemoData,
     loadFields,
     openFieldDetail,
     analyzeFieldLeaf,
