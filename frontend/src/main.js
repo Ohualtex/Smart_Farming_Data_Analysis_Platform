@@ -2062,8 +2062,10 @@ function initTheme() {
 
 /* ─── 🌱 FİLİZ MASKOTU ─────────────────────────────────────── */
 
-// Filiz'in tüm tarımsal ipuçları — tek havuz, sayfaya bağımsız
-const FILIZ_TIPS = [
+// Filiz farmer ipucu havuzu — sulama/gübre/ekim/hava/hastalık/hasat/sensör.
+// (Item 8b: rol-aware havuzlar; overseer/admin/developer aşağıda; _getRoleTips
+//  ile seçilir. Anonim/login-yok durumda farmer havuzu fallback olarak kullanılır.)
+const FILIZ_TIPS_FARMER = [
     // ─── 💧 SULAMA ─────────────────────────────────────────────
     {msg: "Toprak nemi %30 altına düştüyse bitki susamış demektir, hemen su ver.", emoji: "💧"},
     {msg: "Akşamüstü veya sabah erken sulama yap — gündüz buharlaşma çok yüksek.", emoji: "🌅"},
@@ -2144,9 +2146,80 @@ const FILIZ_TIPS = [
     {msg: "Filizden hasada uzun bir yol var, sabırlı ol — ben de yavaş yavaş büyüyorum.", emoji: "🌱"},
 ];
 
+/* Filiz overseer havuzu — gözetmen rolüne odaklı sistem-özeti ipuçları. */
+const FILIZ_TIPS_OVERSEER = [
+    {msg: "Bölge bazlı analytics'te çiftlik dağılımını ısı haritasıyla gör.", emoji: "🗺️"},
+    {msg: "Kritik uyarılar üstte; resolved işaretledikçe arşivlenir.", emoji: "🚨"},
+    {msg: "Sistemde aktif çiftlik sayısı dashboard hero alanında her dakika tazelenir.", emoji: "📊"},
+    {msg: "Hava verisi tüm bölgelerden günlük çekilir; eksik bölgeyi kontrol panelinde gör.", emoji: "🌦️"},
+    {msg: "PDF/Excel dışa aktarımı Raporlar sayfasında — yöneticilere haftalık özet için ideal.", emoji: "📄"},
+    {msg: "Model performansını ModelPerformanceLog endpoint'inde takip et — drift erken yakalan.", emoji: "🤖"},
+    {msg: "Sensör hattındaki kopukluk önce uyarılarda görünür, sonra Analytics'te düşer.", emoji: "📡"},
+    {msg: "Tüm çiftliklerin koordinatları haritada; tıkla, detay açılır.", emoji: "📍"},
+    {msg: "Raporlar > Karşılaştırma sekmesinde iki dönemi yan yana koy, trend net görünür.", emoji: "📈"},
+    {msg: "Bölge bazlı bitki dağılımı için Analytics > Dağılımlar bölümüne göz at.", emoji: "🌾"},
+    {msg: "Sulama onay akışı: farmer talep eder, gözetmen olarak gözlemleyebilirsin.", emoji: "💧"},
+    {msg: "Kritik uyarı seviyesi anomali eşiği aşıldığında otomatik tetiklenir.", emoji: "⚠️"},
+    {msg: "7 bölge dağılımı: pasta grafiği sana hızlı manzara verir.", emoji: "🍩"},
+    {msg: "Senin görevin gözlem ve analiz — değişiklikler yöneticilere bırakılır.", emoji: "👀"},
+    {msg: "Bitki sağlığı modeli sonuçlarını Analytics > Tahminler sekmesinde görebilirsin.", emoji: "🌿"},
+    {msg: "Çiftlik konsolidasyonu için Analytics > Bölge Tablosu çıktısı en yararlısı.", emoji: "📋"},
+];
+
+/* Filiz admin havuzu — yönetici rolüne odaklı kullanıcı/güvenlik ipuçları. */
+const FILIZ_TIPS_ADMIN = [
+    {msg: "Yeni kullanıcı oluştururken rol seçimi sonra değiştirilemez, dikkat et.", emoji: "👤"},
+    {msg: "Çiftliği olan kullanıcı silinemez — önce çiftlikleri devret veya temizle.", emoji: "🚫"},
+    {msg: "Şifre sıfırlama log'ları audit_log'da; düzenli kontrol et.", emoji: "🔐"},
+    {msg: "Admin kendini silemez — sistem korur.", emoji: "🛡️"},
+    {msg: "RBAC her endpoint'te aktif; bypass denemesini izle.", emoji: "🚨"},
+    {msg: "Kullanıcı listesi filtrelenebilir: rol bazında daralt.", emoji: "🔍"},
+    {msg: "Bcrypt cost factor şu an 12; üretimde 14'e çıkarman tavsiye edilir.", emoji: "🔒"},
+    {msg: "Yeni admin oluştururken iki kez düşün — yetkisi tamamen serbesttir.", emoji: "⚖️"},
+    {msg: "Sistem sağlık endpoint'i /api/health: nabız atışı için cron'a bağla.", emoji: "💓"},
+    {msg: "Veritabanı yedeği dışa aktar — alembic migration'ları kapsamalı.", emoji: "💾"},
+    {msg: "JWT token süresi 24 saat; settings'de TOKEN_EXPIRE_HOURS ile değiştir.", emoji: "🎟️"},
+    {msg: "Roller: farmer (sahibi), developer (teknik), overseer (read-only), admin (full).", emoji: "👥"},
+    {msg: "Rate limit aşıldığında 429 döner; abuse durumunda IP banla.", emoji: "🚦"},
+    {msg: "Audit log'da kim ne yaptı, ne zaman — şüpheli aktiviteyi araştır.", emoji: "📜"},
+    {msg: "Bandit + ruff CI'da çalışır — pre-commit hook'la yerel taramayı da koş.", emoji: "🧰"},
+    {msg: "'Demo Yükle' onboarding seçeneği yeni kullanıcılar için; admin'e yaramaz.", emoji: "🌱"},
+];
+
+/* Filiz developer havuzu — geliştirici rolüne odaklı API/debug/workflow ipuçları. */
+const FILIZ_TIPS_DEVELOPER = [
+    {msg: "/docs altında Swagger var; tüm endpoint'leri canlı test edebilirsin.", emoji: "📚"},
+    {msg: "X-API-Key header'ı dev endpoint'leri için — credentials'tan al.", emoji: "🗝️"},
+    {msg: "pytest -k 'test_X' ile filtreli koş; tüm suite'i her seferinde çalıştırma.", emoji: "🧪"},
+    {msg: "alembic upgrade head ile migration'ları uygula; head'i kaçırma.", emoji: "🗃️"},
+    {msg: "FastAPI Depends ile auth/db session inject — DRY için kullan.", emoji: "💉"},
+    {msg: "SQLAlchemy lazy loading N+1 yaratabilir — joinedload/selectinload ekle.", emoji: "🔗"},
+    {msg: "Pydantic v2'de model_dump() var, dict() değil; legacy kodu güncelle.", emoji: "📦"},
+    {msg: "Frontend src/main.js vanilla — modül scope global'i window-bridge ile expose.", emoji: "🌐"},
+    {msg: "vitest jsdom ile DOM mock'lar; test'i frontend/tests altında tut.", emoji: "🃏"},
+    {msg: "ruff format daha hızlı, black uyumlu; pre-commit'e ekle.", emoji: "⚡"},
+    {msg: "GitHub Actions CI .github/workflows altında; matrix Python 3.11/3.12.", emoji: "🤖"},
+    {msg: "API_BASE_URL env'den gelir; lokal dev için .env.local kullan.", emoji: "🔧"},
+    {msg: "Pre-commit hooks: trim whitespace, ruff, bandit — her commit'i denetler.", emoji: "🪝"},
+    {msg: "Bug bulduğunda issue aç, branch fix/X ile çalış, PR --web ile gönder.", emoji: "🔬"},
+    {msg: "Logger seviyeleri: DEBUG > INFO > WARN > ERROR — settings'de set et.", emoji: "📋"},
+    {msg: "Code review öncesi self-review yap; diff'i kendin oku.", emoji: "🤝"},
+];
+
+/* Rol → havuz seçici. Anonim/bilinmeyen rol farmer'a düşer. */
+function _getRoleTips(role) {
+    switch (role) {
+        case 'overseer':  return FILIZ_TIPS_OVERSEER;
+        case 'admin':     return FILIZ_TIPS_ADMIN;
+        case 'developer': return FILIZ_TIPS_DEVELOPER;
+        default:          return FILIZ_TIPS_FARMER;  // farmer + anonim fallback
+    }
+}
+
 /* ─── Hero subtitle dinamik Filiz tipi (Item 8a) ─────────────────────────
  * 8 farmer-anlamlı sayfada hero banner'ın altındaki `<p class="hero-filiz-tip">`
- * sayfa-açıklaması yerine FILIZ_TIPS havuzundan rastgele tip yansıtır. Sayfa
+ * sayfa-açıklaması yerine rol-aware Filiz havuzundan (Item 8b _getRoleTips)
+ * rastgele tip yansıtır. Sayfa
  * açılışında değişir + 20sn'de bir refresh. Yönetim sayfalarına (kullanıcılar,
  * hesabım, analytics, harita, çiftlik-detayı) dokunulmaz; orada mevcut açıklama
  * statik kalır (bu sayfalarda `<p>`'ye `.hero-filiz-tip` class'ı yok). */
@@ -2158,7 +2231,10 @@ const _HERO_TIP_REFRESH_MS = 20000;
 let _heroTipInterval = null;
 
 function _pickHeroTip() {
-    const tip = FILIZ_TIPS[Math.floor(Math.random() * FILIZ_TIPS.length)];
+    // Item 8b: rol-aware — currentUser.role'a göre uygun havuzdan çek.
+    // farmer-anlamlı sayfalarda admin/overseer/dev kendi havuzunu kullanır.
+    const tips = _getRoleTips(currentUser?.role);
+    const tip = tips[Math.floor(Math.random() * tips.length)];
     return `${tip.emoji} ${tip.msg}`;
 }
 
@@ -2189,19 +2265,45 @@ function _startHeroTipRotation(pageId) {
     _heroTipInterval = setInterval(() => _applyHeroTip(pageId), _HERO_TIP_REFRESH_MS);
 }
 
-/* Filiz selamlamaları — saat dilimine göre seçilir (sevimlilik pack) */
-const FILIZ_GREETINGS_MORNING = ["Günaydın çiftçi! 🌅", "Erken başlayan kazanır ☀️", "İyi sabahlar 🐓", "Tarla seni bekliyor 🌱"];
-const FILIZ_GREETINGS_NOON    = ["İyi günler! 🌞", "Bereketli öğleden sonra 🌾", "Tarla nasıl bugün?", "Şu güneşe bak ☀️"];
-const FILIZ_GREETINGS_EVENING = ["İyi akşamlar 🌇", "Hava serinliyor 🌙", "Akşamın hayrına 🌒", "Bugün de bereketli geçti mi? 🌾"];
-const FILIZ_GREETINGS_WORRIED = ["Aaa, bir şey var 😟", "Dikkat! ⚠️", "Olamaz!", "Acele etmen lazım..."];
-const FILIZ_GREETINGS_SLEEPY  = ["Mhmm... 😴", "Geç oldu... zzz", "Uykum geldi 🌙", "Sen de uyu artık 🛏️"];
+/* Filiz selamlamaları — rol + saate göre seçilir (Item 8b).
+ * Anonim/bilinmeyen rol farmer'a düşer. Mood 'sleepy' (00-05) saat dilimini
+ * override eder. Eski FILIZ_GREETINGS_{MORNING,NOON,EVENING,SLEEPY} ve
+ * (kullanılmayan) WORRIED bu objeye taşındı. */
+const FILIZ_GREETINGS = {
+    farmer: {
+        morning: ["Günaydın 🌅", "Erken başlayan kazanır ☀️", "İyi sabahlar 🐓", "Tarla seni bekliyor 🌱"],
+        noon:    ["İyi günler 🌞", "Bereketli öğleden sonra 🌾", "Tarla nasıl bugün?", "Şu güneşe bak ☀️"],
+        evening: ["İyi akşamlar 🌇", "Hava serinliyor 🌙", "Akşamın hayrına 🌒", "Bugün de bereketli geçti mi?"],
+        sleepy:  ["Mhmm... 😴", "Geç oldu... zzz", "Uykum geldi 🌙", "Sen de uyu artık 🛏️"],
+    },
+    overseer: {
+        morning: ["Günaydın gözetmen 📋", "Sistem nabzı nasıl? 📊", "İyi sabahlar 👀", "Sabahın hayrına 🌅"],
+        noon:    ["İyi günler gözetmen 📋", "Sistemde sakin mi? 🔍", "Raporlar bekliyor 📈"],
+        evening: ["İyi akşamlar gözetmen 🌇", "Günün özeti hazır mı? 📜", "Hayırlı akşamlar 🌙"],
+        sleepy:  ["Sistem uyandığında bakalım 😴", "Mhmm... 🌙", "Geç oldu gözetmen 🛏️"],
+    },
+    admin: {
+        morning: ["Günaydın admin 🛡️", "Sistemi açıyoruz 🔑", "İyi sabahlar yönetici 🌅"],
+        noon:    ["İyi günler admin 🛡️", "Sistem güvende mi? 🔐", "Konsol seni bekliyor 💻"],
+        evening: ["İyi akşamlar admin 🌇", "Günün audit raporu? 📜", "Hayırlı akşamlar 🌙"],
+        sleepy:  ["Sistem boş mu? Uyu 🌙", "Mhmm... 😴", "Bile bile uyuyamazsın admin 🛏️"],
+    },
+    developer: {
+        morning: ["Günaydın developer ⌨️", "Coffee + commits ☕", "İyi sabahlar 🌅"],
+        noon:    ["İyi günler developer 💻", "Bugs found? 🐛", "Tests green? 🟢"],
+        evening: ["İyi akşamlar 🌇", "Last commit zamanı 📦", "Wrap-up 🌙"],
+        sleepy:  ["git commit -m 'sleeping' 😴", "Uyu, tests sabah var 🛏️", "Geç oldu... zzz"],
+    },
+};
 
 function pickFilizGreetings() {
-    if (filizMood === 'sleepy') return FILIZ_GREETINGS_SLEEPY;
+    const role = (currentUser?.role && FILIZ_GREETINGS[currentUser.role]) ? currentUser.role : 'farmer';
+    const set = FILIZ_GREETINGS[role];
+    if (filizMood === 'sleepy') return set.sleepy;
     const h = new Date().getHours();
-    if (h >= 5 && h < 12)  return FILIZ_GREETINGS_MORNING;
-    if (h >= 12 && h < 18) return FILIZ_GREETINGS_NOON;
-    return FILIZ_GREETINGS_EVENING;   // 18-23 (00-04 mood=sleepy ile yakalanıyor)
+    if (h >= 5 && h < 12)  return set.morning;
+    if (h >= 12 && h < 18) return set.noon;
+    return set.evening;  // 18-23 (00-04 mood=sleepy ile yakalanıyor)
 }
 
 let filizMood = 'happy';        // 'happy' | 'worried' | 'sleepy'
@@ -2247,10 +2349,16 @@ function initFiliz() {
     };
 
     const pickTip = () => {
-        // Tek havuzdan rastgele tarımsal ipucu
-        const tip = FILIZ_TIPS[Math.floor(Math.random() * FILIZ_TIPS.length)];
+        // Item 8b: rol-aware havuz + isim ile kişiselleştirme.
+        const tips = _getRoleTips(currentUser?.role);
+        const tip = tips[Math.floor(Math.random() * tips.length)];
         const greetingList = pickFilizGreetings();
-        const greeting = greetingList[Math.floor(Math.random() * greetingList.length)];
+        const baseGreeting = greetingList[Math.floor(Math.random() * greetingList.length)];
+        // İlk ad ile selam kişiselleştir; sleepy mood'da uyku tonunu koru (isim ekleme).
+        const firstName = currentUser?.name?.trim().split(/\s+/)[0];
+        const greeting = (firstName && filizMood !== 'sleepy')
+            ? `${baseGreeting} — ${firstName}`
+            : baseGreeting;
         return {
             greeting,
             msg: `${tip.emoji} ${tip.msg}`,
