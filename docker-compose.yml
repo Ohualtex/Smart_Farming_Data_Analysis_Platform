@@ -19,7 +19,13 @@ services:
     expose:
       - "8000"
     environment:
-      - ENVIRONMENT=${ENVIRONMENT:-production}
+      # NOT: `.env` yoksa compose buradaki default'lara duser. `production`
+      # default'u dev sentinel'leri (`dev-api-key` / `dev-secret-key`) ile
+      # birlestiginde `_validate_production` fail-fast atar → uygulama
+      # ayaga kalkmaz. `.env.example`'i `.env` olarak kopyalamak yeterli
+      # (default'lar dev icin hazir); production deploy icin ozellikle
+      # `.env`'de `ENVIRONMENT=production` set edilir + gercek key'ler verilir.
+      - ENVIRONMENT=${ENVIRONMENT:-development}
       - API_KEY=${API_KEY:-dev-api-key}
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
       - API_HOST=0.0.0.0

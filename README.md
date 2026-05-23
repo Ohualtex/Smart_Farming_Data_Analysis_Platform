@@ -18,10 +18,12 @@ git clone https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform.git
 cd Smart_Farming_Data_Analysis_Platform
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt -r requirements-dev.txt
-cp .env.example .env                                # default'lar dev için hazır
+cp .env.example .env                                # ⚠️ ZORUNLU — default'lar dev için hazır
 python database/seed_data.py                        # demo veri (opsiyonel)
 make run                                            # uvicorn → http://localhost:8000
 ```
+
+> **⚠️ `.env` adımı zorunlu** — `.env` dosyası `.gitignore`'da olduğu için clone'la beraber gelmez. `cp .env.example .env` adımını atlamak `_validate_production` fail-fast hatasına yol açabilir (özellikle `docker compose` ile çalıştırırken).
 
 Açılan adresler:
 - **Dashboard:** http://localhost:8000/dashboard/
@@ -99,6 +101,8 @@ Kapsamlı kalite denetim raporu: [`docs/QUALITY_AUDIT.md`](docs/QUALITY_AUDIT.md
 Docker + nginx reverse proxy + Let's Encrypt SSL şablonu. Kurulum adımları: [`docs/setup/PROD_DEPLOY.md`](docs/setup/PROD_DEPLOY.md)
 
 ```bash
+cp .env.example .env                                    # ⚠️ ÖNCE: dev veya prod tüm key'leri burada
+# Prod kullanımı için: .env'de ENVIRONMENT=production + gerçek API_KEY/SECRET_KEY
 docker compose up -d nginx api                          # API + reverse proxy
 docker compose --profile letsencrypt run --rm certbot \ # SSL cert
   certonly --webroot -w /var/www/certbot ...
@@ -107,6 +111,8 @@ docker compose exec api alembic upgrade head            # Migration uygula
 ```
 
 Production guard'ları (`app/config.py`): `ENVIRONMENT=production` iken default API_KEY / SECRET_KEY / wildcard veya localhost CORS origin'ler fail-fast hata fırlatır.
+
+> **Compose default davranışı:** `.env` yoksa compose `ENVIRONMENT=development` + dev sentinel key'leri ile başlar (dev/demo için çalışır). Production'a geçmek için `.env`'de `ENVIRONMENT=production` set + gerçek `API_KEY` / `SECRET_KEY` / `CORS_ORIGINS` override edilir.
 
 ---
 
