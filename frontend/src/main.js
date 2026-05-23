@@ -137,6 +137,9 @@ function navigate(page) {
     else if (page === 'users') loadUsers();
     else if (page === 'auth') refreshAuthState();
     // 'field-detail' navigate() ile değil openFieldDetail(id) ile yüklenir.
+    // Hero subtitle dinamik Filiz tipi (Item 8a) — farmer-anlamlı 8 sayfada
+    // sayfa-açıklamasını Filiz havuzundan rastgele tiple değiştirir + 20sn'de refresh.
+    _startHeroTipRotation(page);
     // Close sidebar on mobile (a11y: hamburger aria-expanded sync)
     const sidebar = document.getElementById('sidebar');
     sidebar.classList.remove('open');
@@ -2140,6 +2143,51 @@ const FILIZ_TIPS = [
     {msg: "Yağmuru duyduğumda yapraklarım titrer — sevimli bir tepki vermiş oluyorum 💧", emoji: "🌧️"},
     {msg: "Filizden hasada uzun bir yol var, sabırlı ol — ben de yavaş yavaş büyüyorum.", emoji: "🌱"},
 ];
+
+/* ─── Hero subtitle dinamik Filiz tipi (Item 8a) ─────────────────────────
+ * 8 farmer-anlamlı sayfada hero banner'ın altındaki `<p class="hero-filiz-tip">`
+ * sayfa-açıklaması yerine FILIZ_TIPS havuzundan rastgele tip yansıtır. Sayfa
+ * açılışında değişir + 20sn'de bir refresh. Yönetim sayfalarına (kullanıcılar,
+ * hesabım, analytics, harita, çiftlik-detayı) dokunulmaz; orada mevcut açıklama
+ * statik kalır (bu sayfalarda `<p>`'ye `.hero-filiz-tip` class'ı yok). */
+const _HERO_TIP_PAGES = new Set([
+    'dashboard', 'fields', 'sensors', 'weather',
+    'irrigation', 'fertilizer', 'plants', 'alerts',
+]);
+const _HERO_TIP_REFRESH_MS = 20000;
+let _heroTipInterval = null;
+
+function _pickHeroTip() {
+    const tip = FILIZ_TIPS[Math.floor(Math.random() * FILIZ_TIPS.length)];
+    return `${tip.emoji} ${tip.msg}`;
+}
+
+function _applyHeroTip(pageId) {
+    if (!_HERO_TIP_PAGES.has(pageId)) return;
+    const p = document.querySelector(`p.hero-filiz-tip[data-page="${pageId}"]`);
+    if (!p) return;
+    // Fade out → değiştir → fade in (smooth geçiş)
+    p.classList.add('fading');
+    setTimeout(() => {
+        p.textContent = _pickHeroTip();
+        p.classList.remove('fading');
+    }, 350);  // CSS transition süresiyle eşle
+}
+
+function _startHeroTipRotation(pageId) {
+    // Eski interval'ı temizle (sayfa değişimi)
+    if (_heroTipInterval) {
+        clearInterval(_heroTipInterval);
+        _heroTipInterval = null;
+    }
+    if (!_HERO_TIP_PAGES.has(pageId)) return;
+    // İlk yansıma — fade animasyonu olmadan anında değiştir (sayfa girişinde
+    // hemen Filiz tipini göster, sayfa-açıklamasını birkaç saniye okutma).
+    const p = document.querySelector(`p.hero-filiz-tip[data-page="${pageId}"]`);
+    if (p) p.textContent = _pickHeroTip();
+    // Periyodik yenileme (fade'li)
+    _heroTipInterval = setInterval(() => _applyHeroTip(pageId), _HERO_TIP_REFRESH_MS);
+}
 
 /* Filiz selamlamaları — saat dilimine göre seçilir (sevimlilik pack) */
 const FILIZ_GREETINGS_MORNING = ["Günaydın çiftçi! 🌅", "Erken başlayan kazanır ☀️", "İyi sabahlar 🐓", "Tarla seni bekliyor 🌱"];

@@ -1097,6 +1097,14 @@ body::before {
     line-height: 1.6;
     max-width: 680px;
 }
+/* Dynamic Filiz tip rotation (farmer-anlamlı 8 sayfa) — smooth fade */
+.hero-banner p.hero-filiz-tip {
+    transition: opacity .35s ease;
+    min-height: 1.6em;  /* layout shift'i engelle (tip değişirken) */
+}
+.hero-banner p.hero-filiz-tip.fading {
+    opacity: 0;
+}
 .hero-banner .hero-stats {
     display: flex;
     gap: 24px;
