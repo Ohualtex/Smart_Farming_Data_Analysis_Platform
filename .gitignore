@@ -144,3 +144,9 @@ backups/
 *.dump
 sfdap_dev.db
 sfdap_dev.db.backup-*
+
+# ========================
+# Local dev (Claude Preview)
+# ========================
+.claude/launch.json
+sfdap_preview.db
