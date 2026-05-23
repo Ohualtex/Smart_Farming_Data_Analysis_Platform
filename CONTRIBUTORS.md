@@ -4,7 +4,7 @@
 
 | Üye | Rol | Görev Alanları |
 |:----|:----|:---------------|
-| **Miraç Duran** | Scrum Master / Manager | Proje yönetimi, CI/CD, analitik dashboard, ulusal ölçek genişletme, integration testler |
+| **Miraç Duran** | Scrum Master / Manager | Proje yönetimi, CI/CD, REBUILD pivot (çiftçi-odaklı saha aracı + 4-rol RBAC), analitik dashboard, integration testler |
 | **Ayşe Eslem Çekici** | Geliştirici | UI/UX wireframe, gübreleme servisi, hava durumu pipeline, ML model değerlendirme |
 | **Ecenur Üner** | Geliştirici | Dashboard SPA, veri görselleştirme, responsive tasarım, veri hattı izleme |
 | **Emirhan Günay** | Geliştirici | Veritabanı tasarımı, sensör entegrasyonu, Alembic migration, seed data |
@@ -73,6 +73,36 @@
   içinde ayrı PR ile main'e alınacak.
 - **Ecenur**: Veri hattı izleme modülü (script + dokümantasyon)
 - *Diğer üyeler kendi Cycle 6 görevlerini devam ettirmekte*
+
+### REBUILD Pivot — Çiftçi-Odaklı Geri Dönüş (Mayıs 2026)
+
+**Pivot kararı:** Eski "ulusal/bakanlık paneli" çerçevesi bırakıldı; sistem
+artık çiftçi-odaklı saha aracı + admin/gözetmen için sistem-geneli read-only
+gözlem modu olarak konumlandırıldı. Detaylar: `REBUILD_ROADMAP.md`.
+
+- **Miraç**: Pivot kararı + 7 faz uygulama.
+  - **Faz 1-2**: Pivot doc + repo temizlik (81-il/ulusal iddialar
+    forward-facing dosyalardan kaldırıldı; cycle geçmişi korundu).
+  - **Faz 3**: Auth backend (JWT bearer + bcrypt + 4-rol model) +
+    frontend Bearer helper + ön panel auth gate + hesabım/şifre UI.
+  - **Faz 3.5**: Admin user-mgmt endpoint'leri (`/api/auth/users` CRUD,
+    şifre sıfırlama) + frontend Kullanıcılar sayfası + tarla detay
+    sayfası + leaf-upload akışı.
+  - **Faz 4**: Çiftlik/tarla CRUD (`farms.py`/`fields.py` write) +
+    RBAC ownership middleware + sulama onay/status akışı.
+  - **Faz 5**: `POST /api/alerts/check` (tarama + dedup) + header
+    bildirim çanı UI.
+  - **Faz 6**: `POST /api/onboarding/demo` (per-user örnek veri) +
+    boş hesap onboarding banner.
+  - **Faz 7**: CHANGELOG/projeakisi REBUILD kayıtları, demo script,
+    README sayı/rozet, FINAL_REPORT REBUILD bölümleri.
+  - **fixroll_v1/v2**: Polish round'ları — farmer Raporlar gizleme,
+    sensör add/del UI (#7), hero subtitle dynamic (#8a), Filiz
+    rol-aware tip havuzları + isim kişiselleştirmesi (#8b), harita
+    auto-zoom (#10), architecture.md REBUILD güncelleme (#23),
+    CONTRIBUTORS REBUILD bölümü (#24).
+- **Diğer üyeler**: REBUILD sprintinde aktif değil — önceki cycle'larda
+  tamamlanan modülleri yukarıdaki bölümlerde listelendiği gibi.
 
 ---
 

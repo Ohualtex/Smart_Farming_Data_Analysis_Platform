@@ -2,6 +2,11 @@
 
 > Bu döküman SFDAP'ın yapı taşlarını ve veri akışını teknik kişiler için
 > detaylandırır. README'deki mermaid diyagramının açıklamalı versiyonu.
+>
+> **REBUILD pivot (Mayıs 2026):** Eski "ulusal/bakanlık paneli" framing'i
+> bırakıldı; sistem artık **çiftçi-odaklı saha aracı** + admin/gözetmen
+> için **sistem-geneli read-only gözlem** modu (4-rol RBAC). Detaylı pivot
+> notları için `REBUILD_ROADMAP.md` ve `FINAL_REPORT.md`.
 
 ---
 
@@ -20,7 +25,7 @@ graph TB
         Auth[🔐 Auth Middleware<br/>X-API-Key + JWT]
         RateLimit[🚦 SlowAPI Rate Limiter]
         ReqLog[📝 Request Logger]
-        Routers[11 Router<br/>41 Endpoint]
+        Routers[15 Router<br/>65 Endpoint]
         Services[İş Mantığı<br/>weather, fertilizer, ml_eval]
         Tasks[⏰ APScheduler<br/>Daily weather fetch]
         MQTT[📨 MQTT Listener]
@@ -33,7 +38,7 @@ graph TB
     end
 
     subgraph "Veri Katmanı"
-        DB[(SQLite / PostgreSQL<br/>14 Tablo)]
+        DB[(SQLite / PostgreSQL<br/>15 Tablo)]
         Migration[🗄️ Alembic Migration]
         Seed[🌱 Seed Data<br/>çiftçi-odaklı demo seti]
     end
@@ -82,18 +87,22 @@ app/
 ├── schemas/
 │   └── schemas.py             # 30+ Pydantic request/response modeli
 │
-├── routers/                   # 11 router, 43 endpoint (sensors/count + schedules/count dahil)
+├── routers/                   # 15 router, 65 endpoint (REBUILD pivot sonrası)
 │   ├── health.py              # Sığ sağlık (load balancer için)
 │   ├── metrics.py             # Derin sağlık (DB+scheduler+ML+freshness+alerts)
+│   ├── dashboard.py           # Frontend hero özet (REBUILD Faz 3.5)
+│   ├── farms.py               # Çiftlik CRUD + RBAC ownership (REBUILD Faz 4)
+│   ├── fields.py              # Tarla CRUD + detay (sensor/sulama/toprak/hastalık)
 │   ├── sensors.py             # Sensör CRUD + readings
 │   ├── weather.py             # Hava durumu CRUD + dış API + clean
-│   ├── irrigation.py          # ML tahmin + program + auto-log
+│   ├── irrigation.py          # ML tahmin + program + onay akışı (RBAC)
 │   ├── fertilizer.py          # NPK öneri + takvim
 │   ├── plants.py              # Bitki sağlığı (URL + CNN multipart)
 │   ├── analytics.py           # Toplu istatistik + compare + PDF/Excel export
-│   ├── alerts.py              # SystemAlert CRUD (severity filtre)
+│   ├── alerts.py              # SystemAlert CRUD + POST /check (tarama+dedup)
 │   ├── model_performance.py   # Log + summary + timeseries + compare + drift
-│   └── auth.py                # Register/login/me/logout (JWT + bcrypt)
+│   ├── onboarding.py          # POST /demo (per-user örnek veri; REBUILD Faz 6)
+│   └── auth.py                # Register/login/me/admin user-mgmt (JWT + bcrypt + 4 rol RBAC)
 │
 ├── services/                  # İş mantığı
 │   ├── weather_service.py     # OpenWeatherMap entegrasyonu + temizleme
@@ -229,8 +238,9 @@ erDiagram
 │  3. Request Logger        (loguru, her istek için)      │
 ├─────────────────────────────────────────────────────────┤
 │  4. Auth Middleware                                      │
-│     - X-API-Key  (POST/DELETE)                          │
+│     - X-API-Key  (POST/DELETE legacy)                   │
 │     - JWT Bearer (bcrypt + HS256)                       │
+│     - 4-rol RBAC (farmer/developer/overseer/admin)      │
 ├─────────────────────────────────────────────────────────┤
 │  5. Pydantic Validation   (request body schema)         │
 ├─────────────────────────────────────────────────────────┤
@@ -239,6 +249,21 @@ erDiagram
 │  7. Global Exception      (custom error format)         │
 └─────────────────────────────────────────────────────────┘
 ```
+
+### Rol Bazlı Yetkilendirme (RBAC) — REBUILD pivot
+
+4 rol, ownership + tip bazlı kapı kontrolü `app/middleware/rbac.py` ve
+endpoint'lerdeki `Depends()` helper'larıyla uygulanır:
+
+| Rol | Erişim |
+|-----|--------|
+| **farmer** | Kendi çiftlik/tarla/sensör/sulama verilerine yazma; sistem genelinde read sınırlı (sadece kendi ownership'i). |
+| **developer** | Sistem genelinde teknik endpoint'ler (ML log, metrics, model performance); write yetkileri kısıtlı. |
+| **overseer** | Tüm çiftlikler üzerinde **read-only** sistem-geneli gözlem (analytics, harita, alerts); değişiklik yok. |
+| **admin** | Full access — kullanıcı yönetimi (`/api/auth/users` CRUD), şifre sıfırlama, rol görüntüleme. Kendini silemez; çiftliği olan kullanıcıyı silemez. |
+
+Yardımcı helper'lar (`app/middleware/rbac.py`): `require_admin`, `require_role(roles…)`,
+`require_owner_or_admin(resource_user_id)` — handler imzalarında `Depends()` ile.
 
 ---
 

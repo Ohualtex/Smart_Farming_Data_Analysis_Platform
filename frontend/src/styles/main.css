@@ -244,6 +244,14 @@ input, select { font-family: var(--font); }
 }
 .field-card-wrap:hover .field-card-del { opacity: 1; }
 
+/* Sensör mini-kartı + hover'da 🗑 sil butonu (fixroll_v2 #7) */
+.sensor-card-wrap { position: relative; }
+.sensor-card-del {
+    position: absolute; top: 6px; right: 6px; opacity: 0; transition: opacity .2s ease;
+    padding: 2px 8px; font-size: .7rem;
+}
+.sensor-card-wrap:hover .sensor-card-del { opacity: 1; }
+
 /* Tarla detay aksiyonları (hero altı) */
 .field-detail-actions { display: flex; gap: 8px; margin-top: 14px; }
 
@@ -1088,6 +1096,14 @@ body::before {
     font-size: .95rem;
     line-height: 1.6;
     max-width: 680px;
+}
+/* Dynamic Filiz tip rotation (farmer-anlamlı 8 sayfa) — smooth fade */
+.hero-banner p.hero-filiz-tip {
+    transition: opacity .35s ease;
+    min-height: 1.6em;  /* layout shift'i engelle (tip değişirken) */
+}
+.hero-banner p.hero-filiz-tip.fading {
+    opacity: 0;
 }
 .hero-banner .hero-stats {
     display: flex;

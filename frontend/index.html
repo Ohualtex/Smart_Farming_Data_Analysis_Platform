@@ -227,7 +227,7 @@
             <section class="page active" id="page-dashboard">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌾</span> Hoş geldin, çiftçi!</h1>
-                    <p>Çiftliğinden toplanan toprak, hava ve sulama bilgilerini tek bir ekranda gör. Akıllı asistan seninle çalışıyor.</p>
+                    <p class="hero-filiz-tip" data-page="dashboard">Çiftliğinden toplanan toprak, hava ve sulama bilgilerini tek bir ekranda gör. Akıllı asistan seninle çalışıyor.</p>
                     <div class="hero-stats">
                         <div class="hero-stat">🚜 <strong id="heroFarms">—</strong> çiftlik</div>
                         <div class="hero-stat">📡 <strong id="heroSensors">—</strong> sensör</div>
@@ -249,7 +249,7 @@
             <section class="page" id="page-fields">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌱</span> Tarlalarım</h1>
-                    <p>Çiftliklerine bağlı tüm tarlalar. Bir tarlaya tıkla; sensör, sulama, hastalık ve toprak detayını gör, yaprak fotoğrafı yükle.</p>
+                    <p class="hero-filiz-tip" data-page="fields">Çiftliklerine bağlı tüm tarlalar. Bir tarlaya tıkla; sensör, sulama, hastalık ve toprak detayını gör, yaprak fotoğrafı yükle.</p>
                 </div>
                 <div class="section-header">🚜 Çiftlik &amp; Tarlalar</div>
                 <div id="fieldsListContainer" aria-busy="true" aria-live="polite"></div>
@@ -265,7 +265,7 @@
             <section class="page" id="page-sensors">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">📡</span> Tarladaki Sensörler</h1>
-                    <p>Toprak nemi ve sıcaklık ölçümlerini buradan takip edebilirsin. Listeden bir sensöre tıklayınca o sensörün son okumalarını grafik olarak görürsün.</p>
+                    <p class="hero-filiz-tip" data-page="sensors">Toprak nemi ve sıcaklık ölçümlerini buradan takip edebilirsin. Listeden bir sensöre tıklayınca o sensörün son okumalarını grafik olarak görürsün.</p>
                 </div>
                 <div class="section-header">📈 Sensör Okumaları</div>
                 <div class="charts-row">
@@ -293,7 +293,7 @@
             <section class="page" id="page-weather">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌤️</span> Hava Durumu</h1>
-                    <p>Çiftliğinin sıcaklık, nem, yağış ve rüzgar bilgilerini görebilirsin. Hava verileri her gün otomatik güncellenir.</p>
+                    <p class="hero-filiz-tip" data-page="weather">Çiftliğinin sıcaklık, nem, yağış ve rüzgar bilgilerini görebilirsin. Hava verileri her gün otomatik güncellenir.</p>
                 </div>
                 <div class="section-header">🌡️ Şu Anki Durum</div>
                 <div class="cards-grid" id="weatherCards" aria-busy="true" aria-live="polite"></div>
@@ -307,7 +307,7 @@
             <section class="page" id="page-irrigation">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">💧</span> Akıllı Sulama</h1>
-                    <p>Toprak ve hava verilerini birlikte değerlendirip tarlana ne kadar su vermen gerektiğini söyler. Aşağıdaki formu doldur, öneriyi hemen al.</p>
+                    <p class="hero-filiz-tip" data-page="irrigation">Toprak ve hava verilerini birlikte değerlendirip tarlana ne kadar su vermen gerektiğini söyler. Aşağıdaki formu doldur, öneriyi hemen al.</p>
                 </div>
                 <div class="section-header">💧 Sulama Önerisi</div>
                 <div class="form-box">
@@ -342,7 +342,7 @@
             <section class="page" id="page-fertilizer">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🌱</span> Akıllı Gübreleme</h1>
-                    <p>Bitki türüne ve toprak analizine göre tarlana ne kadar azot, fosfor ve potasyum gübresi gerektiğini hesaplarız. 17 farklı bitki türü destekli.</p>
+                    <p class="hero-filiz-tip" data-page="fertilizer">Bitki türüne ve toprak analizine göre tarlana ne kadar azot, fosfor ve potasyum gübresi gerektiğini hesaplarız. 17 farklı bitki türü destekli.</p>
                 </div>
                 <div class="section-header">🧪 Gübre Önerisi</div>
                 <div class="form-box">
@@ -449,7 +449,7 @@
             <section class="page" id="page-plants">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🦠</span> Bitki Sağlığı Tespiti</h1>
-                    <p>Yapraktan bir fotoğraf yükle, model anında hastalık olup olmadığını söylesin. Desteklenen formatlar: JPG, PNG, WebP (max 5 MB).</p>
+                    <p class="hero-filiz-tip" data-page="plants">Yapraktan bir fotoğraf yükle, model anında hastalık olup olmadığını söylesin. Desteklenen formatlar: JPG, PNG, WebP (max 5 MB).</p>
                 </div>
                 <div class="section-header">📷 Yeni Görsel Yükle</div>
                 <div class="form-box">
@@ -477,7 +477,7 @@
             <section class="page" id="page-alerts">
                 <div class="hero-banner">
                     <h1><span class="hero-emoji">🚨</span> Sistem Uyarıları</h1>
-                    <p>Sensör anomalisi, hava uyarısı veya model drift gibi olayların listesi. Çözülenleri işaretleyebilirsin.</p>
+                    <p class="hero-filiz-tip" data-page="alerts">Sensör anomalisi, hava uyarısı veya model drift gibi olayların listesi. Çözülenleri işaretleyebilirsin.</p>
                 </div>
                 <div class="section-header">🔍 Filtreler</div>
                 <div class="form-box">
