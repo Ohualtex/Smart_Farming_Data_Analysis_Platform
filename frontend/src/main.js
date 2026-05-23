@@ -527,6 +527,42 @@ async function deleteField(fieldId, name) {
     } catch { showToast('Sunucuya ulaşılamadı', 'error'); }
 }
 
+// ─── Sensör CRUD (fixroll_v2 #7) ─────────────────────────────
+async function submitNewSensor(fieldId) {
+    const sensor_type = document.getElementById('nsType').value;
+    const serial_number = document.getElementById('nsSerial').value.trim();
+    if (!serial_number) { showToast('Seri no gerekli', 'warning'); return; }
+    const body = {
+        field_id: fieldId,
+        sensor_type,
+        serial_number,
+        depth_cm: parseFloat(document.getElementById('nsDepth').value) || null,
+    };
+    const res = await apiAuth('/api/sensors/', { method: 'POST', body: JSON.stringify(body) });
+    if (res) {
+        showToast('Sensör eklendi ✅', 'success');
+        if (currentFieldId) loadFieldDetail(currentFieldId);
+    }
+}
+
+async function deleteSensor(sensorId, label) {
+    if (!confirm(`"${label}" sensörünü silmek istiyor musun? Bu işlem geri alınamaz.`)) return;
+    const token = getAuthToken();
+    try {
+        const resp = await fetch(`${API_BASE}/api/sensors/${sensorId}`, {
+            method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+        });
+        // sensors.py DELETE 200 dönüyor (farms/fields 204) — evrensel success check
+        if (resp.ok) {
+            showToast('Sensör silindi', 'success');
+            if (currentFieldId) loadFieldDetail(currentFieldId);
+        } else {
+            const e = await resp.json().catch(() => ({}));
+            showToast(e.detail || `Silinemedi (${resp.status})`, 'error');
+        }
+    } catch { showToast('Sunucuya ulaşılamadı', 'error'); }
+}
+
 // ─── TARLA DETAYI (FIELD DETAIL) ──────────────────────────────
 let currentFieldId = null;
 
@@ -565,14 +601,16 @@ function renderFieldDetail(d) {
     const moistVal = d.avg_moisture_percent != null ? `%${_fmtNumber(d.avg_moisture_percent)}` : '—';
     const ms = d.moisture_status || 'no_data';
 
-    // Sensör kartları
+    // Sensör kartları — hover'da 🗑 sil butonu (fixroll_v2 #7)
     const sensorRows = (d.sensors || []).map(s => {
         const m = s.latest_moisture_percent != null ? `%${_fmtNumber(s.latest_moisture_percent)}` : '—';
         const t = s.latest_soil_temperature_c != null ? `${_fmtNumber(s.latest_soil_temperature_c)}°C` : '—';
-        return `<div class="detail-mini-card">
+        const label = `${s.sensor_type}${s.serial_number ? ' (' + s.serial_number + ')' : ''}`;
+        return `<div class="detail-mini-card sensor-card-wrap">
             <div class="detail-mini-title">📡 ${_escAttr(s.sensor_type)} <span class="sensor-status sensor-${_escAttr(s.status)}">${_escAttr(s.status)}</span></div>
             <div class="detail-mini-row">Nem: <strong>${m}</strong> · Toprak: <strong>${t}</strong></div>
             <div class="detail-mini-sub">${s.latest_reading_at ? _fmtDate(s.latest_reading_at) : 'okuma yok'}</div>
+            <button class="btn-mini btn-danger sensor-card-del" onclick="deleteSensor(${s.id}, '${_escAttr(label)}')" title="Sensörü sil">🗑</button>
         </div>`;
     }).join('') || '<p class="detail-empty">Bu tarlada sensör yok.</p>';
 
@@ -628,7 +666,24 @@ function renderFieldDetail(d) {
             </div>
         </div>
 
-        <div class="section-header">📡 Sensörler</div>
+        <div class="section-header">📡 Sensörler
+            <button class="btn-mini" style="float:right;" onclick="toggleForm('newSensorForm')">➕ Sensör Ekle</button>
+        </div>
+        <div class="form-box crud-form" id="newSensorForm" style="display:none;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tip *</label>
+                    <select id="nsType">
+                        <option value="soil_moisture">Toprak Nemi</option>
+                        <option value="soil_temperature">Toprak Sıcaklığı</option>
+                        <option value="humidity">Hava Nemi</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Seri No *</label><input type="text" id="nsSerial" placeholder="SN-2026-001" /></div>
+                <div class="form-group"><label>Derinlik (cm)</label><input type="number" id="nsDepth" value="20" step="1" /></div>
+            </div>
+            <button class="btn-primary" onclick="submitNewSensor(${d.id})">Kaydet</button>
+        </div>
         <div class="detail-mini-grid">${sensorRows}</div>
 
         <div class="section-header">📈 Nem Trendi</div>
@@ -2255,6 +2310,8 @@ Object.assign(window, {
     deleteFarm,
     editField,
     deleteField,
+    submitNewSensor,
+    deleteSensor,
     approveIrrigation,
     updateIrrigationStatus,
     addFieldIrrigation,
