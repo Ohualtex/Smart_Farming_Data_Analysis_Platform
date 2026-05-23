@@ -166,6 +166,7 @@ export async function loadMap({ api, regionColors = REGION_COLORS } = {}) {
 
   let plotted = 0;
   let skipped = 0;
+  const latLngs = [];
   farms.forEach((farm) => {
     if (farm.location_lat == null || farm.location_lng == null) {
       skipped++;
@@ -181,8 +182,20 @@ export async function loadMap({ api, regionColors = REGION_COLORS } = {}) {
       opacity: 0.9,
     });
     marker.addTo(_mapMarkersLayer);
+    latLngs.push([farm.location_lat, farm.location_lng]);
     plotted++;
   });
+
+  // Item 10 (fixroll_v2): çiftliklerin koordinat dağılımına göre auto-zoom.
+  // Tek çiftlik → şehir seviyesi (zoom 12). Çoklu → fitBounds + padding +
+  // maxZoom 12 (yakın çiftliklerde aşırı yaklaşmayı önler).
+  if (latLngs.length === 1) {
+    map.setView(latLngs[0], 12);
+  } else if (latLngs.length > 1) {
+    map.fitBounds(L.latLngBounds(latLngs), { padding: [40, 40], maxZoom: 12 });
+  }
+  // 0 marker → mevcut TURKEY_CENTER görünümü korunur (kullanıcı boş haritada
+  // ülke genelini görür, bağlam kaybolmaz).
 
   container.setAttribute("aria-busy", "false");
   if (status) {
