@@ -42,7 +42,8 @@ class TestCustomExceptions:
 
     def test_validation_exception_attributes(self):
         exc = ValidationError(message="Gecersiz email")
-        assert exc.status_code == 422
+        # v5-2: ValidationError 400 (manuel validasyon); Pydantic 422 ayrı handler
+        assert exc.status_code == 400
         assert exc.message == "Gecersiz email"
 
     def test_conflict_exception_attributes(self):

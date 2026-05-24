@@ -19,12 +19,13 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request
 from loguru import logger
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
+from app.middleware.exceptions import ForbiddenError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import _BYPASS_ROLES, _WRITE_ROLES, assert_field_ownership
 from app.ml.irrigation_model import irrigation_optimizer
@@ -52,10 +53,7 @@ router = APIRouter(prefix="/api/irrigation", tags=["Sulama Optimizasyonu"])
 def _require_write(user: User) -> None:
     """overseer/developer için 403; farmer + admin OK (write set)."""
     if user.role not in _WRITE_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek",
-        )
+        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 def _scope_schedules_to_user(query, user: User):  # noqa: ANN001
@@ -211,7 +209,7 @@ def update_schedule_status(
     _require_write(current_user)
     schedule = db.query(IrrigationSchedule).filter(IrrigationSchedule.id == schedule_id).first()
     if schedule is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sulama programi bulunamadi")
+        raise NotFoundError("Sulama programı")
     # field ownership: schedule.field_id farmer'ın olmalı
     assert_field_ownership(db, schedule.field_id, current_user)
     schedule.status = payload.status

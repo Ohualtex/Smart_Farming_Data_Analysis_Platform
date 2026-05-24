@@ -18,11 +18,12 @@ from __future__ import annotations
 import math
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.middleware.exceptions import ConflictError, ForbiddenError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import _WRITE_ROLES
 from app.models.models import (
@@ -51,10 +52,7 @@ _DEMO_FIELDS = [
 def _require_write(user: User) -> None:
     """overseer/developer için 403; farmer + admin OK."""
     if user.role not in _WRITE_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek",
-        )
+        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 def _diurnal_factor(hour: int) -> float:
@@ -89,10 +87,7 @@ def load_demo_data(
 
     existing = db.query(func.count(Farm.id)).filter(Farm.user_id == current_user.id).scalar() or 0
     if existing > 0:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Zaten çiftliğin var; demo veri yalnız boş hesaba kurulur.",
-        )
+        raise ConflictError(message="Zaten çiftliğin var; demo veri yalnız boş hesaba kurulur.")
 
     now = datetime.now(UTC)
 

@@ -16,10 +16,11 @@ veri yazmaz; auth zorunlu ama her rol kullanabilir.
 from __future__ import annotations
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
+from app.middleware.exceptions import ExternalServiceError, ForbiddenError, NotFoundError, SFDAPError
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.middleware.rbac import _WRITE_ROLES, assert_farm_ownership, scope_to_user
 from app.models.models import User, WeatherData
@@ -33,10 +34,7 @@ router = APIRouter(prefix="/api/weather", tags=["Hava Durumu"])
 def _require_write(user: User) -> None:
     """overseer/developer için 403; farmer + admin OK."""
     if user.role not in _WRITE_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek",
-        )
+        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 @router.get(
@@ -119,7 +117,7 @@ def get_latest_weather(
         db.query(WeatherData).filter(WeatherData.farm_id == farm_id).order_by(WeatherData.recorded_at.desc()).first()
     )
     if not weather:
-        raise HTTPException(status_code=404, detail="Hava durumu verisi bulunamadi")
+        raise NotFoundError("Hava durumu verisi")
     return weather
 
 
@@ -163,9 +161,9 @@ async def fetch_weather_from_api(
             },
         }
     except httpx.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Dis API hatasi: {e!s}") from e
+        raise ExternalServiceError(service="OpenWeatherMap", detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Sunucu hatasi: {e!s}") from e
+        raise SFDAPError(message="Sunucu hatası oluştu.", detail=str(e)) from e
 
 
 @router.get(

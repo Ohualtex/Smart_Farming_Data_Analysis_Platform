@@ -11,8 +11,9 @@ Faz 4'te (`FertilizerRecommendationLog` ile öneri persist edildiğinde)
 field ownership eklenecek; o ana kadar auth bağımsız.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
+from app.middleware.exceptions import ValidationError
 from app.schemas.schemas import (
     FertilizerRecommendRequest,
     FertilizerRecommendResponse,
@@ -54,7 +55,7 @@ def recommend_fertilizer(data: FertilizerRecommendRequest) -> FertilizerRecommen
     )
 
     if result.get("error"):
-        raise HTTPException(status_code=400, detail=result["message"])
+        raise ValidationError(message=result["message"])
 
     return result
 
@@ -85,9 +86,6 @@ def get_fertilizer_schedule(data: FertilizerScheduleRequest) -> list[FertilizerS
     )
 
     if not schedule:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Bilinmeyen bitki turu: {data.crop_type}",
-        )
+        raise ValidationError(message=f"Bilinmeyen bitki türü: {data.crop_type}")
 
     return schedule

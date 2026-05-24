@@ -18,11 +18,12 @@ akışları ile gelecek.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import MAX_SQLITE_INT, get_db
+from app.middleware.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import _WRITE_ROLES, assert_farm_ownership, scope_to_user
 from app.models.models import Farm, Field, SoilAnalysis, User
@@ -47,10 +48,7 @@ MAX_SKIP = 1_000_000
 def _require_write(user: User) -> None:
     """overseer/developer için 403; farmer + admin OK (write set)."""
     if user.role not in _WRITE_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek",
-        )
+        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 @router.get(
@@ -106,7 +104,7 @@ def get_farm(
     if not farm:
         # Theoretically unreachable — assert_farm_ownership zaten 404 fırlattı.
         # Defensive: race condition'da farm silinmiş olabilir.
-        raise HTTPException(status_code=404, detail="Ciftlik bulunamadi")
+        raise NotFoundError("Çiftlik")
     return farm
 
 
@@ -228,10 +226,7 @@ def delete_farm(
     assert_farm_ownership(db, farm_id, current_user)
     field_count = db.query(func.count(Field.id)).filter(Field.farm_id == farm_id).scalar() or 0
     if field_count > 0:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Bu ciftligin {field_count} tarlasi var; once tarlalari sil.",
-        )
+        raise ConflictError(message=f"Bu çiftliğin {field_count} tarlası var; önce tarlaları sil.")
     farm = db.query(Farm).filter(Farm.id == farm_id).first()
     db.delete(farm)
     db.commit()

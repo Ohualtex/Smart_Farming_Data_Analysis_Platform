@@ -22,12 +22,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
+from fastapi import APIRouter, Depends, Path, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.auth import verify_api_key
+from app.middleware.exceptions import NotFoundError, ValidationError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import ModelPerformanceLog, SystemAlert
 from app.schemas.schemas import (
@@ -114,7 +115,7 @@ def update_log(
 ) -> ModelPerformanceLog:
     log = db.query(ModelPerformanceLog).filter(ModelPerformanceLog.id == log_id).first()
     if log is None:
-        raise HTTPException(status_code=404, detail=f"Log {log_id} bulunamadi")
+        raise NotFoundError("Log", detail=f"log_id={log_id}")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(log, field, value)
     db.commit()
@@ -140,7 +141,7 @@ def model_summary(model_name: str, db: Session = Depends(get_db)) -> ModelPerfor
         .one()
     )
     if rows.total == 0:
-        raise HTTPException(status_code=404, detail=f"'{model_name}' icin log bulunamadi")
+        raise NotFoundError("Log", detail=f"'{model_name}' modeli için kayıt yok")
     return ModelPerformanceSummary(
         model_name=model_name,
         total_predictions=rows.total,
@@ -207,7 +208,7 @@ def compare_models(
         # ---
         # 400 is correct here; FastAPI's auto-generated 422 schema requires
         # a list-of-ValidationError shape that a plain-string detail breaks.
-        raise HTTPException(status_code=400, detail="En az bir model adı gerekli")
+        raise ValidationError(message="En az bir model adı gerekli.")
 
     since = datetime.now(UTC) - timedelta(days=days)
     results: list[ModelPerformanceCompareItem] = []
