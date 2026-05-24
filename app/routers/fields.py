@@ -133,16 +133,27 @@ def get_field_detail(
         raise HTTPException(status_code=404, detail="Tarla bulunamadi")
     field, farm, crop = row
 
-    # ─── Sensörler + her birinin en son okuması ──────────────────
+    # ─── Sensörler + her birinin en son okuması (N+1 fix v3-3 #3) ─
+    # Önceki yaklaşım: her sensor için ayrı `latest` query (1 + N).
+    # Şimdi tek query'de tüm sensor_id'ler için reading'leri çek, Python'da
+    # her sensor için ilk (en yeni) okumayı al. Toplam: 2 query.
     sensors = db.query(Sensor).filter(Sensor.field_id == field_id).order_by(Sensor.id).all()
+    latest_by_sensor: dict[int, SoilMoistureReading] = {}
+    if sensors:
+        sensor_ids = [s.id for s in sensors]
+        readings = (
+            db.query(SoilMoistureReading)
+            .filter(SoilMoistureReading.sensor_id.in_(sensor_ids))
+            .order_by(SoilMoistureReading.sensor_id, SoilMoistureReading.reading_timestamp.desc())
+            .all()
+        )
+        for r in readings:
+            # ORDER BY desc → her sensor'ın ilk gördüğümüz okuması en yenidir
+            if r.sensor_id not in latest_by_sensor:
+                latest_by_sensor[r.sensor_id] = r
     sensor_summaries: list[FieldSensorSummary] = []
     for sensor in sensors:
-        latest = (
-            db.query(SoilMoistureReading)
-            .filter(SoilMoistureReading.sensor_id == sensor.id)
-            .order_by(SoilMoistureReading.reading_timestamp.desc())
-            .first()
-        )
+        latest = latest_by_sensor.get(sensor.id)
         sensor_summaries.append(
             FieldSensorSummary(
                 id=sensor.id,
