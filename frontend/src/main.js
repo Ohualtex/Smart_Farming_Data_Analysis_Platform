@@ -36,13 +36,34 @@ function _authHeaders() {
         : { 'X-API-Key': 'dev-api-key' };  // anonim fallback (eski endpoint'ler)
 }
 
+/**
+ * Backend hata envelope'undan kullanıcıya gösterilecek mesaj üret.
+ * SFDAPError envelope: {error_code, message, detail}. v5-1 (fixroll_v5):
+ * - `message` öncelikli (TR, kullanıcı dostu)
+ * - `detail` (string ise) fallback
+ * - hiçbiri yoksa generic `HTTP ${status}`
+ */
+async function _extractErrorMessage(res) {
+    try {
+        const body = await res.clone().json();
+        if (body && typeof body.message === "string" && body.message.trim()) return body.message;
+        if (body && typeof body.detail === "string" && body.detail.trim()) return body.detail;
+    } catch {
+        // body JSON değil veya parse hatası — generic mesaja düş
+    }
+    return `HTTP ${res.status}`;
+}
+
 async function api(endpoint, options = {}) {
     try {
         const res = await fetch(`${API_BASE}${endpoint}`, {
             headers: { 'Content-Type': 'application/json', ..._authHeaders(), ...options.headers },
             ...options
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            const msg = await _extractErrorMessage(res);
+            throw new Error(msg);
+        }
         return await res.json();
     } catch (e) {
         console.warn(`API Error: ${endpoint}`, e);
@@ -77,10 +98,17 @@ async function apiAuth(endpoint, options = {}) {
             return null;
         }
         if (res.status === 403) {
-            showToast('Bu işlem için yetkin yok', 'warning');
+            // v5-1: backend envelope mesajı varsa toast'ı kişiselleştir
+            const msg = await _extractErrorMessage(res);
+            showToast(msg.startsWith('HTTP ') ? 'Bu işlem için yetkin yok' : msg, 'warning');
             return null;
         }
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            // v5-1: 4xx/5xx → envelope message'i toast'a yansıt
+            const msg = await _extractErrorMessage(res);
+            showToast(msg, 'error');
+            throw new Error(msg);
+        }
         return await res.json();
     } catch (e) {
         console.warn(`API Auth Error: ${endpoint}`, e);
