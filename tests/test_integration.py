@@ -258,3 +258,125 @@ class TestAnalyticsFlow:
         res = client.get("/api/analytics/summary")
         data = res.json()
         assert data["counts"]["sensors"] >= 1
+
+
+# ─── REBUILD pivot end-to-end (v4-2) ─────────────────────────────
+
+
+class TestFarmerEndToEndJourney:
+    """v4-2: farmer register → login → çiftlik/tarla/sensör → uyarı tarama.
+
+    Bir çiftçinin sıfırdan onboarding'ini tek test'te dolaş; RBAC + Bearer
+    auth + ownership filtreleri birlikte çalışmalı.
+    """
+
+    def test_farmer_full_journey_register_to_alert(self, anon_client):
+        # 1) Register — başarılı 201
+        reg = anon_client.post(
+            "/api/auth/register",
+            json={
+                "name": "Test Çiftçi",
+                "email": "e2e-farmer@test.invalid",
+                "password": "EndToEnd2026",
+            },
+        )
+        assert reg.status_code in (200, 201)
+
+        # 2) Login → token al
+        login = anon_client.post(
+            "/api/auth/login",
+            json={"email": "e2e-farmer@test.invalid", "password": "EndToEnd2026"},
+        )
+        assert login.status_code == 200
+        token = login.json()["access_token"]
+        h = {"Authorization": f"Bearer {token}"}
+
+        # 3) /me → rol farmer
+        me = anon_client.get("/api/auth/me", headers=h).json()
+        assert me["role"] == "farmer"
+        # owned_farms_count baseline 0
+        assert me["owned_farms_count"] == 0
+
+        # 4) Farm create
+        farm = anon_client.post(
+            "/api/farms/",
+            json={"name": "E2E Çiftlik", "city": "Konya", "region": "İç Anadolu", "area_hectares": 5.0},
+            headers=h,
+        )
+        assert farm.status_code in (200, 201)
+        farm_id = farm.json()["id"]
+
+        # 5) Field create
+        field = anon_client.post(
+            "/api/fields/",
+            json={"farm_id": farm_id, "name": "E2E Tarla", "soil_type": "killi", "area_hectares": 2.0},
+            headers=h,
+        )
+        assert field.status_code in (200, 201)
+        field_id = field.json()["id"]
+
+        # 6) Field detail — kendi tarlasını görmeli
+        detail = anon_client.get(f"/api/fields/{field_id}", headers=h)
+        assert detail.status_code == 200
+        assert detail.json()["name"] == "E2E Tarla"
+
+        # 7) Alert check — hiç sensor okuması yok ama disease_reminder tetiklenmeli
+        check = anon_client.post("/api/alerts/check", headers=h)
+        assert check.status_code == 200
+        types = [a["alert_type"] for a in check.json()["alerts"]]
+        assert "disease_reminder" in types
+
+        # 8) Alert listede en az 1 kayıt görünmeli (kendi farm'ı)
+        alerts = anon_client.get("/api/alerts/", headers=h).json()
+        assert len(alerts) >= 1
+
+
+class TestRBACScopeIsolation:
+    """v4-2: farmer A, farmer B'nin çiftliğine erişememeli (403)."""
+
+    def test_farmer_cannot_access_other_farmers_farm(self, farmer_client, db):
+        from app.models.models import Farm, User
+
+        client_a, _user_a = farmer_client
+        # Farmer B'yi DB'de yarat + B'ye ait bir çiftlik
+        other = User(name="Diğer Çiftçi", email="other@test.invalid", password_hash="x", role="farmer")
+        db.add(other)
+        db.commit()
+        db.refresh(other)
+        farm_b = Farm(user_id=other.id, name="B Çiftlik", region="Ege")
+        db.add(farm_b)
+        db.commit()
+        db.refresh(farm_b)
+
+        # A, B'nin çiftliğine erişmeye çalışır
+        resp = client_a.get(f"/api/farms/{farm_b.id}")
+        assert resp.status_code == 403
+
+
+class TestAdminUserMgmtFlow:
+    """v4-2: admin yeni developer kullanıcı yarat → liste → şifre sıfırla → sil."""
+
+    def test_admin_user_lifecycle(self, admin_client):
+        client, _admin = admin_client
+
+        # Create developer
+        created = client.post(
+            "/api/auth/users",
+            json={"name": "E2E Dev", "email": "e2e-dev@test.invalid", "password": "DevPass2026", "role": "developer"},
+        )
+        assert created.status_code == 201
+        dev_id = created.json()["id"]
+
+        # List should include
+        listing = client.get("/api/auth/users").json()
+        assert any(u["id"] == dev_id for u in listing)
+
+        # Password reset → developer yeni şifreyle login
+        reset = client.patch(f"/api/auth/users/{dev_id}/password", json={"new_password": "DevReset2026"})
+        assert reset.status_code == 200
+
+        # Delete
+        deleted = client.delete(f"/api/auth/users/{dev_id}")
+        assert deleted.status_code == 204
+        # GET 404
+        assert client.get(f"/api/auth/users/{dev_id}").status_code == 404
