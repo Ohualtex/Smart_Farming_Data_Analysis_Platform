@@ -47,7 +47,9 @@ class Farm(Base):
 
     __tablename__ = "farms"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # FK + index: farmer ownership filter (Farm.user_id == user.id) sık kullanılır
+    # (RBAC scope_to_user). v3-5: index eklendi.
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String(150), nullable=False)
     location_lat = Column(Float)
     location_lng = Column(Float)
@@ -63,12 +65,15 @@ class Field(Base):
 
     __tablename__ = "fields"
     id = Column(Integer, primary_key=True, index=True)
-    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
+    # FK + index: çiftliğin tarlaları (Field.farm_id == farm_id) sık filtre.
+    # v3-5: index eklendi.
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False, index=True)
     name = Column(String(150), nullable=False)
     area_hectares = Column(Float)
     soil_type = Column(String(50))
     elevation_m = Column(Float)
-    crop_id = Column(Integer, ForeignKey("crop_types.id"))
+    # FK + index: bitki türü join'i analytics'te kullanılır. v3-5: index eklendi.
+    crop_id = Column(Integer, ForeignKey("crop_types.id"), index=True)
     farm = relationship("Farm", back_populates="fields")
     sensors = relationship("Sensor", back_populates="field")
     crop = relationship("CropType", back_populates="fields")
