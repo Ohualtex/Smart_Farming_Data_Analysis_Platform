@@ -42,3 +42,40 @@ class TestDeepHealth:
             resp = c.get("/api/health/deep")
             # Health endpoint'leri public olmalı
             assert resp.status_code == 200
+
+    def test_uptime_component_present(self, client):
+        """v3-7: uptime bileşeni eklendi, uptime_seconds >= 0 olmalı."""
+        resp = client.get("/api/health/deep")
+        uptime = resp.json()["components"].get("uptime")
+        assert uptime is not None
+        assert uptime["status"] == "ok"
+        assert isinstance(uptime["uptime_seconds"], int)
+        assert uptime["uptime_seconds"] >= 0
+        assert "started_at" in uptime
+
+
+class TestPrometheusMetrics:
+    """v3-7: GET /api/health/metrics — Prometheus text exposition format."""
+
+    def test_metrics_returns_200_with_text_plain(self, client):
+        resp = client.get("/api/health/metrics")
+        assert resp.status_code == 200
+        assert "text/plain" in resp.headers.get("content-type", "")
+
+    def test_metrics_contains_required_gauges(self, client):
+        resp = client.get("/api/health/metrics")
+        body = resp.text
+        # Beklenen metric isimleri ve HELP/TYPE etiketleri
+        assert "sfdap_uptime_seconds" in body
+        assert "sfdap_active_sensors" in body
+        assert "sfdap_readings_last_hour" in body
+        assert "sfdap_alerts_unresolved" in body
+        # Prometheus format işaretleri
+        assert "# HELP" in body
+        assert "# TYPE" in body
+
+    def test_alert_labels_present(self, client):
+        resp = client.get("/api/health/metrics")
+        body = resp.text
+        for severity in ("critical", "medium", "low"):
+            assert f'severity="{severity}"' in body
