@@ -76,6 +76,15 @@ class Settings(BaseSettings):
     # production observability stack için).
     LOG_FORMAT: str = "text"
 
+    # Log seviyesi: DEBUG | INFO | WARNING | ERROR | CRITICAL.
+    # Console handler bu seviyeden itibaren yazar; file handler ayrıca
+    # WARNING'in altına inmez (üretim disk tasarrufu).
+    LOG_LEVEL: str = "INFO"
+
+    # Slow-request eşiği (ms). RequestLoggerMiddleware'de bu eşiği aşan
+    # istekler WARN seviyesinde "slow" tag'iyle yansır (perf gözlemi).
+    LOG_SLOW_REQUEST_MS: int = 1000
+
     # ─── Dış servisler ─────────────────────────────────────────
     OPENWEATHERMAP_API_KEY: str | None = None
 

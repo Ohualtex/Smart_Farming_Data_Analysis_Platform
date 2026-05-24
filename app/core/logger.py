@@ -81,9 +81,18 @@ def setup_logging() -> None:
     Format `LOG_FORMAT` env değişkenine göre seçilir:
     - "json"  → structured JSON, prod observability stack için
     - "text"  → renkli console (default, dev)
+
+    Seviye `LOG_LEVEL` env'den okunur (default INFO). Geçersiz değerde INFO'ya
+    düşer ve uyarı yazılır. File handler ayrıca WARNING'in altına inmez —
+    üretimde disk tasarrufu (gürültülü INFO log'lar diske düşmesin).
     """
+    # Console seviyesini ayrıştır — geçersizse INFO'ya geri dön
+    level_name = settings.LOG_LEVEL.upper()
+    valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+    console_level = level_name if level_name in valid_levels else "INFO"
+
     logging.root.handlers = [InterceptHandler()]
-    logging.root.setLevel(logging.INFO)
+    logging.root.setLevel(getattr(logging, console_level, logging.INFO))
 
     for name in logging.root.manager.loggerDict:
         logging.getLogger(name).handlers = []
@@ -96,7 +105,7 @@ def setup_logging() -> None:
 
     if use_json:
         # JSON formatter — production observability için
-        logger.add(sys.stdout, format=_json_formatter, level="INFO", colorize=False, serialize=False)
+        logger.add(sys.stdout, format=_json_formatter, level=console_level, colorize=False, serialize=False)
         logger.add(
             "logs/sfdap_{time}.log",
             rotation="10 MB",
@@ -114,7 +123,7 @@ def setup_logging() -> None:
             "<level>{level: <8}</level> | "
             "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
             "<level>{message}</level>",
-            level="INFO",
+            level=console_level,
         )
         logger.add(
             "logs/sfdap_{time}.log",
@@ -124,4 +133,9 @@ def setup_logging() -> None:
             format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
         )
 
-    logger.info(f"Loguru basariyla yapilandirildi (LOG_FORMAT={settings.LOG_FORMAT})!")
+    if level_name != console_level:
+        logger.warning(
+            f"LOG_LEVEL='{settings.LOG_LEVEL}' geçersiz; INFO'ya düşürüldü "
+            f"(geçerli: DEBUG|INFO|WARNING|ERROR|CRITICAL)."
+        )
+    logger.info(f"Loguru başarıyla yapılandırıldı (LOG_FORMAT={settings.LOG_FORMAT}, LOG_LEVEL={console_level}).")

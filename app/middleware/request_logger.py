@@ -27,6 +27,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.config import settings
+
 # Logger konfigürasyonu
 logger = logging.getLogger("sfdap.access")
 logger.setLevel(logging.INFO)
@@ -95,16 +97,20 @@ class RequestLoggerMiddleware(BaseHTTPMiddleware):
 
             # Başarılı response logu
             duration_ms = (time.perf_counter() - start_time) * 1000
-            log_method = logger.warning if response.status_code >= 400 else logger.info
-
+            # Slow request → WARN (perf gözlemi); >=400 status → WARN; aksi INFO
+            slow_threshold = settings.LOG_SLOW_REQUEST_MS
+            is_slow = duration_ms >= slow_threshold
+            log_method = logger.warning if response.status_code >= 400 or is_slow else logger.info
+            slow_tag = " [SLOW]" if is_slow else ""
             log_method(
-                "%s %s %d %.0fms %s [req-id=%s]",
+                "%s %s %d %.0fms %s [req-id=%s]%s",
                 request.method,
                 request.url.path,
                 response.status_code,
                 duration_ms,
                 client_ip,
                 request_id,
+                slow_tag,
             )
 
             # Response header'a request_id ekle (istemci trace ile eşleştirebilsin)
