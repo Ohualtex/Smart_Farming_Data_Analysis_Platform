@@ -198,6 +198,37 @@ class TestAlertsCheck:
         client, _ = overseer_client
         assert client.post("/api/alerts/check").status_code == 403
 
+    def test_check_batch_multiple_fields_v3_3(self, farmer_client, db):
+        """v4-1 coverage: v3-3 N+1 fix (batch GROUP BY) çoklu field senaryosu.
+
+        Önceki N+1 yapı her field için iki ek query yapıyordu. Yeni batch path
+        tek GROUP BY ile çalışır; sonuç eşdeğer olmalı (3 field, 3 düşük nem
+        + 3 hastalık reminder = 6 alert, dedup öncesi). 1 alert iki tarafta da
+        üretilir (low_moisture + disease_reminder) per field.
+        """
+        client, user = farmer_client
+        # 3 tarla — hepsi susuz + hastalık analizi eski (yok)
+        ids = [self._seed_field(db, user.id, moisture=15.0, name=f"BatchTarla{i}") for i in range(3)]
+        assert len(ids) == 3
+        resp = client.post("/api/alerts/check")
+        assert resp.status_code == 200
+        data = resp.json()
+        # Her field'da iki alert tipi: low_moisture + disease_reminder → 6
+        assert data["created"] == 6
+        types_count = dict.fromkeys(("low_moisture", "disease_reminder"), 0)
+        for a in data["alerts"]:
+            if a["alert_type"] in types_count:
+                types_count[a["alert_type"]] += 1
+        assert types_count["low_moisture"] == 3
+        assert types_count["disease_reminder"] == 3
+
+    def test_check_empty_fields_returns_zero(self, farmer_client):
+        """v4-1: farmer'ın hiç field'ı yoksa batch query None döner, 0 alert."""
+        client, _ = farmer_client
+        resp = client.post("/api/alerts/check")
+        assert resp.status_code == 200
+        assert resp.json()["created"] == 0
+
     def test_check_anon_401(self, anon_client):
         assert anon_client.post("/api/alerts/check").status_code == 401
 

@@ -218,6 +218,67 @@ class TestFieldDetailSystemScope:
         assert client.get(f"/api/fields/{field.id}").status_code == 200
 
 
+# ─── Multi-sensor N+1 fix verification (v3-3 → v4-1 coverage) ──
+
+
+class TestFieldDetailMultiSensor:
+    """v4-1: v3-3 N+1 fix (batch latest_by_sensor) çoklu sensor'da çalışır.
+
+    Önceki kod her sensor için ayrı query yapardı (1+N); yeni kod tek
+    IN-list query + Python grouping (2 toplam). Sonuç: her sensor en
+    yeni okumayı doğru gösterir.
+    """
+
+    def test_multi_sensor_each_shows_own_latest(self, farmer_client, db):
+        from datetime import UTC, datetime, timedelta
+
+        from app.models.models import Farm, Field, Sensor, SoilMoistureReading
+
+        client, user = farmer_client
+        farm = Farm(user_id=user.id, name="Çoklu", region="Ege")
+        db.add(farm)
+        db.flush()
+        field = Field(farm_id=farm.id, name="MultiSensorTarla", soil_type="killi")
+        db.add(field)
+        db.flush()
+        # 3 sensor — her biri farklı moisture değeri ile en yeni okuma
+        sensors_data = [(40.0, 1), (25.0, 2), (60.0, 3)]
+        sensor_ids = []
+        now = datetime.now(UTC)
+        for moisture, idx in sensors_data:
+            s = Sensor(field_id=field.id, sensor_type="soil_moisture", serial_number=f"SN-{idx}")
+            db.add(s)
+            db.flush()
+            sensor_ids.append(s.id)
+            # Eski okuma (gürültü)
+            db.add(
+                SoilMoistureReading(
+                    sensor_id=s.id,
+                    moisture_percent=10.0,
+                    reading_timestamp=now - timedelta(days=2),
+                )
+            )
+            # En yeni okuma
+            db.add(
+                SoilMoistureReading(
+                    sensor_id=s.id,
+                    moisture_percent=moisture,
+                    reading_timestamp=now - timedelta(minutes=idx),
+                )
+            )
+        db.commit()
+
+        resp = client.get(f"/api/fields/{field.id}")
+        assert resp.status_code == 200
+        sensors_resp = resp.json()["sensors"]
+        assert len(sensors_resp) == 3
+        # Her sensor'ın latest_moisture_percent eski 10.0 değil, kendi en yenisi
+        latest_by_id = {s["id"]: s["latest_moisture_percent"] for s in sensors_resp}
+        assert latest_by_id[sensor_ids[0]] == 40.0
+        assert latest_by_id[sensor_ids[1]] == 25.0
+        assert latest_by_id[sensor_ids[2]] == 60.0
+
+
 # ─── Readings zaman serisi ─────────────────────────────────────
 
 
