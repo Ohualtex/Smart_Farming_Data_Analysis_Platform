@@ -12,6 +12,7 @@ Tüm API hataları için tutarlı response formatı sağlar.
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
@@ -35,7 +36,7 @@ class NotFoundError(SFDAPError):
 
     def __init__(self, resource: str = "Kaynak", detail: str | None = None):
         super().__init__(
-            message=f"{resource} bulunamadi.",
+            message=f"{resource} bulunamadı.",
             detail=detail,
         )
 
@@ -48,7 +49,7 @@ class UnauthorizedError(SFDAPError):
 
     def __init__(self, detail: str | None = None):
         super().__init__(
-            message="Kimlik dogrulama basarisiz. Gecerli bir API anahtari gerekli.",
+            message="Kimlik doğrulama başarısız. Geçerli bir API anahtarı gerekli.",
             detail=detail,
         )
 
@@ -61,7 +62,7 @@ class ForbiddenError(SFDAPError):
 
     def __init__(self, detail: str | None = None):
         super().__init__(
-            message="Bu islemi gerceklestirmek icin yetkiniz yok.",
+            message="Bu işlemi gerçekleştirmek için yetkiniz yok.",
             detail=detail,
         )
 
@@ -72,7 +73,7 @@ class ValidationError(SFDAPError):
     error_code = "VALIDATION_ERROR"
     status_code = 422
 
-    def __init__(self, message: str = "Gecersiz veri", detail: str | None = None):
+    def __init__(self, message: str = "Geçersiz veri", detail: str | None = None):
         super().__init__(message=message, detail=detail)
 
 
@@ -92,9 +93,9 @@ class ExternalServiceError(SFDAPError):
     error_code = "EXTERNAL_SERVICE_ERROR"
     status_code = 502
 
-    def __init__(self, service: str = "Dis servis", detail: str | None = None):
+    def __init__(self, service: str = "Dış servis", detail: str | None = None):
         super().__init__(
-            message=f"{service} ile iletisim kurulamadi.",
+            message=f"{service} ile iletişim kurulamadı.",
             detail=detail,
         )
 
@@ -141,6 +142,30 @@ def register_exception_handlers(app: FastAPI) -> None:
             },
         )
 
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_handler(request: Request, exc: RequestValidationError):
+        """Pydantic request validation hatalarını döndürür.
+
+        OpenAPI 422 sözleşmesini (`{"detail": [{"loc": [...], "msg": ..., "type": ...}]}`)
+        koruyoruz — schemathesis conformance ve istemci kütüphane parser'larıyla
+        uyumlu kalır. SFDAP envelope yalnızca SFDAPError/IntegrityError/Exception
+        yollarında kullanılır (validation İngilizce kalır; frontend toast tarafı
+        message map'leme yapar).
+        """
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": [
+                    {
+                        "loc": list(err.get("loc", [])),
+                        "msg": err.get("msg", ""),
+                        "type": err.get("type", ""),
+                    }
+                    for err in exc.errors()
+                ],
+            },
+        )
+
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         """Beklenmeyen hataları yakalar ve tutarlı format döndürür."""
@@ -148,7 +173,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=500,
             content={
                 "error_code": "INTERNAL_ERROR",
-                "message": "Beklenmeyen bir sunucu hatasi olustu.",
+                "message": "Beklenmeyen bir sunucu hatası oluştu.",
                 "detail": str(exc) if exc.args else None,
             },
         )

@@ -126,3 +126,23 @@ class TestCorsOriginsList:
     def test_empty_string_yields_empty_list(self):
         settings = Settings(CORS_ORIGINS="")
         assert settings.cors_origins_list == []
+
+
+class TestLoggingConfig:
+    """LOG_LEVEL ve LOG_SLOW_REQUEST_MS env override edilebilmeli (v3-2)."""
+
+    def test_log_level_default_info(self):
+        settings = Settings()
+        assert settings.LOG_LEVEL == "INFO"
+
+    def test_log_level_override(self):
+        settings = Settings(LOG_LEVEL="DEBUG")
+        assert settings.LOG_LEVEL == "DEBUG"
+
+    def test_slow_request_threshold_default(self):
+        settings = Settings()
+        assert settings.LOG_SLOW_REQUEST_MS == 1000
+
+    def test_slow_request_threshold_override(self):
+        settings = Settings(LOG_SLOW_REQUEST_MS=500)
+        assert settings.LOG_SLOW_REQUEST_MS == 500

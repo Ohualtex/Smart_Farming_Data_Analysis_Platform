@@ -19,6 +19,7 @@ import time
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -29,6 +30,16 @@ from app.models.models import Sensor, SoilMoistureReading, SystemAlert
 from app.schemas.schemas import HealthCheckResponse
 
 router = APIRouter(prefix="/api/health", tags=["Sistem Metrikleri"])
+
+# Uygulama başlangıç zamanı (modül import — uvicorn worker ilk yüklendiğinde).
+# Uptime hesaplaması için kullanılır. v3-7.
+_STARTED_AT = datetime.now(UTC)
+
+
+def _check_uptime() -> dict:
+    """Uygulama uptime (saniye) — basit gauge."""
+    seconds = int((datetime.now(UTC) - _STARTED_AT).total_seconds())
+    return {"status": "ok", "uptime_seconds": seconds, "started_at": _STARTED_AT.isoformat()}
 
 
 def _check_db(db: Session) -> dict:
@@ -178,6 +189,7 @@ def deep_health_check(db: Session = Depends(get_db)) -> HealthCheckResponse:
         "data_freshness": _check_data_freshness(db),
         "alerts": _check_alerts(db),
         "mqtt": _check_mqtt(),
+        "uptime": _check_uptime(),
     }
     # Bileşen durumlarını birleştir: 'fail' → unhealthy, 'degraded'/'stopped' → degraded,
     # aksi takdirde healthy. 'disabled' (MQTT_ENABLED=false) sağlıksızlık sayılmaz.
@@ -195,3 +207,65 @@ def deep_health_check(db: Session = Depends(get_db)) -> HealthCheckResponse:
         components=components,
         timestamp=datetime.now(UTC),
     )
+
+
+@router.get(
+    "/metrics",
+    response_class=PlainTextResponse,
+    summary="Prometheus text format metrikleri (v3-7)",
+    description=(
+        "Prometheus scrape endpoint'i — text/plain format'ta sistem metrikleri "
+        "(uptime, aktif sensör sayısı, çözülmemiş alert sayıları). Hafif, harici "
+        "library bağımlılığı olmadan basit gauge'lar yayar. Production'da bir "
+        "Prometheus instance'ı buradan periyodik scrape eder."
+    ),
+    responses={200: {"content": {"text/plain": {}}, "description": "Prometheus exposition format"}},
+)
+def prometheus_metrics(db: Session = Depends(get_db)) -> PlainTextResponse:
+    """Lightweight Prometheus exposition — manual text format (no client_python dep)."""
+    # Uptime
+    uptime_seconds = int((datetime.now(UTC) - _STARTED_AT).total_seconds())
+    # Aktif sensör sayısı + son saat okumalar
+    try:
+        active_sensors = db.query(func.count(Sensor.id)).filter(Sensor.status == "active").scalar() or 0
+        since = datetime.now(UTC) - timedelta(hours=1)
+        readings_last_hour = (
+            db.query(func.count(SoilMoistureReading.id)).filter(SoilMoistureReading.reading_timestamp >= since).scalar()
+            or 0
+        )
+    except SQLAlchemyError:
+        active_sensors = 0
+        readings_last_hour = 0
+    # Çözülmemiş alert sayıları (severity bazlı)
+    try:
+        alert_counts = dict(
+            db.query(SystemAlert.severity, func.count(SystemAlert.id))
+            .filter(SystemAlert.is_resolved.is_(False))
+            .group_by(SystemAlert.severity)
+            .all()
+        )
+    except SQLAlchemyError:
+        alert_counts = {}
+
+    lines = [
+        "# HELP sfdap_uptime_seconds Uygulama uptime (saniye)",
+        "# TYPE sfdap_uptime_seconds counter",
+        f"sfdap_uptime_seconds {uptime_seconds}",
+        "",
+        "# HELP sfdap_active_sensors Aktif (status='active') sensör sayısı",
+        "# TYPE sfdap_active_sensors gauge",
+        f"sfdap_active_sensors {active_sensors}",
+        "",
+        "# HELP sfdap_readings_last_hour Son 1 saatte gelen toprak nemi okuma sayısı",
+        "# TYPE sfdap_readings_last_hour gauge",
+        f"sfdap_readings_last_hour {readings_last_hour}",
+        "",
+        "# HELP sfdap_alerts_unresolved Çözülmemiş sistem uyarısı sayısı (severity etiketi)",
+        "# TYPE sfdap_alerts_unresolved gauge",
+    ]
+    lines.extend(
+        f'sfdap_alerts_unresolved{{severity="{severity}"}} {alert_counts.get(severity, 0)}'
+        for severity in ("critical", "medium", "low")
+    )
+    lines.append("")
+    return PlainTextResponse("\n".join(lines), media_type="text/plain; version=0.0.4; charset=utf-8")

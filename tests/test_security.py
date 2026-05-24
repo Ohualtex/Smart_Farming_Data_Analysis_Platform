@@ -26,7 +26,7 @@ class TestCustomExceptions:
 
     def test_not_found_exception_attributes(self):
         exc = NotFoundError("Sensor")
-        assert exc.message == "Sensor bulunamadi."
+        assert exc.message == "Sensor bulunamadı."
         assert exc.status_code == 404
         assert exc.error_code == "NOT_FOUND"
 

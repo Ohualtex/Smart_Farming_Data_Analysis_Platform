@@ -85,3 +85,13 @@ ignore = [
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.bandit]
+# Pre-commit ve CI'da `bandit -r app/` çalıştırılır. False-positive azaltma:
+# - B101 (assert_used): runtime sanity-check ve Pydantic validator'larda
+#   bilinçli kullanım (UserRole↔USER_ROLES sync gibi).
+# - B105 (hardcoded_password): OpenAPI schema örnek password'ları + DEV
+#   fallback sabitleri (üretimde _validate_production fail-fast eder).
+# - B311 (random): scheduler jitter / data quality outlier seeding —
+#   kriptografik kullanım değil. (Üretimde secrets.* kullanılıyor.)
+skips = ["B101", "B105", "B311"]

@@ -237,15 +237,33 @@ def check_alerts(
     )
     existing = {(fid, atype) for fid, atype in open_alerts}
 
+    # ─── N+1 fix v3-3 #3: her field için ayrı query yerine batch ──
+    # Önceki: her field iki ek query (avg moisture + last disease). N field
+    # → 1 + 2N. Şimdi GROUP BY ile tek seferde tüm field'ler için aggregate.
+    field_ids = [fid for fid, _, _ in fields]
+    moisture_by_field: dict[int, float] = {}
+    last_disease_by_field: dict[int, datetime] = {}
+    if field_ids:
+        moisture_rows = (
+            db.query(Sensor.field_id, func.avg(SoilMoistureReading.moisture_percent))
+            .join(SoilMoistureReading, SoilMoistureReading.sensor_id == Sensor.id)
+            .filter(Sensor.field_id.in_(field_ids), SoilMoistureReading.reading_timestamp >= since)
+            .group_by(Sensor.field_id)
+            .all()
+        )
+        moisture_by_field = {fid: avg for fid, avg in moisture_rows if avg is not None}
+        disease_rows = (
+            db.query(PlantHealthImage.field_id, func.max(PlantHealthImage.captured_at))
+            .filter(PlantHealthImage.field_id.in_(field_ids))
+            .group_by(PlantHealthImage.field_id)
+            .all()
+        )
+        last_disease_by_field = {fid: ts for fid, ts in disease_rows if ts is not None}
+
     created: list[SystemAlert] = []
     for field_id, field_name, farm_id in fields:
         # ─── Koşul 1: düşük toprak nemi ──────────────────────────
-        avg_moisture = (
-            db.query(func.avg(SoilMoistureReading.moisture_percent))
-            .join(Sensor, SoilMoistureReading.sensor_id == Sensor.id)
-            .filter(Sensor.field_id == field_id, SoilMoistureReading.reading_timestamp >= since)
-            .scalar()
-        )
+        avg_moisture = moisture_by_field.get(field_id)
         if (
             avg_moisture is not None
             and avg_moisture < LOW_MOISTURE_THRESHOLD
@@ -265,9 +283,7 @@ def check_alerts(
             existing.add((field_id, "low_moisture"))
 
         # ─── Koşul 2: hastalık kontrolü hatırlatması ─────────────
-        last_disease = (
-            db.query(func.max(PlantHealthImage.captured_at)).filter(PlantHealthImage.field_id == field_id).scalar()
-        )
+        last_disease = last_disease_by_field.get(field_id)
         needs_reminder = (
             last_disease is None
             or (last_disease.replace(tzinfo=UTC) if last_disease.tzinfo is None else last_disease) < disease_cutoff
