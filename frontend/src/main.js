@@ -440,9 +440,15 @@ async function loadFields() {
     `;
 
     if (farms.length === 0) {
+        // v5-3: empty state cilası — illustration + iki CTA (yeni çiftlik / demo)
         html += `<div class="empty-state">
-            <p>🌱 Henüz çiftliğin yok. Yukarıdan "Çiftlik Ekle" ile başla
-               ya da <button class="btn-link" onclick="loadDemoData()">demo verisi yükle</button>.</p>
+            <div class="icon">🚜</div>
+            <p><strong>Henüz hiç çiftliğin yok.</strong></p>
+            <p>İlk çiftliğini ekleyerek başla veya örnek verilerle deneyebilirsin.</p>
+            <div class="cta-row">
+                <button class="btn-primary" onclick="toggleForm('newFarmForm')">➕ İlk çiftliğimi ekle</button>
+                <button class="btn-link" onclick="loadDemoData()">veya demo verisi yükle</button>
+            </div>
         </div>`;
         container.innerHTML = html;
         _setBusy('fieldsListContainer', false);

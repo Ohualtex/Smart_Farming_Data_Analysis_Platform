@@ -529,8 +529,34 @@ tr:hover td { background: var(--surface-2); }
 :focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; border-radius: 4px; }
 button:focus-visible, .nav-item:focus-visible, a:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
 
-.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    /* v5-3: glass-card stili — boş listeler daha "kart" hissi versin */
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    margin: 16px 0;
+}
 .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+.empty-state p { margin: 8px 0; line-height: 1.6; }
+.empty-state .btn-link {
+    background: none;
+    border: none;
+    color: var(--accent-cyan);
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+    text-decoration: underline;
+}
+.empty-state .btn-link:hover { color: var(--accent-green); }
+/* v5-3: CTA pattern — empty state'in altında belirgin aksiyon butonu */
+.empty-state .cta-row { margin-top: 20px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+[data-theme="light"] .empty-state {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.08);
+}
 
 /* ════════════════════════════════════════════════════════════
    ✨ Sevimlilik Pack — global mikro-iyileştirmeler
