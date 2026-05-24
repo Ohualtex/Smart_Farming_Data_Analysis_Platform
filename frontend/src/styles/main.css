@@ -685,6 +685,16 @@ button:focus-visible, .nav-item:focus-visible, a:focus-visible { outline: 2px so
 @media (max-width: 480px) {
     .cards-grid { grid-template-columns: 1fr; }
     html { font-size: 14px; }
+    /* v5-6: mobil cila — hero başlık taşıyabilir, hero-stats wrap */
+    .hero-banner h1 { font-size: 1.4rem; line-height: 1.3; }
+    .hero-banner .hero-stats { gap: 12px; }
+    .hero-stat { font-size: .72rem; padding: 4px 10px; }
+    /* Filiz mascot mobilde küçülsün ki içeriği örtmesin */
+    .filiz-mascot { width: 72px; height: 84px; bottom: 12px; right: 12px; }
+    .filiz-bubble { right: 12px; bottom: 100px; max-width: calc(100vw - 24px); }
+    /* Empty state CTA mobilde dikey */
+    .empty-state .cta-row { flex-direction: column; gap: 8px; }
+    .empty-state .cta-row .btn-primary { width: 100%; }
 }
 
 /* ============================================================
