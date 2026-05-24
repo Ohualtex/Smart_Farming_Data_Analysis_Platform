@@ -477,6 +477,20 @@ tr:hover td { background: var(--surface-2); }
     padding: 10px 14px; color: var(--text); font-size: .9rem; outline: none; transition: border var(--transition);
 }
 .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+/* v5-5: inline field error — toast'a ek olarak alanın altında belirir */
+.form-group .field-error {
+    font-size: .78rem;
+    color: #ef4444;  /* red-500 */
+    margin-top: 4px;
+    min-height: 1em;
+    display: none;
+}
+.form-group.has-error .field-error { display: block; }
+.form-group.has-error input,
+.form-group.has-error select {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.06);
+}
 .btn-primary {
     background: var(--primary); color: #fff; padding: 12px 28px; border-radius: var(--radius-sm);
     font-weight: 600; font-size: .9rem; transition: all var(--transition); margin-top: 8px;

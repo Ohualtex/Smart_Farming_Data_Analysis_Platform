@@ -1741,10 +1741,51 @@ document.addEventListener('click', (e) => {
     }
 });
 
+/**
+ * v5-5: Inline field error helper'ları.
+ * - _setFieldError(inputId, msg): form-group'a `has-error` ekler + `.field-error` doldurur,
+ *   aria-invalid="true" yapar (screen reader)
+ * - _clearFieldError(inputId): tüm error state'i temizler
+ * - _clearAllErrors(...ids): birden çok alanı bir kerede temizle
+ *
+ * Toast'a ek olarak alanı işaretler — kullanıcı hatanın hangi alanda olduğunu görür.
+ */
+function _setFieldError(inputId, msg) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const group = input.closest('.form-group');
+    if (!group) return;
+    group.classList.add('has-error');
+    let errEl = group.querySelector('.field-error');
+    if (!errEl) {
+        errEl = document.createElement('div');
+        errEl.className = 'field-error';
+        errEl.setAttribute('role', 'alert');
+        group.appendChild(errEl);
+    }
+    errEl.textContent = msg;
+    input.setAttribute('aria-invalid', 'true');
+}
+function _clearFieldError(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const group = input.closest('.form-group');
+    if (!group) return;
+    group.classList.remove('has-error');
+    input.removeAttribute('aria-invalid');
+    const errEl = group.querySelector('.field-error');
+    if (errEl) errEl.textContent = '';
+}
+function _clearAllErrors(...ids) { ids.forEach(_clearFieldError); }
+
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
-    if (!email || !password) { showToast('E-posta ve şifre gerekli', 'warning'); return; }
+    _clearAllErrors('loginEmail', 'loginPassword');
+    let hasError = false;
+    if (!email) { _setFieldError('loginEmail', 'E-posta gerekli.'); hasError = true; }
+    if (!password) { _setFieldError('loginPassword', 'Şifre gerekli.'); hasError = true; }
+    if (hasError) { showToast('Lütfen eksik alanları doldur.', 'warning'); return; }
     try {
         const resp = await fetch(`${API_BASE}/api/auth/login`, {
             method: 'POST',
@@ -1770,8 +1811,18 @@ async function doRegister() {
     const name = document.getElementById('regName').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPassword').value;
-    if (!name || !email || !password) { showToast('Tüm alanlar gerekli', 'warning'); return; }
-    if (password.length < 8) { showToast('Şifre en az 8 karakter olmalı', 'warning'); return; }
+    _clearAllErrors('regName', 'regEmail', 'regPassword');
+    let hasError = false;
+    if (!name) { _setFieldError('regName', 'Ad gerekli.'); hasError = true; }
+    if (!email) { _setFieldError('regEmail', 'E-posta gerekli.'); hasError = true; }
+    if (!password) {
+        _setFieldError('regPassword', 'Şifre gerekli.');
+        hasError = true;
+    } else if (password.length < 8) {
+        _setFieldError('regPassword', 'Şifre en az 8 karakter olmalı.');
+        hasError = true;
+    }
+    if (hasError) { showToast('Lütfen formu kontrol et.', 'warning'); return; }
     try {
         const resp = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',
