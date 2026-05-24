@@ -135,7 +135,9 @@ class TestGetFarmDetailAsAdmin:
         client, _ = admin_client
         r = client.get("/api/farms/99999")
         assert r.status_code == 404
-        assert "bulunamadi" in r.json()["detail"].lower()
+        # v4-6 envelope (TR karakter): "bulunamadı" message/detail içinde
+        body = r.json()
+        assert "bulunamad" in body.get("detail", "").lower() or "bulunamad" in body.get("message", "").lower()
 
     def test_detail_int64_overflow_rejected(self, admin_client):
         client, _ = admin_client

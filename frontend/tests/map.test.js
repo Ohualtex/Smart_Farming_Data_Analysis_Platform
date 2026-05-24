@@ -164,4 +164,69 @@ describe("_markerOptions — region renk + outline", () => {
     const opts = _markerOptions(baseFarm, customPalette);
     expect(opts.fillColor).toBe("#FF00FF");
   });
+
+  // v4-4 edge case'ler
+  it("region tanımsız (undefined) — DEFAULT fallback", () => {
+    const opts = _markerOptions({});
+    expect(opts.fillColor).toBe(DEFAULT_REGION_COLOR);
+  });
+
+  it("region null — DEFAULT fallback (NULL-safety)", () => {
+    const opts = _markerOptions({ region: null });
+    expect(opts.fillColor).toBe(DEFAULT_REGION_COLOR);
+  });
+
+  it("region boş string — DEFAULT fallback", () => {
+    const opts = _markerOptions({ region: "" });
+    expect(opts.fillColor).toBe(DEFAULT_REGION_COLOR);
+  });
+});
+
+describe("_escapeHtml — edge case'ler (v4-4)", () => {
+  it("null input boş string döner", () => {
+    expect(_escapeHtml(null)).toBe("");
+  });
+
+  it("undefined input boş string döner", () => {
+    expect(_escapeHtml(undefined)).toBe("");
+  });
+
+  it("sayı (number) input string'e çevrilip escape edilir", () => {
+    expect(_escapeHtml(42)).toBe("42");
+  });
+
+  it("uzun XSS payload'ı tam sanitize eder", () => {
+    const evil = '<script>alert("XSS")</script>&<img src=x onerror=1>';
+    const safe = _escapeHtml(evil);
+    expect(safe).not.toContain("<script>");
+    expect(safe).not.toContain("</script>");
+    expect(safe).toContain("&lt;");
+    expect(safe).toContain("&gt;");
+    expect(safe).toContain("&quot;");
+    expect(safe).toContain("&amp;");
+  });
+
+  it("Türkçe karakterler dokunulmamış (UTF-8 korunur)", () => {
+    expect(_escapeHtml("Çiftlik Ş")).toBe("Çiftlik Ş");
+  });
+});
+
+describe("_farmPopupHtml — edge case'ler (v4-4)", () => {
+  it("area_hectares null ise '—' dash gösterir", () => {
+    const html = _farmPopupHtml({ id: 1, name: "X", area_hectares: null });
+    expect(html).toContain("Alan: —");
+  });
+
+  it("city/region eksikse boş string'le render eder (crash yok)", () => {
+    const html = _farmPopupHtml({ id: 5, name: "Eksik" });
+    expect(html).toContain("Eksik");
+    // Boş city · region — ayraç hâlâ var
+    expect(html).toContain("·");
+  });
+
+  it("XSS payload'lı name güvenli render edilir", () => {
+    const html = _farmPopupHtml({ id: 7, name: '<img src=x onerror=alert(1)>' });
+    expect(html).not.toContain("<img src=x");
+    expect(html).toContain("&lt;img");
+  });
 });

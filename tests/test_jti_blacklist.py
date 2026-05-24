@@ -164,9 +164,14 @@ class TestTamperedJwt:
     """Signature kırılınca jti check'ten önce JWTError fırlatılmalı."""
 
     def test_tampered_signature_rejected_before_jti_check(self, client):
-        """Token'in son karakteri değiştirildiğinde 401."""
+        """Signature segment'i değiştirildiğinde 401 (v4-6: tek-karakter
+        strategy base64url'da padding-equivalent çakışma riskli olduğu için
+        signature'ı tamamen sahteleştirilen string ile değiştir)."""
         token, _ = _register_and_login(client, email="tamper-jti@sfdap.test")
-        tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
+        # JWT format: header.payload.signature → signature'ı tamamen sahtele
+        parts = token.split(".")
+        assert len(parts) == 3, "JWT 3 segment olmalı"
+        tampered = f"{parts[0]}.{parts[1]}.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         r = client.get("/api/auth/me", headers={"Authorization": f"Bearer {tampered}"})
         assert r.status_code == 401
 
