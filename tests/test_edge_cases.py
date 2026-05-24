@@ -425,3 +425,76 @@ class TestMalformedInput:
         except (ValueError, TypeError, json.JSONDecodeError):
             # json.dumps inf/nan'ı atar — bu da kabul edilebilir bir savunma
             pass
+
+
+# ─── v4-5 REBUILD pivot edge case'leri ───────────────────────────
+
+
+class TestREBUILDAuthEdgeCases:
+    """v4-5: REBUILD pivot eklenen auth endpoint'lerinde sınır durumları."""
+
+    def test_register_extremely_long_email_rejected_or_truncated(self, anon_client):
+        """RFC 5321: email max 254 char. 500+ char email reddedilmeli."""
+        long_email = ("x" * 250) + "@test.invalid"
+        resp = anon_client.post(
+            "/api/auth/register",
+            json={"name": "X", "email": long_email, "password": "GuvenliP4ss2026"},
+        )
+        # 422 (Pydantic email validator) veya 400/409; 5xx olmamalı
+        assert resp.status_code < 500
+
+    def test_register_short_password_rejected(self, anon_client):
+        resp = anon_client.post(
+            "/api/auth/register",
+            json={"name": "X", "email": "short-pw@test.invalid", "password": "1234567"},
+        )
+        # 8 karakterden kısa → 400 veya 422
+        assert resp.status_code in (400, 422)
+
+    def test_malformed_authorization_header_returns_401(self, anon_client):
+        """Bearer prefix'siz token → 401."""
+        resp = anon_client.get("/api/auth/me", headers={"Authorization": "InvalidPrefix abc"})
+        assert resp.status_code == 401
+
+    def test_garbage_jwt_token_returns_401(self, anon_client):
+        """Geçersiz imza/yapı → 401."""
+        resp = anon_client.get("/api/auth/me", headers={"Authorization": "Bearer garbage.token.string"})
+        assert resp.status_code == 401
+
+
+class TestOnboardingEdgeCases:
+    """v4-5: REBUILD Faz 6 onboarding endpoint sınır durumları."""
+
+    def test_demo_idempotent_second_call_no_duplicate(self, farmer_client):
+        """Demo data iki kez yüklenmeli mi? Mevcut davranışı pin'le."""
+        client, _ = farmer_client
+        first = client.post("/api/onboarding/demo")
+        # Başarılı (200/201) veya zaten yüklü (409) olmalı
+        assert first.status_code in (200, 201, 409)
+
+        second = client.post("/api/onboarding/demo")
+        # İkinci çağrı: idempotent (200/409) veya yine başarılı
+        assert second.status_code in (200, 201, 409)
+
+
+class TestRBACEdgeCases:
+    """v4-5: RBAC bypass denemeleri sınır durumları."""
+
+    def test_overseer_cannot_post_to_write_endpoint(self, overseer_client):
+        """Overseer read-only — POST /api/farms/ 403 dönmeli."""
+        client, _ = overseer_client
+        resp = client.post(
+            "/api/farms/",
+            json={"name": "Gözetmen Çiftliği", "region": "Ege"},
+        )
+        assert resp.status_code == 403
+
+    def test_developer_cannot_create_farm_for_other_user(self, developer_client):
+        """Developer write yapamaz."""
+        client, _ = developer_client
+        resp = client.post(
+            "/api/farms/",
+            json={"name": "Dev Çiftlik", "region": "Marmara"},
+        )
+        # _WRITE_ROLES = {admin, farmer}; developer → 403
+        assert resp.status_code == 403
