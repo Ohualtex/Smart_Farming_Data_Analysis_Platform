@@ -108,16 +108,24 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(SFDAPError)
     async def sfdap_exception_handler(request: Request, exc: SFDAPError):
-        """Tüm SFDAP custom exception'larını yakalar."""
+        """Tüm SFDAP custom exception'larını yakalar.
+
+        Envelope: `{"error_code": "...", "message": "...", "detail": "..."}`.
+        Backward compat (v4-6): exc.detail None ise `detail` alanı message ile
+        doldurulur — eski HTTPException(detail="...") yanıtlarını bekleyen
+        client'lar ve testler bozulmadan çalışır.
+        """
         status_code = getattr(exc, "status_code", 500)
         error_code = getattr(exc, "error_code", "INTERNAL_ERROR")
+        # detail None ise message'i fallback olarak koy (HTTPException uyumu)
+        detail = exc.detail if exc.detail is not None else exc.message
 
         return JSONResponse(
             status_code=status_code,
             content={
                 "error_code": error_code,
                 "message": exc.message,
-                "detail": exc.detail,
+                "detail": detail,
             },
         )
 

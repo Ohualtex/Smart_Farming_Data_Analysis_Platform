@@ -119,7 +119,9 @@ class TestGetSensorById:
     def test_get_sensor_404_message(self, admin_with_field):
         client, _ = admin_with_field
         response = client.get("/api/sensors/99999")
-        assert "bulunamadi" in response.json()["detail"].lower()
+        # v4-6 envelope (TR karakter): "bulunamadı" message/detail içinde
+        body = response.json()
+        assert "bulunamad" in body.get("detail", "").lower() or "bulunamad" in body.get("message", "").lower()
 
 
 # ───── DELETE /api/sensors/{id} ───────────────────────────────────────────────

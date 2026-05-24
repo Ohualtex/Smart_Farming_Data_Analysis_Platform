@@ -9,10 +9,11 @@ the `X-API-Key` header.
 API anahtarı tabanlı kimlik doğrulama; X-API-Key header zorunludur.
 """
 
-from fastapi import HTTPException, Security, status
+from fastapi import Security
 from fastapi.security import APIKeyHeader
 
 from app.config import settings
+from app.middleware.exceptions import ForbiddenError, UnauthorizedError
 
 # Header'dan API Key okuma
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
@@ -29,15 +30,9 @@ async def verify_api_key(api_key: str = Security(api_key_header)) -> str:
             ...
     """
     if not api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API anahtari eksik. 'X-API-Key' header'i gerekli.",
-        )
+        raise UnauthorizedError(detail="API anahtarı eksik. 'X-API-Key' header'ı gerekli.")
 
     if api_key != settings.API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Gecersiz API anahtari.",
-        )
+        raise ForbiddenError(detail="Geçersiz API anahtarı.")
 
     return api_key

@@ -26,9 +26,9 @@ Rol semantik:
 
 from __future__ import annotations
 
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Query, Session
 
+from app.middleware.exceptions import ForbiddenError, NotFoundError
 from app.models.models import Farm, Field, Sensor, User
 
 # Bypass set'i — bu rollerin scope filter'ı uygulanmaz, sistem-geneli
@@ -70,8 +70,8 @@ def assert_farm_ownership(db: Session, farm_id: int, user: User) -> None:
         user: caller `User` ORM nesnesi
 
     Raises:
-        HTTPException(403): farmer ise ve sahibi değilse
-        HTTPException(404): farm hiç mevcut değilse (admin için bile)
+        ForbiddenError (403): farmer ise ve sahibi değilse
+        NotFoundError (404): farm hiç mevcut değilse (admin için bile)
 
     Bypass:
         admin/overseer/developer için sadece varlık check'i yapılır;
@@ -79,14 +79,11 @@ def assert_farm_ownership(db: Session, farm_id: int, user: User) -> None:
     """
     farm = db.query(Farm.id, Farm.user_id).filter(Farm.id == farm_id).first()
     if farm is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ciftlik bulunamadi")
+        raise NotFoundError("Çiftlik")
     if user.role in _BYPASS_ROLES:
         return
     if farm.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Bu ciftlige erisim yetkin yok",
-        )
+        raise ForbiddenError(detail="Bu çiftliğe erişim yetkin yok.")
 
 
 def is_write_allowed(user: User) -> bool:
@@ -98,24 +95,24 @@ def assert_field_ownership(db: Session, field_id: int, user: User) -> None:
     """`Field` sahipliğini Field → Farm → user_id zinciri ile doğrula.
 
     Raises:
-        HTTPException(403): farmer ise ve sahibi değilse
-        HTTPException(404): field hiç mevcut değilse
+        ForbiddenError (403): farmer ise ve sahibi değilse
+        NotFoundError (404): field hiç mevcut değilse
     """
     row = db.query(Field.id, Farm.user_id).join(Farm, Field.farm_id == Farm.id).filter(Field.id == field_id).first()
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarla bulunamadi")
+        raise NotFoundError("Tarla")
     if user.role in _BYPASS_ROLES:
         return
     if row.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu tarlaya erisim yetkin yok")
+        raise ForbiddenError(detail="Bu tarlaya erişim yetkin yok.")
 
 
 def assert_sensor_ownership(db: Session, sensor_id: int, user: User) -> None:
     """`Sensor` sahipliğini Sensor → Field → Farm → user_id zinciri ile doğrula.
 
     Raises:
-        HTTPException(403): farmer ise ve sahibi değilse
-        HTTPException(404): sensor hiç mevcut değilse
+        ForbiddenError (403): farmer ise ve sahibi değilse
+        NotFoundError (404): sensor hiç mevcut değilse
     """
     row = (
         db.query(Sensor.id, Farm.user_id)
@@ -125,11 +122,11 @@ def assert_sensor_ownership(db: Session, sensor_id: int, user: User) -> None:
         .first()
     )
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sensor bulunamadi")
+        raise NotFoundError("Sensör")
     if user.role in _BYPASS_ROLES:
         return
     if row.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu sensore erisim yetkin yok")
+        raise ForbiddenError(detail="Bu sensöre erişim yetkin yok.")
 
 
 def scope_sensors_to_user(query: Query, user: User) -> Query:
