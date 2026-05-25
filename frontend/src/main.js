@@ -2434,7 +2434,37 @@ function initFiliz() {
         }
     };
 
+    /**
+     * v6-1 (Item 8b binding): Farmer için critical alert varsa Filiz mesajına
+     * yansıt — ölü kodu canlandır (`filizCriticalAlerts` zaten 60sn'de bir
+     * çekiliyor ama mevcut bubble random tip gösteriyordu).
+     *
+     * Strateji: %50 olasılıkla critical alert mesajı, %50 normal random tip
+     * (farmer'ı sürekli alertle bombalamamak için). Sleepy mood'da alert
+     * görmezden gelinir — gece kullanıcıyı strese sokma.
+     *
+     * Sadece farmer için aktif: admin/overseer/developer kendi alert UI'larına
+     * (header çanı, /api/alerts sayfası) sahip; mascot farmer'ın "sahada
+     * çağırıcı sesi" rolünde.
+     */
+    const pickCriticalIfAny = () => {
+        if (currentUser?.role !== 'farmer') return null;
+        if (filizMood === 'sleepy') return null;
+        if (!filizCriticalAlerts || filizCriticalAlerts.length === 0) return null;
+        if (Math.random() > 0.5) return null;  // %50 — kullanıcıyı bombalamayı önle
+        const alert = filizCriticalAlerts[0];  // API en yeni first dönüyor
+        if (!alert || !alert.message) return null;
+        return {
+            greeting: 'Aa, dikkat! 😟',
+            msg: `🚨 ${alert.message}`,
+            tip: 'Uyarılar sayfasından detayı gör →',
+        };
+    };
+
     const pickTip = () => {
+        // v6-1: Critical alert varsa öncelik tanı (farmer için, %50 olasılıkla)
+        const critical = pickCriticalIfAny();
+        if (critical) return critical;
         // Item 8b: rol-aware havuz + isim ile kişiselleştirme.
         const tips = _getRoleTips(currentUser?.role);
         const tip = tips[Math.floor(Math.random() * tips.length)];
