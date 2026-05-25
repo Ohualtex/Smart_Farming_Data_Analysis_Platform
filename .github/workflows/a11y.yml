@@ -97,6 +97,13 @@ jobs:
           # Dashboard erişilebilir mi?
           curl -sfI http://127.0.0.1:8000/dashboard/ | head -3
 
+      - name: 🔧 ChromeDriver'ı Chrome ile senkronize et
+        # Runner imajındaki Chrome sürümü ile npx ile çekilen
+        # @axe-core/cli'nin ChromeDriver'ı arada uyumsuz çıkıyor
+        # ("This version of ChromeDriver only supports Chrome version N").
+        # browser-driver-manager runner'daki Chrome'a uyumlu driver yükler.
+        run: npx --yes browser-driver-manager install chrome
+
       - name: ♿ axe-core taraması
         working-directory: frontend
         # `--exit` violation varsa exit 1 döner ve job fail eder.
