@@ -28,11 +28,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
+from app.middleware.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import _WRITE_ROLES, assert_farm_ownership, assert_field_ownership
 from app.models.models import (
@@ -67,10 +68,7 @@ router = APIRouter(prefix="/api/fields", tags=["Tarla Detayı"])
 def _require_write(user: User) -> None:
     """overseer/developer için 403; farmer + admin OK (write set)."""
     if user.role not in _WRITE_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek",
-        )
+        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 # ─── Sabitler ──────────────────────────────────────────────────
@@ -130,7 +128,7 @@ def get_field_detail(
     )
     if row is None:
         # assert_field_ownership zaten 404 fırlattı; defensive (race).
-        raise HTTPException(status_code=404, detail="Tarla bulunamadi")
+        raise NotFoundError("Tarla")
     field, farm, crop = row
 
     # ─── Sensörler + her birinin en son okuması (N+1 fix v3-3 #3) ─
@@ -362,10 +360,7 @@ def delete_field(
     assert_field_ownership(db, field_id, current_user)
     sensor_count = db.query(func.count(Sensor.id)).filter(Sensor.field_id == field_id).scalar() or 0
     if sensor_count > 0:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Bu tarlanin {sensor_count} sensoru var; once sensorleri sil.",
-        )
+        raise ConflictError(message=f"Bu tarlanın {sensor_count} sensörü var; önce sensörleri sil.")
     field = db.query(Field).filter(Field.id == field_id).first()
     db.delete(field)
     db.commit()

@@ -13,12 +13,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.middleware.exceptions import ValidationError
 from app.models.models import (
     Farm,
     Field,
@@ -306,7 +307,7 @@ def export_analytics(
 ) -> StreamingResponse:
     """Analitik verilerini PDF veya Excel formati olarak disari aktarir."""
     if format not in ["pdf", "xlsx"]:
-        raise HTTPException(status_code=400, detail="Gecersiz format. Sadece 'pdf' veya 'xlsx' desteklenir.")
+        raise ValidationError(message="Geçersiz format. Sadece 'pdf' veya 'xlsx' desteklenir.")
 
     # `get_analytics_summary` artık `_user` Depends gerektiriyor; export
     # zaten authorized caller'ı geçirir.

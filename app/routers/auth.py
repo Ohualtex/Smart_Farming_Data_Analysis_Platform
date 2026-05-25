@@ -42,6 +42,13 @@ from sqlalchemy.orm import Session
 # TODO: swap to EmailStr once pydantic[email] (email-validator) is installed.
 from app.config import settings
 from app.database import MAX_SQLITE_INT, get_db
+from app.middleware.exceptions import (
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    UnauthorizedError,
+    ValidationError,
+)
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.models.models import USER_ROLES, Farm, User  # USER_ROLES: tek kaynak referansı
 from app.schemas.schemas import UtcDateTime  # UTC-suffix'li date-time serializer (OpenAPI kontratı)
@@ -256,26 +263,26 @@ def _decode_token(token: str) -> int:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
     except JWTError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gecersiz token") from exc
+        raise UnauthorizedError(detail="Geçersiz token.") from exc
     # jti blacklist kontrolü — payload.get çünkü eski (jti'siz) token'lara
     # tolerans (`jti` yoksa never-blacklisted sayılır; eski client'lar yeni
     # login alana kadar çalışmaya devam eder).
     jti = payload.get("jti")
     if jti is not None and jti in _BLACKLISTED_JTIS:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token iptal edildi")
+        raise UnauthorizedError(detail="Token iptal edildi.")
     sub = payload.get("sub")
     if sub is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token icerigi eksik")
+        raise UnauthorizedError(detail="Token içeriği eksik.")
     try:
         return int(sub)
     except (TypeError, ValueError) as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gecersiz token") from exc
+        raise UnauthorizedError(detail="Geçersiz token.") from exc
 
 
 def _extract_bearer(authorization: str) -> str:
     """`Authorization: Bearer <token>` header'ından token'ı çıkar."""
     if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token eksik")
+        raise UnauthorizedError(detail="Token eksik.")
     return authorization[7:]
 
 
@@ -285,7 +292,7 @@ def _get_current_user(authorization: str = Header(default=""), db: Session = Dep
     user_id = _decode_token(token)
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanici bulunamadi")
+        raise UnauthorizedError(detail="Kullanıcı bulunamadı.")
     return user
 
 
@@ -337,10 +344,7 @@ def require_role(*allowed_roles: str) -> Callable[..., User]:
 
     def _dep(user: User = Depends(_get_current_user)) -> User:
         if user.role not in allowed_set:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Bu islem icin yetki yok — gerekli rol(ler): {', '.join(sorted(allowed_set))}",
-            )
+            raise ForbiddenError(detail=f"Bu işlem için yetki yok — gerekli rol(ler): {', '.join(sorted(allowed_set))}")
         return user
 
     return _dep
@@ -361,14 +365,14 @@ def require_role(*allowed_roles: str) -> Callable[..., User]:
 @limiter.limit(AUTH_RATE)
 def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)) -> User:
     if db.query(User).filter(User.email == payload.email).first():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta zaten kayitli")
+        raise ConflictError(message="Bu e-posta zaten kayıtlı.")
     if len(payload.password) < 8:
         # 400 — FastAPI'nin auto-generated 422 şeması list[ValidationError]
         # bekler; düz-string detail uyumsuz olur.
         # ---
         # 400 — FastAPI's auto-generated 422 schema expects
         # list[ValidationError]; a plain-string detail breaks it.
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sifre en az 8 karakter olmali")
+        raise ValidationError(message="Şifre en az 8 karakter olmalı.")
     user = User(
         name=payload.name,
         email=payload.email,
@@ -399,7 +403,7 @@ def register(request: Request, payload: UserRegisterRequest, db: Session = Depen
 def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     user = db.query(User).filter(User.email == payload.email).first()
     if user is None or not _verify_password(payload.password, user.password_hash or ""):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="E-posta veya sifre hatali")
+        raise UnauthorizedError(detail="E-posta veya şifre hatalı.")
     token, expires_in = _create_token(user.id)
     return TokenResponse(access_token=token, expires_in=expires_in)
 
@@ -486,13 +490,12 @@ def update_user_role(
     if user_id == caller.id:
         # Admin self-demotion → potansiyel lock-out (son admin kendini farmer
         # yaparsa promotion endpoint'i çağıracak admin kalmaz).
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Admin kendi rolünü değiştiremez (lock-out koruması). Başka bir admin promote/demote etmeli.",
+        raise ConflictError(
+            message="Admin kendi rolünü değiştiremez (lock-out koruması). Başka bir admin promote/demote etmeli."
         )
     target = db.query(User).filter(User.id == user_id).first()
     if target is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanici bulunamadi")
+        raise NotFoundError("Kullanıcı")
     target.role = payload.role
     db.commit()
     db.refresh(target)
@@ -531,20 +534,11 @@ def change_password(
 ) -> PasswordChangeResponse:
     """Mevcut şifreyi doğrula, yenisini bcrypt ile hash'le, DB'ye kaydet."""
     if not _verify_password(payload.current_password, user.password_hash or ""):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Mevcut sifre hatali",
-        )
+        raise UnauthorizedError(detail="Mevcut şifre hatalı.")
     if len(payload.new_password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Yeni sifre en az 8 karakter olmali",
-        )
+        raise ValidationError(message="Yeni şifre en az 8 karakter olmalı.")
     if payload.new_password == payload.current_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Yeni sifre mevcut sifreyle ayni olamaz",
-        )
+        raise ValidationError(message="Yeni şifre mevcut şifreyle aynı olamaz.")
     user.password_hash = _hash_password(payload.new_password)
     db.commit()
     return PasswordChangeResponse(detail="Sifre guncellendi")
@@ -624,7 +618,7 @@ def get_user(
     """Tek kullanıcının admin görünümü."""
     target = db.query(User).filter(User.id == user_id).first()
     if target is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanici bulunamadi")
+        raise NotFoundError("Kullanıcı")
     owned = db.query(func.count(Farm.id)).filter(Farm.user_id == target.id).scalar() or 0
     return AdminUserListItem(
         id=target.id,
@@ -664,9 +658,9 @@ def admin_create_user(
 ) -> User:
     """Admin rol seçerek kullanıcı yaratır."""
     if db.query(User).filter(User.email == payload.email).first():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta zaten kayitli")
+        raise ConflictError(message="Bu e-posta zaten kayıtlı.")
     if len(payload.password) < 8:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sifre en az 8 karakter olmali")
+        raise ValidationError(message="Şifre en az 8 karakter olmalı.")
     user = User(
         name=payload.name,
         email=payload.email,
@@ -707,10 +701,10 @@ def admin_reset_password(
 ) -> PasswordChangeResponse:
     """Admin override — hedef kullanıcının şifresini sıfırla."""
     if len(payload.new_password) < 8:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Yeni sifre en az 8 karakter olmali")
+        raise ValidationError(message="Yeni şifre en az 8 karakter olmalı.")
     target = db.query(User).filter(User.id == user_id).first()
     if target is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanici bulunamadi")
+        raise NotFoundError("Kullanıcı")
     target.password_hash = _hash_password(payload.new_password)
     db.commit()
     return PasswordChangeResponse(detail="Sifre sifirlandi")
@@ -740,18 +734,12 @@ def admin_delete_user(
 ) -> None:
     """Kullanıcı sil — self + farm-owner guard'larıyla."""
     if user_id == caller.id:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Admin kendini silemez (lock-out koruması). Başka bir admin silmeli.",
-        )
+        raise ConflictError(message="Admin kendini silemez (lock-out koruması). Başka bir admin silmeli.")
     target = db.query(User).filter(User.id == user_id).first()
     if target is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanici bulunamadi")
+        raise NotFoundError("Kullanıcı")
     farm_count = db.query(func.count(Farm.id)).filter(Farm.user_id == user_id).scalar() or 0
     if farm_count > 0:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Bu kullanicinin {farm_count} ciftligi var; once ciftlikleri sil veya devret.",
-        )
+        raise ConflictError(message=f"Bu kullanıcının {farm_count} çiftliği var; önce çiftlikleri sil veya devret.")
     db.delete(target)
     db.commit()

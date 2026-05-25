@@ -36,13 +36,34 @@ function _authHeaders() {
         : { 'X-API-Key': 'dev-api-key' };  // anonim fallback (eski endpoint'ler)
 }
 
+/**
+ * Backend hata envelope'undan kullanıcıya gösterilecek mesaj üret.
+ * SFDAPError envelope: {error_code, message, detail}. v5-1 (fixroll_v5):
+ * - `message` öncelikli (TR, kullanıcı dostu)
+ * - `detail` (string ise) fallback
+ * - hiçbiri yoksa generic `HTTP ${status}`
+ */
+async function _extractErrorMessage(res) {
+    try {
+        const body = await res.clone().json();
+        if (body && typeof body.message === "string" && body.message.trim()) return body.message;
+        if (body && typeof body.detail === "string" && body.detail.trim()) return body.detail;
+    } catch {
+        // body JSON değil veya parse hatası — generic mesaja düş
+    }
+    return `HTTP ${res.status}`;
+}
+
 async function api(endpoint, options = {}) {
     try {
         const res = await fetch(`${API_BASE}${endpoint}`, {
             headers: { 'Content-Type': 'application/json', ..._authHeaders(), ...options.headers },
             ...options
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            const msg = await _extractErrorMessage(res);
+            throw new Error(msg);
+        }
         return await res.json();
     } catch (e) {
         console.warn(`API Error: ${endpoint}`, e);
@@ -77,10 +98,17 @@ async function apiAuth(endpoint, options = {}) {
             return null;
         }
         if (res.status === 403) {
-            showToast('Bu işlem için yetkin yok', 'warning');
+            // v5-1: backend envelope mesajı varsa toast'ı kişiselleştir
+            const msg = await _extractErrorMessage(res);
+            showToast(msg.startsWith('HTTP ') ? 'Bu işlem için yetkin yok' : msg, 'warning');
             return null;
         }
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            // v5-1: 4xx/5xx → envelope message'i toast'a yansıt
+            const msg = await _extractErrorMessage(res);
+            showToast(msg, 'error');
+            throw new Error(msg);
+        }
         return await res.json();
     } catch (e) {
         console.warn(`API Auth Error: ${endpoint}`, e);
@@ -412,9 +440,15 @@ async function loadFields() {
     `;
 
     if (farms.length === 0) {
+        // v5-3: empty state cilası — illustration + iki CTA (yeni çiftlik / demo)
         html += `<div class="empty-state">
-            <p>🌱 Henüz çiftliğin yok. Yukarıdan "Çiftlik Ekle" ile başla
-               ya da <button class="btn-link" onclick="loadDemoData()">demo verisi yükle</button>.</p>
+            <div class="icon">🚜</div>
+            <p><strong>Henüz hiç çiftliğin yok.</strong></p>
+            <p>İlk çiftliğini ekleyerek başla veya örnek verilerle deneyebilirsin.</p>
+            <div class="cta-row">
+                <button class="btn-primary" onclick="toggleForm('newFarmForm')">➕ İlk çiftliğimi ekle</button>
+                <button class="btn-link" onclick="loadDemoData()">veya demo verisi yükle</button>
+            </div>
         </div>`;
         container.innerHTML = html;
         _setBusy('fieldsListContainer', false);
@@ -1707,10 +1741,51 @@ document.addEventListener('click', (e) => {
     }
 });
 
+/**
+ * v5-5: Inline field error helper'ları.
+ * - _setFieldError(inputId, msg): form-group'a `has-error` ekler + `.field-error` doldurur,
+ *   aria-invalid="true" yapar (screen reader)
+ * - _clearFieldError(inputId): tüm error state'i temizler
+ * - _clearAllErrors(...ids): birden çok alanı bir kerede temizle
+ *
+ * Toast'a ek olarak alanı işaretler — kullanıcı hatanın hangi alanda olduğunu görür.
+ */
+function _setFieldError(inputId, msg) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const group = input.closest('.form-group');
+    if (!group) return;
+    group.classList.add('has-error');
+    let errEl = group.querySelector('.field-error');
+    if (!errEl) {
+        errEl = document.createElement('div');
+        errEl.className = 'field-error';
+        errEl.setAttribute('role', 'alert');
+        group.appendChild(errEl);
+    }
+    errEl.textContent = msg;
+    input.setAttribute('aria-invalid', 'true');
+}
+function _clearFieldError(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const group = input.closest('.form-group');
+    if (!group) return;
+    group.classList.remove('has-error');
+    input.removeAttribute('aria-invalid');
+    const errEl = group.querySelector('.field-error');
+    if (errEl) errEl.textContent = '';
+}
+function _clearAllErrors(...ids) { ids.forEach(_clearFieldError); }
+
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
-    if (!email || !password) { showToast('E-posta ve şifre gerekli', 'warning'); return; }
+    _clearAllErrors('loginEmail', 'loginPassword');
+    let hasError = false;
+    if (!email) { _setFieldError('loginEmail', 'E-posta gerekli.'); hasError = true; }
+    if (!password) { _setFieldError('loginPassword', 'Şifre gerekli.'); hasError = true; }
+    if (hasError) { showToast('Lütfen eksik alanları doldur.', 'warning'); return; }
     try {
         const resp = await fetch(`${API_BASE}/api/auth/login`, {
             method: 'POST',
@@ -1736,8 +1811,18 @@ async function doRegister() {
     const name = document.getElementById('regName').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPassword').value;
-    if (!name || !email || !password) { showToast('Tüm alanlar gerekli', 'warning'); return; }
-    if (password.length < 8) { showToast('Şifre en az 8 karakter olmalı', 'warning'); return; }
+    _clearAllErrors('regName', 'regEmail', 'regPassword');
+    let hasError = false;
+    if (!name) { _setFieldError('regName', 'Ad gerekli.'); hasError = true; }
+    if (!email) { _setFieldError('regEmail', 'E-posta gerekli.'); hasError = true; }
+    if (!password) {
+        _setFieldError('regPassword', 'Şifre gerekli.');
+        hasError = true;
+    } else if (password.length < 8) {
+        _setFieldError('regPassword', 'Şifre en az 8 karakter olmalı.');
+        hasError = true;
+    }
+    if (hasError) { showToast('Lütfen formu kontrol et.', 'warning'); return; }
     try {
         const resp = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',

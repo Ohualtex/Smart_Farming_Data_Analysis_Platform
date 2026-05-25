@@ -15,10 +15,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
+from app.middleware.exceptions import ForbiddenError, ValidationError
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
 from app.middleware.rbac import _WRITE_ROLES, assert_field_ownership
 from app.ml.plant_disease_model import plant_disease_model
@@ -31,10 +32,7 @@ router = APIRouter(prefix="/api/plants", tags=["Bitki Sağlığı"])
 def _require_write(user: User) -> None:
     """overseer/developer için 403; farmer + admin OK."""
     if user.role not in _WRITE_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek",
-        )
+        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 def _scope_images_to_user(query, user: User):  # noqa: ANN001
@@ -163,7 +161,7 @@ async def analyze_plant_image(
             detail=f"Dosya cok buyuk ({len(content)} byte). Max: {MAX_UPLOAD_BYTES} byte.",
         )
     if len(content) == 0:
-        raise HTTPException(status_code=400, detail="Dosya bos")
+        raise ValidationError(message="Dosya boş.")
 
     # ─── Diske kaydet ────────────────────────────────────────────
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")

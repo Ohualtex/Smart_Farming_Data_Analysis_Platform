@@ -12,11 +12,12 @@ RBAC kapsamı (4 rol):
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
+from app.middleware.exceptions import ForbiddenError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import (
     _WRITE_ROLES,
@@ -41,10 +42,7 @@ MAX_SKIP = 1_000_000
 def _require_write(user: User) -> None:
     """overseer/developer write 403; farmer + admin OK."""
     if user.role not in _WRITE_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek",
-        )
+        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 @router.get(
@@ -94,7 +92,7 @@ def get_sensor(
     assert_sensor_ownership(db, sensor_id, current_user)
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
-        raise HTTPException(status_code=404, detail="Sensor bulunamadi")
+        raise NotFoundError("Sensör")
     return sensor
 
 
@@ -149,7 +147,7 @@ def delete_sensor(
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
         # assert_sensor_ownership zaten 404 fırlattı; race condition defensive.
-        raise HTTPException(status_code=404, detail="Sensor bulunamadi")
+        raise NotFoundError("Sensör")
     db.delete(sensor)
     db.commit()
     return {"message": "Sensor silindi"}

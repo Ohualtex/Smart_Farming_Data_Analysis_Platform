@@ -68,10 +68,15 @@ class ForbiddenError(SFDAPError):
 
 
 class ValidationError(SFDAPError):
-    """Validasyon hatası (422)."""
+    """Manuel validasyon hatası (400 — kullanıcı girdisi business-rule ihlali).
+
+    NOT: Pydantic schema validation 422 RequestValidationError handler'ında
+    ele alınır; bu sınıf manuel `if x < 8: raise ValidationError(...)` gibi
+    runtime kontrolleri için 400 döner (HTTPException(400) ile uyumlu).
+    """
 
     error_code = "VALIDATION_ERROR"
-    status_code = 422
+    status_code = 400
 
     def __init__(self, message: str = "Geçersiz veri", detail: str | None = None):
         super().__init__(message=message, detail=detail)

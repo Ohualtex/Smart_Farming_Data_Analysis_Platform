@@ -21,11 +21,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
+from app.middleware.exceptions import ForbiddenError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import _BYPASS_ROLES, _WRITE_ROLES, assert_farm_ownership
 from app.models.models import Farm, Field, PlantHealthImage, Sensor, SoilMoistureReading, SystemAlert, User
@@ -44,10 +45,7 @@ DISEASE_REMINDER_DAYS = 14  # bu süredir hastalık analizi yoksa hatırlat
 def _require_write(user: User) -> None:
     """overseer/developer için 403; farmer + admin OK."""
     if user.role not in _WRITE_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek",
-        )
+        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 def _scope_alerts_to_user(query, user: User):  # noqa: ANN001
@@ -105,12 +103,12 @@ def get_alert(
 ) -> SystemAlert:
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if alert is None:
-        raise HTTPException(status_code=404, detail=f"Alert {alert_id} bulunamadi")
+        raise NotFoundError("Uyarı", detail=f"alert_id={alert_id}")
     # Sahiplik check: farmer'lar yalnız kendi farm'larına ait alert'leri görsün.
     if current_user.role == "farmer":
         if alert.farm_id is None:
             # Sistem-wide alert (farm_id NULL) — farmer görmesin
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu alert'e erisim yetkin yok")
+            raise ForbiddenError(detail="Bu uyarıya erişim yetkin yok.")
         assert_farm_ownership(db, alert.farm_id, current_user)
     return alert
 
@@ -139,10 +137,7 @@ def create_alert(
     if payload.farm_id is not None:
         assert_farm_ownership(db, payload.farm_id, current_user)
     elif current_user.role == "farmer":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Farmer sistem-wide alert (farm_id=None) oluşturamaz",
-        )
+        raise ForbiddenError(detail="Farmer sistem-geneli uyarı (farm_id=None) oluşturamaz.")
     alert = SystemAlert(**payload.model_dump())
     db.add(alert)
     db.commit()
@@ -177,11 +172,11 @@ def update_alert(
     _require_write(current_user)
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if alert is None:
-        raise HTTPException(status_code=404, detail=f"Alert {alert_id} bulunamadi")
+        raise NotFoundError("Uyarı", detail=f"alert_id={alert_id}")
     # Sahiplik check farmer için
     if current_user.role == "farmer":
         if alert.farm_id is None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bu alert'e erisim yetkin yok")
+            raise ForbiddenError(detail="Bu uyarıya erişim yetkin yok.")
         assert_farm_ownership(db, alert.farm_id, current_user)
     # ─── AUDIT FIX (REBUILD Faz 1 / Adım 13) ─────────────────────────
     # `exclude_none=True` → `is_resolved: None` / `severity: None` gibi
