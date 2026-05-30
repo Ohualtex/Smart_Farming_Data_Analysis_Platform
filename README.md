@@ -7,7 +7,7 @@
 [![A11y](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue)
 ![Coverage 95%](https://img.shields.io/badge/Coverage-95%25-brightgreen)
-![Tests 622+32](https://img.shields.io/badge/Tests-622%20backend%20%2B%2032%20frontend-success)
+![Tests 650+59](https://img.shields.io/badge/Tests-650%20backend%20%2B%2059%20frontend-success)
 
 ---
 
@@ -43,7 +43,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
 | 🏛️ **Genel Gözetmen** | Tüm çiftliklere read-only, harita + analytics | Sistem-geneli gözetim ve raporlama (tüm çiftlikler, salt-okunur) |
 | 👑 **Admin** | Tüm sistem + kullanıcı yönetimi + audit log | Operasyonel kontrol, rol atama, kritik alert yönetimi |
 
-> **`rebuild` branch — aktif geliştirme:** 4-rollü RBAC, rol-spesifik dashboard'lar, eyleme yönelik akışlar ve onboarding burada inşa ediliyor. Detaylı plan: [`docs/REBUILD_ROADMAP.md`](docs/REBUILD_ROADMAP.md).
+> **REBUILD sprint — `main`'e merge edildi:** 4-rollü RBAC, rol-spesifik dashboard'lar, eyleme yönelik akışlar ve onboarding tamamlandı; ardından `fixroll` iyileştirme serisi (v1-v7) ile frontend cila, performans (N+1/index), hata-zarfı refactor ve bug fix turları yapıldı. Detaylı plan: [`docs/REBUILD_ROADMAP.md`](docs/REBUILD_ROADMAP.md).
 
 ---
 
@@ -55,7 +55,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
    [FastAPI routers] → [services] → [SQLAlchemy ORM] → [SQLite / PostgreSQL]
             │
             ├─ JWT bearer + bcrypt + jti blacklist
-            ├─ 4-rollü RBAC (rebuild branch)
+            ├─ 4-rollü RBAC (REBUILD)
             ├─ Rate limiting (slowapi)
             ├─ Defense-in-depth headers (CSP / HSTS / XFO / XCTO / Referrer / Permissions)
             ├─ Sentry + Prometheus + structured JSON log
@@ -80,9 +80,9 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
 
 | Kategori | Değer | Komut |
 |:--|:--|:--|
-| Backend test | **622** geçer | `make test` |
-| Frontend test | **32** geçer (Vitest + jsdom) | `cd frontend && npm test` |
-| Coverage | **%95.04** (eşik %80) | `make test` |
+| Backend test | **650** geçer | `make test` |
+| Frontend test | **59** geçer (Vitest + jsdom) | `cd frontend && npm test` |
+| Coverage | **%95** (eşik %80) | `make test` |
 | Lint + format | Ruff temiz (17 kural grubu) | `make lint && make format` |
 | Source security | bandit medium+ → 0 issue | `make audit` |
 | Dependency CVE | pip-audit (haftalık cron) | `make audit` |
@@ -118,9 +118,9 @@ Production guard'ları (`app/config.py`): `ENVIRONMENT=production` iken default 
 
 ## 📋 Sprint Durumu
 
-- **Şu an:** `rebuild` branch — REBUILD sprint (18 – 30 May 2026, solo)
+- **Şu an:** REBUILD (18–30 May 2026) + `fixroll` iyileştirme serisi (v1-v7) `main`'de — akademik teslime hazırlık
 - **Akademik teslim:** 7 Haziran 2026
-- **Aktif yol haritası:** [`docs/REBUILD_ROADMAP.md`](docs/REBUILD_ROADMAP.md) — 7 faz × 13 gün
+- **Yol haritası:** [`docs/REBUILD_ROADMAP.md`](docs/REBUILD_ROADMAP.md) — 7 faz × 13 gün
 - **Geçmiş cycle'lar + ekip dağılımı:** [`projeakisi.md`](projeakisi.md)
 
 ---
