@@ -3,7 +3,7 @@
 # ============================================================
 # Her push ve Pull Request'te otomatik olarak:
 #   1. Kod kalitesi kontrolü (Ruff lint + format)
-#   2. Testleri çalıştırma (pytest, 400+ test)
+#   2. Testleri çalıştırma (pytest, 650+ test)
 #   3. Test coverage raporu (HTML + XML artifact)
 #   4. Alembic migration smoke test (boş DB → upgrade head)
 #   5. Schemathesis property-based API fuzz (shiftFinal Ayşe paketi)

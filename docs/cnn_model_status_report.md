@@ -3,7 +3,7 @@
 **Proje:** SFDAP — Akıllı Tarım Veri Analizi Platformu  
 **Hafta:** 6  
 **Konu:** CNN Tabanlı Bitki Hastalığı Tespit Modeli Durum Değerlendirmesi  
-**İlgili Dosya:** `app/ml/plant_decision_model.py`
+**İlgili Dosya:** `app/ml/plant_disease_model.py`
 
 ---
 

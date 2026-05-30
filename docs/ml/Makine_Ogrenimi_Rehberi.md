@@ -34,7 +34,7 @@ Modelin `predict()` fonksiyonu şu formatta bir sonuç döndürür:
 Bitki yaprak görüntülerinden hastalık teşhisi yapan CNN sarıcısı `app/ml/plant_disease_model.py` içinde canlıdır.
 
 ### Mevcut Yapı
-- **Sarıcı sınıf:** `PlantDiseaseClassifier` — Pillow tabanlı heuristic mod (renk histogramı + sağlıklı yeşil oranı + lezyon oranı). `app/ml/models/plant_disease_cnn.onnx` mevcutsa `onnxruntime` ile gerçek CNN inference'a otomatik geçer.
+- **Sarıcı sınıf:** `PlantDiseaseModel` — Pillow tabanlı heuristic mod (renk histogramı + sağlıklı yeşil oranı + lezyon oranı). `app/ml/models/plant_disease_cnn.onnx` mevcutsa `onnxruntime` ile gerçek CNN inference'a otomatik geçer.
 - **API endpoint'i:** `POST /api/plants/health-images/analyze` (multipart upload). Yüklenen görseli `app/ml/plant_uploads/` altına kaydedip `PlantHealthImage` ve `ModelPerformanceLog` tablolarına yazar.
 - **Test kapsamı:** `tests/test_plants.py` (heuristic ve ONNX path'leri için integration testleri).
 

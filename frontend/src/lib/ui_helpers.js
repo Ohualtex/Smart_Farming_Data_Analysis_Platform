@@ -1,20 +1,19 @@
 /**
- * SFDAP Dashboard — UI helpers (test mirror).
+ * SFDAP Dashboard — UI helpers (form-error + envelope mesaj).
  *
- * ⚠️  DRIFT NOTE
- * --------------
- * v5-1 ve v5-5'te `frontend/src/main.js`'e eklenen helper'lar burada
- * mirror edildi (`skeleton.js` ile aynı desen — main.js klasik script
- * olarak yüklenir, ES module geçişi Cycle 9 cila'sına planlanmış).
+ * ⚠️  DRIFT NOTE (bağlama eksik)
+ * ------------------------------
+ * Bu modül şu an YALNIZ Vitest tarafından import edilir; `main.js` bunu
+ * henüz import ETMEZ — aynı 4 helper main.js içinde `_` önekiyle
+ * (`_setFieldError`/`_clearFieldError`/`_clearAllErrors`/`_extractErrorMessage`)
+ * birebir duplike tanımlıdır. Yani test prod kodunun *kopyasını* doğruluyor.
+ * İdeal: main.js bu modülü import etsin (skeleton.js deseni) ki test gerçek
+ * prod kodunu doğrulasın. O bağlama yapılana kadar main.js'teki bir
+ * değişikliği burada da yansıt (aksi halde sessiz drift).
  *
- * Mirror edilen fonksiyonlar:
- *   - `setFieldError(inputId, msg)`     v5-5 inline form validation
- *   - `clearFieldError(inputId)`        v5-5 inline form validation
- *   - `clearAllErrors(...ids)`          v5-5 batch helper
- *   - `extractErrorMessage(res)`        v5-1 api() envelope toast
- *
- * Helper'lardan birini main.js'te değiştirirsen buradakini de güncelle
- * (drift kontrolü için vitest aynı kontratı pin'liyor).
+ * Fonksiyonlar:
+ *   - setFieldError / clearFieldError / clearAllErrors  (v5-5 form validation)
+ *   - extractErrorMessage                               (v5-1 api() envelope)
  */
 
 /**

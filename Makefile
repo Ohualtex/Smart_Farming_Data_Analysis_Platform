@@ -11,7 +11,7 @@ run: ## Run the FastAPI application locally
 	uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 test: ## Run the test suite with coverage (Schemathesis fuzz hariç — `make fuzz`)
-	SKIP_SCHEMATHESIS=1 pytest tests/ --cov=app --cov-report=term-missing
+	SKIP_SCHEMATHESIS=1 pytest tests/ --cov=app --cov-report=term-missing --cov-fail-under=80
 
 fuzz: ## Schemathesis property-based API fuzz (read + write); CI'da ayrı job
 	pytest tests/test_schemathesis_fuzz.py -v --no-cov

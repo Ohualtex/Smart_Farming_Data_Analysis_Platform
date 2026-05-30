@@ -1,19 +1,19 @@
 """
-Farm Read-Only Endpoints — Cycle 9 prep + REBUILD Faz 1 RBAC
+Farm Endpoints — REBUILD Faz 1 RBAC + Faz 4 CRUD
 ==============================================================
-List + detail + per-farm soil analyses. RBAC kapsamı:
+List + detail + per-farm soil analyses + CRUD. RBAC kapsamı:
     farmer    → yalnız kendi çiftlikleri
     developer → tüm sistem (test/integration namespace)
     overseer  → tüm sistem read-only
     admin     → tüm sistem
 
 Endpoints:
-    GET /api/farms/                       — list (region/city filter + pagination)
-    GET /api/farms/{farm_id}              — detail + nested fields
-    GET /api/farms/{farm_id}/soil         — soil analyses across the farm's fields
-
-Write operasyonları (POST/PATCH/DELETE) henüz yok — REBUILD Faz 4'te eylem
-akışları ile gelecek.
+    GET    /api/farms/                    — list (region/city filter + pagination)
+    GET    /api/farms/{farm_id}           — detail + nested fields
+    GET    /api/farms/{farm_id}/soil      — soil analyses across the farm's fields
+    POST   /api/farms/                    — create (farmer/admin write guard)
+    PATCH  /api/farms/{farm_id}           — update (ownership + write guard)
+    DELETE /api/farms/{farm_id}           — delete (cascade guard: tarlalı çiftlik → 409)
 """
 
 from __future__ import annotations

@@ -130,7 +130,7 @@ seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla).
 > 🚧 **TODO Cycle 9 — Miraç:** `docs/architecture.md`'den Mermaid diyagramları + açıklama paragrafları aktar.
 
 **Üst düzey:**
-- **Frontend katmanı:** Tek dosyalı SPA (`frontend/index.html` ≈ 3 100 satır + Vite scaffold) — shiftFinal A3'te a11y/skeleton refactor + Vite build pipeline iskeleti eklendi; ES module split Cycle 9 sonrası kademeli
+- **Frontend katmanı:** SPA — `frontend/index.html` (markup) + `src/main.js` (ES module entry) + `src/styles/main.css` + `src/lib/` (map/skeleton/ui_helpers); Vite build pipeline. ES module split tamamlandı (`8f5920e`/`ebbe87f`); shiftFinal A3'te a11y/skeleton refactor
 - **API katmanı:** FastAPI Gateway → 15 router × 66 endpoint (REBUILD sonrası: dashboard/fields/onboarding router'ları + CRUD + RBAC user mgmt eklendi)
 - **İş katmanı:** Servisler (`weather_service`, `fertilizer_service`, `mqtt_listener`, `sensor_archiver`, `report_service`, `data_quality`)
 - **ML katmanı:** RandomForest (sulama) + heuristic+ONNX (bitki hastalığı) + APScheduler periyodik görevler
@@ -201,7 +201,7 @@ seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla).
 
 > 🚧 **TODO Cycle 9 — Ecenur:** Ekran görüntüleri + sayfa-sayfa anlatım.
 
-**Mevcut yapı:** Tek dosya SPA, ~3 100 satır, 9 sayfa, dark/light tema, Chart.js, vanilla JS.
+**Mevcut yapı:** SPA — ES module (`index.html` + `src/main.js` + `src/styles/main.css` + `src/lib/`), 9 sayfa, dark/light tema, Chart.js, vanilla JS.
 
 **Filiz maskotu** (Cycle 7 — Miraç):
 - Inline SVG, idle/blink/mood animasyonları
@@ -210,7 +210,7 @@ seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla).
 - Tıklama tepkileri (kalp + sinirli)
 
 **shiftFinal A3 (Ecenur — `02d1359`):**
-- **Vite scaffold:** `package.json` + `vite.config.js` (dev :5173, FastAPI :8000 proxy); ES module split Cycle 9 sonrası
+- **Vite scaffold:** `package.json` + `vite.config.js` (dev :5173, FastAPI :8000 proxy); ES module split tamamlandı (main.js entry + lib/ modülleri)
 - **A11y:** skip-to-content link, `<main id="main-content" role="main" tabindex="-1">`, sidebar `<nav aria-label="Ana menü">`, `aria-current="page"`, hamburger `aria-controls`+`aria-expanded`, `<th scope="col">`+sr-only caption, decorative icon `aria-hidden`, toast container live region, `:focus-visible` outline
 - **Skeleton loaders:** 4 JS helper (`_skeletonCards`, `_skeletonRows`, `_skeletonBlock`, `_setBusy`); 8 hedef element için fetch öncesi iskelet + `aria-busy`. `@media (prefers-reduced-motion: reduce)` → animation:none
 - **Tests:** 28 yeni a11y testi (`test_frontend_a11y.py`)

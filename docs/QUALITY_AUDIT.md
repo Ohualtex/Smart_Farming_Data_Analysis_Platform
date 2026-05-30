@@ -25,7 +25,7 @@ Bu doküman, repo'nun mevcut kalite durumunu fotoğraflar ve hâlâ açık olan 
 | **Endpoint sayısı** | 66 (15 router; REBUILD dashboard/fields/onboarding + CRUD + RBAC) | — | ✅ |
 | **ORM tablo sayısı** | 15 (initial 14 + aggregate) | — | ✅ |
 | **Alembic migration zinciri** | 2 revision (initial + aggregate) | — | ✅ |
-| **Frontend SPA satır sayısı** | ~3 100 (`frontend/index.html`, pagination + a11y/skeleton) | bundling scaffold | ✅ Vite scaffold + a11y + skeleton |
+| **Frontend yapısı** | ES module split (`index.html` markup + `src/main.js` + `src/styles/main.css` + `src/lib/`) | bundling scaffold | ✅ Vite + a11y + skeleton |
 | **Vite + axe-core CLI** | `frontend/package.json` scaffolded | — | ✅ |
 | **Dış bağımlılık güncelliği** | 7 minor outdated | major-stable | 🟡 |
 

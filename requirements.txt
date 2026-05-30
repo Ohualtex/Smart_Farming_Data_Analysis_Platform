@@ -39,6 +39,8 @@ bcrypt>=4.0,<5.0
 
 # HTTP Client (for weather API)
 httpx>=0.27.0
+# scripts/weather_processing.py (standalone ETL CLI) — requests kullanır
+requests>=2.31.0
 
 # Logging & Background Tasks
 loguru>=0.7.2

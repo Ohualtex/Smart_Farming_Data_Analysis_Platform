@@ -1,24 +1,15 @@
 /**
- * SFDAP Dashboard — Skeleton loader + aria-busy helpers (test mirror).
+ * SFDAP Dashboard — Skeleton loader + aria-busy helpers.
  *
- * ⚠️  DRIFT NOTE
- * --------------
- * These 4 functions are currently duplicated from `frontend/src/main.js`
- * lines 31-68. main.js is loaded as a classic <script> (23 inline
- * onclick handlers in index.html depend on globals); converting it to
- * an ES module is planned as a Cycle 9 follow-up (`projeakisi.md`
- * Cycle 9 / Ecenur — Sunum Materyalleri'nde frontend cila pasajı).
+ * Tek kaynak burasıdır. `main.js` (ES module — index.html'de
+ * `<script type="module">`) bu helper'ları doğrudan import eder
+ * (`import { _skeletonBlock, _skeletonCards, _skeletonRows, _setBusy }
+ * from "./lib/skeleton.js"`). Vitest de aynı modülü import edip
+ * skeleton/aria-busy sözleşmesini test eder — yani testler gerçek
+ * prod kodunu doğrular, kopyasını değil.
  *
- * Until then, this lib mirrors main.js so Vitest can exercise the
- * skeleton/aria-busy contract without touching the browser bundle.
- * If you change a helper in main.js, mirror it here (or vice-versa);
- * tests pin the visual + a11y shape and will fail loudly on drift.
- *
- * EN/TR: main.js'in 31-68. satırlarındaki yardımcılar burada Vitest
- * için kopyalanmıştır. main.js klasik script olarak yüklenir (index.html
- * inline onclick handler'ları globaller kullanır); ES module geçişi
- * Cycle 9 cila pasajına planlanmıştır. Helper'lardan birini değiştirirsen
- * iki dosyayı da senkronize et — testler HTML + aria-busy şeklini sabitler.
+ * EN: Single source of truth. main.js (ES module) imports these helpers
+ * directly; Vitest exercises the same module. No mirror/duplication.
  */
 
 export function _skeletonCards(count = 4) {
