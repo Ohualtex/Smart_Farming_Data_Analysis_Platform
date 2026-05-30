@@ -240,6 +240,35 @@ class TestFertilizerScheduleEndpoint:
         )
         assert response.status_code == 400
 
+    def test_schedule_empty_planting_date_returns_422(self, client):
+        """Boş planting_date 500 degil 422 donmeli (Schemathesis fuzz regresyonu).
+
+        Eski davranis: bos string fertilizer_service.generate_schedule
+        icinde `datetime.strptime("", ...)` ValueError → 500. Fix:
+        schema field_validator 422 doner.
+        """
+        response = client.post(
+            "/api/fertilizer/schedules",
+            json={
+                "crop_type": "corn",
+                "planting_date": "",
+                "area_hectares": 3.0,
+            },
+        )
+        assert response.status_code == 422
+
+    def test_schedule_invalid_planting_date_returns_422(self, client):
+        """Gecersiz tarih formati (gun-ay-yil) 422 donmeli, 500 degil."""
+        response = client.post(
+            "/api/fertilizer/schedules",
+            json={
+                "crop_type": "corn",
+                "planting_date": "31-12-2026",
+                "area_hectares": 3.0,
+            },
+        )
+        assert response.status_code == 422
+
 
 class TestFertilizerCropsEndpoint:
     """GET /api/fertilizer/crops testleri."""
