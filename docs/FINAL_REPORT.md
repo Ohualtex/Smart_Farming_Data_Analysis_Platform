@@ -93,12 +93,13 @@ read-only gözetim için harita + analytics + raporlama panosu.
 | 7 | 3 – 10 May | İzleme + Gelişmiş | Filiz maskotu, Auth UI, Plants UI, Alerts panel, MQTT stream, plant_disease CNN |
 | 8 | 10 – 12 May | Üretim Hazırlığı (core) | Rate limit, N+1 fix, JWT auth, Alembic 14-tablo migration, nginx + Let's Encrypt |
 | shiftFinal | 13 – 17 May | Cila + Gözlemlenebilirlik | Sentry, Prometheus, structured logging, Vite bundling, a11y, backup/restore, edge tests, security headers, farms router, Türkiye haritası, Vitest scaffold |
-| REBUILD | 18 – 22 May | Kullanıcı-Odaklı Yeniden Yapılandırma *(solo, Miraç)* | 4-rol RBAC, "Çiftliğim" dashboard, tarla detay, auth gate + admin kullanıcı yönetimi, çiftlik/tarla CRUD + sulama onay/status, bildirim çanı, onboarding; 81-il iddiası temizliği |
+| REBUILD | 18 – 30 May | Kullanıcı-Odaklı Yeniden Yapılandırma *(solo, Miraç)* | 4-rol RBAC, "Çiftliğim" dashboard, tarla detay, auth gate + admin kullanıcı yönetimi, çiftlik/tarla CRUD + sulama onay/status, bildirim çanı, onboarding; 81-il iddiası temizliği |
+| fixroll v1-v7 | 23 – 30 May | İyileştirme serisi *(solo, Miraç)* | Frontend cila (Filiz rol-aware + critical-alert, empty-state, form validation, mobile), performans (N+1/FK index), `SFDAPError` envelope refactor, fertilizer 500→422 fix, test 622→650 + frontend 32→59, CI 3.11/3.12 matrix |
 | 9 | 1 – 7 Haz | Final Rapor + Sunum | **Bu doküman** + sunum slaytları + Q&A + akademik teslim |
 
-**Detay:** Her cycle için ayrı retrospective var (Cycle 8: [`CYCLE_8_RETROSPECTIVE.md`](CYCLE_8_RETROSPECTIVE.md)).
+**Detay:** Cycle 8 retrospektifi ve tüm cycle/fixroll özetleri [`CHANGELOG.md`](../CHANGELOG.md) içinde.
 
-### REBUILD özeti — çiftçi-odaklı yeniden yapılandırma (18-22 May 2026)
+### REBUILD özeti — çiftçi-odaklı yeniden yapılandırma (18-30 May 2026)
 
 shiftFinal'ın 3. gününde stratejik gözlem: teknik kalite yüksekti ama **UI hiçbir
 gerçek kullanıcı persona'sına yetmiyordu** (auth boş vaat, tablolar veri dump,
@@ -120,8 +121,9 @@ eyleme yönelik akış yok). Karar: "81 il / ulusal bakanlık paneli" çerçeves
 zaman (fertilizer), komşulara göre durum (admin/gözetmen analytics), haberim olur mu
 (bildirim çanı). **Geri-dönüş güvencesi:** `v0.9.0-pre-rebuild` tag'i.
 
-**Metrikler (REBUILD sonu):** pytest **622/622** · Vitest 32/32 · ruff+format temiz ·
-bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla).
+**Metrikler (REBUILD sonu → fixroll v1-v7 sonrası):** pytest 622 → **650** ·
+Vitest 32 → **59** · ruff+format temiz · bandit medium+ 0 · coverage **%95** ·
+seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla).
 
 ## 4. Mimari
 
@@ -129,7 +131,7 @@ bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla)
 
 **Üst düzey:**
 - **Frontend katmanı:** Tek dosyalı SPA (`frontend/index.html` ≈ 3 100 satır + Vite scaffold) — shiftFinal A3'te a11y/skeleton refactor + Vite build pipeline iskeleti eklendi; ES module split Cycle 9 sonrası kademeli
-- **API katmanı:** FastAPI Gateway → 15 router × ~65 endpoint (REBUILD sonrası: dashboard/fields/onboarding router'ları + CRUD + RBAC user mgmt eklendi)
+- **API katmanı:** FastAPI Gateway → 15 router × 66 endpoint (REBUILD sonrası: dashboard/fields/onboarding router'ları + CRUD + RBAC user mgmt eklendi)
 - **İş katmanı:** Servisler (`weather_service`, `fertilizer_service`, `mqtt_listener`, `sensor_archiver`, `report_service`, `data_quality`)
 - **ML katmanı:** RandomForest (sulama) + heuristic+ONNX (bitki hastalığı) + APScheduler periyodik görevler
 - **Veri katmanı:** SQLAlchemy 2.0 ORM, SQLite (dev) / PostgreSQL (prod), Alembic migration
@@ -151,22 +153,25 @@ bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla)
 
 ## 6. API Endpoint'leri
 
-**~65 endpoint × 15 router** (REBUILD sonrası dashboard/fields/onboarding + CRUD + RBAC user mgmt dahil)**:**
+**66 endpoint × 15 router** (REBUILD sonrası dashboard/fields/onboarding + CRUD + RBAC user mgmt dahil)**:**
 
 | Router | Endpoint | Anahtar Yetenek |
 |:--|:--:|:--|
-| `auth` | 4 | JWT bearer + bcrypt (Cycle 8 #3); `jti` blacklist (shiftFinal `dec2e82`) |
-| `farms` | 3 | **Cycle 9 prep:** list/detail + nested fields + per-farm soil analyses |
+| `auth` | 11 | JWT bearer + bcrypt (Cycle 8); `jti` blacklist (shiftFinal); kullanıcı yönetimi (register/login/me/logout/şifre + admin user CRUD + rol) |
 | `sensors` | 7 | CRUD + readings + **count (pagination)** |
-| `weather` | 6 | CRUD + OpenWeatherMap fetch + clean |
-| `irrigation` | 4 | ML predict + schedule CRUD + **count (pagination)** |
-| `fertilizer` | 3 | NPK recommend (17 bitki) |
-| `plants` | 3 | Health image URL + CNN multipart |
-| `analytics` | 3 | Summary + compare + export (PDF/Excel) |
-| `alerts` | 4 | SystemAlert CRUD + severity filter |
 | `model_performance` | 7 | Log + summary + timeseries + drift detection |
-| `metrics` | 3 | /health, /health/deep |
+| `farms` | 6 | List/detail + **CRUD** (REBUILD Faz 4, cascade guard) + per-farm soil |
+| `weather` | 6 | CRUD + OpenWeatherMap fetch + clean |
+| `fields` | 5 | Aggregated detail + readings trend + **CRUD** (REBUILD Faz 3-4) |
+| `irrigation` | 5 | ML predict + schedule CRUD + **status** + count |
+| `alerts` | 5 | SystemAlert CRUD + severity filter + **check** (otomatik tarama) |
+| `analytics` | 3 | Summary + compare + export (PDF/Excel) |
+| `fertilizer` | 3 | NPK recommend (17 bitki) + schedule + crops |
+| `plants` | 3 | Health image URL + CNN multipart |
+| `dashboard` | 1 | Rol-aware "Çiftliğim" özet (REBUILD Faz 2) |
+| `metrics` | 2 | Prometheus `/metrics` + uptime |
 | `health` | 1 | Sığ load balancer probe |
+| `onboarding` | 1 | Tek-tık demo seed (REBUILD Faz 6) |
 
 **Pagination pattern (sensors + irrigation):** `?skip=0&limit=50` formatında sayfa-temelli erişim. Frontend `/count` endpoint'inden toplam kayıt sayısını alır, `◀ Önceki / Sonraki ▶` butonlarıyla sayfaları gezdirir (50 kayıt/sayfa).
 
@@ -232,11 +237,13 @@ bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla)
 ## 10. Test, Coverage ve CI/CD
 
 ```
-Test sayısı:        622 backend + 32 frontend (Vitest)
+Test sayısı:        650 backend + 59 frontend (Vitest)
                     246 → 313 → 425 → 485 (shiftFinal kapanış)
                     → 499 (REBUILD Faz 1 RBAC) → 565 (Faz 3.5 admin user mgmt)
                     → 605 (Faz 4 CRUD) → 613 (Faz 5 bildirim) → 622 (Faz 6 onboarding)
-Coverage:           %95+ (CI gate %80; Cycle 8 ölçümü %95.04)
+                    → 650 (fixroll v1-v7: fertilizer 422 fix + edge/integration/coverage)
+Frontend (Vitest):  59 (map 29 + skeleton 14 + ui_helpers 16)
+Coverage:           %95 (CI gate %80)
 Linter:             Ruff (17 kural grubu) — All checks passed
 Source security:    Bandit medium+ — 0 issue
 API fuzz:           Schemathesis property-based — 25 GET + auth-aware
@@ -370,7 +377,7 @@ fırlatıyor — fail-fast.
 
 > Tüm 4 maddenin kapsamlı testleri `tests/test_jti_blacklist.py`,
 > `tests/test_security_headers.py` ve `tests/test_edge_cases.py` içinde
-> yaşıyor (toplam **475+ pytest** + **32 Vitest** test).
+> yaşıyor (bu testler güncel **650 pytest + 59 Vitest** suite'inin parçası).
 
 ## 14. Gelecek Çalışmalar
 
@@ -417,7 +424,7 @@ fırlatıyor — fail-fast.
 - [`CONTRIBUTORS.md`](../CONTRIBUTORS.md) — ekip + metrik tablosu
 - [`docs/architecture.md`](architecture.md) — sistem mimarisi
 - [`docs/QUALITY_AUDIT.md`](QUALITY_AUDIT.md) — Cycle 8 sonu kalite denetimi
-- [`docs/CYCLE_8_RETROSPECTIVE.md`](CYCLE_8_RETROSPECTIVE.md) — Cycle 8 retrospective
+- [`CHANGELOG.md`](../CHANGELOG.md) — sürüm notları + cycle/fixroll özetleri (Cycle 8 retrospektifi dahil)
 - [`docs/setup/PROD_DEPLOY.md`](setup/PROD_DEPLOY.md) — üretim deploy kılavuzu
 - [`docs/api/API_Kullanim_Kilavuzu.md`](api/API_Kullanim_Kilavuzu.md) — API kullanım rehberi
 - [`docs/demo_script.md`](demo_script.md) — sunum demo akışı

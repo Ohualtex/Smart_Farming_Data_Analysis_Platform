@@ -135,7 +135,6 @@ Production guard'ları (`app/config.py`): `ENVIRONMENT=production` iken default 
 | [`docs/architecture.md`](docs/architecture.md) | Sistem mimarisi + Mermaid diyagramları |
 | [`docs/api/API_Kullanim_Kilavuzu.md`](docs/api/API_Kullanim_Kilavuzu.md) | API kullanım rehberi |
 | [`docs/setup/PROD_DEPLOY.md`](docs/setup/PROD_DEPLOY.md) | Production deploy kılavuzu |
-| [`docs/CYCLE_8_RETROSPECTIVE.md`](docs/CYCLE_8_RETROSPECTIVE.md) | Cycle 8 retrospective |
 | [`docs/QUALITY_AUDIT.md`](docs/QUALITY_AUDIT.md) | Kalite denetim raporu |
 | [`docs/demo_script.md`](docs/demo_script.md) | Sunum demo akışı |
 

@@ -133,11 +133,11 @@ Tarayıcıda aç: **http://localhost:8000/dashboard/** (+ opsiyonel `/docs` Swag
 
 **Terminal:**
 ```bash
-make test            # 622 backend test
-cd frontend && npm test   # 32 frontend (Vitest)
+make test            # 650 backend test
+cd frontend && npm test   # 59 frontend (Vitest)
 ```
 
-> *"622 backend + 32 frontend test, ruff lint+format temiz, bandit medium+ 0 issue.
+> *"650 backend + 59 frontend test, ruff lint+format temiz, bandit medium+ 0 issue.
 > 4 GitHub Actions workflow (lint+test+migrations+fuzz / security / a11y).
 > Pre-commit hook'larıyla her commit denetimden geçiyor."*
 

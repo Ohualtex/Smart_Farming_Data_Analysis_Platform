@@ -8,10 +8,13 @@ Bu doküman, repo'nun mevcut kalite durumunu fotoğraflar ve hâlâ açık olan 
 
 ## 📊 Genel Sağlık Tablosu
 
+> **Güncel snapshot:** fixroll v1-v7 sonrası (30 May 2026). Tarihsel
+> progresyon parantez içinde korunmuştur.
+
 | Boyut | Değer | Hedef | Durum |
 |:--|:--:|:--:|:--:|
-| **Test sayısı** | **425** (350 → 365 → 372 → 400 → 425) | — | ✅ |
-| **Coverage** | **%95.04** | %95+ | ✅ Hedef geçildi (pagination test paketiyle) |
+| **Test sayısı** | **650** backend + **59** frontend (425 → 485 shiftFinal → 622 REBUILD → 650 fixroll) | — | ✅ |
+| **Coverage** | **%95** | %95+ | ✅ Hedef geçildi |
 | **Ruff (genişletilmiş kural seti)** | 0 hata | 0 | ✅ |
 | **Bandit (medium+ severity)** | 0 issue | 0 | ✅ |
 | **pip-audit** | (CI) | 0 CVE | ⏳ CI'da koşar |
@@ -19,7 +22,7 @@ Bu doküman, repo'nun mevcut kalite durumunu fotoğraflar ve hâlâ açık olan 
 | **axe-core CI** | WCAG 2.0 + 2.1 A/AA, weekly cron | 0 critical violation | ⏳ İlk run sonrası kalan warning'lar değerlendirilir |
 | **CI/CD pipeline** | 3 workflow (ci + security + a11y) | — | ✅ |
 | **CI job sayısı** | 4 (lint + test + migrations + fuzz) + 2 security + 1 a11y | — | ✅ |
-| **Endpoint sayısı** | 43 (2× pagination count dahil) | — | ✅ |
+| **Endpoint sayısı** | 66 (15 router; REBUILD dashboard/fields/onboarding + CRUD + RBAC) | — | ✅ |
 | **ORM tablo sayısı** | 15 (initial 14 + aggregate) | — | ✅ |
 | **Alembic migration zinciri** | 2 revision (initial + aggregate) | — | ✅ |
 | **Frontend SPA satır sayısı** | ~3 100 (`frontend/index.html`, pagination + a11y/skeleton) | bundling scaffold | ✅ Vite scaffold + a11y + skeleton |
@@ -183,8 +186,12 @@ Temel paketler tamamlandıktan sonra ele alınabilecek iyileştirmeler:
 
 ## 📈 Repo Büyüme Trendi
 
+> **Not:** Aşağıdaki trend shiftFinal kapanışına (17 May 2026) kadarki büyümeyi
+> gösterir. **fixroll v1-v7 sonrası güncel (30 May):** 650 test · %95 coverage ·
+> 66 endpoint · 15 ORM tablo · 4 CI workflow (+ frontend-test job).
+
 ```
-Başlangıç  →  Üretim Çekirdeği  →  Cila & QA (mevcut)
+Başlangıç  →  Üretim Çekirdeği  →  Cila & QA (shiftFinal)
 ─────────────────────────────────────────────────────────────────
 Test         246    →  350               →  425     (+179 / +73%)
 Coverage     %86    →  %95.04            →  %95.04  (+9.0 pp, hedef ✅)
