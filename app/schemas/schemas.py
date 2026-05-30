@@ -20,7 +20,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator
 
 
 def _serialize_utc(value: datetime) -> str:
@@ -259,6 +259,23 @@ class FertilizerScheduleRequest(BaseModel):
     soil_nitrogen: float = 0.0
     soil_phosphorus: float = 0.0
     soil_potassium: float = 0.0
+
+    @field_validator("planting_date")
+    @classmethod
+    def _validate_planting_date(cls, value: str) -> str:
+        """`planting_date` 'YYYY-MM-DD' formatinda olmali (fail-fast 422).
+
+        Bos string veya gecersiz tarih burada Pydantic ValidationError
+        (422) tetikler. Aksi halde `fertilizer_service.generate_schedule`
+        icindeki `datetime.strptime(planting_date, ...)` ham `ValueError`
+        firlatip 500 donerdi (Schemathesis fuzz bulgusu: POST
+        /api/fertilizer/schedules, planting_date="").
+        """
+        try:
+            datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=UTC)
+        except ValueError as exc:
+            raise ValueError("planting_date 'YYYY-MM-DD' formatinda olmali") from exc
+        return value
 
 
 class FertilizerScheduleResponse(BaseModel):
