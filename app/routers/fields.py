@@ -33,9 +33,9 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
-from app.middleware.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.middleware.exceptions import ConflictError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
-from app.middleware.rbac import _WRITE_ROLES, assert_farm_ownership, assert_field_ownership
+from app.middleware.rbac import assert_farm_ownership, assert_field_ownership, require_write
 from app.models.models import (
     CropType,
     Farm,
@@ -63,12 +63,6 @@ from app.schemas.schemas import (
 )
 
 router = APIRouter(prefix="/api/fields", tags=["Tarla Detayı"])
-
-
-def _require_write(user: User) -> None:
-    """overseer/developer için 403; farmer + admin OK (write set)."""
-    if user.role not in _WRITE_ROLES:
-        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 # ─── Sabitler ──────────────────────────────────────────────────
@@ -296,7 +290,7 @@ def create_field(
     current_user: User = Depends(get_current_user_or_403),
 ) -> Field:
     """Tarlayı, sahibi olunan çiftliğe ekle."""
-    _require_write(current_user)
+    require_write(current_user)
     assert_farm_ownership(db, payload.farm_id, current_user)
     field = Field(**payload.model_dump())
     db.add(field)
@@ -325,7 +319,7 @@ def update_field(
     current_user: User = Depends(get_current_user_or_403),
 ) -> Field:
     """Sahiplik + write kontrolünden sonra kısmi güncelleme."""
-    _require_write(current_user)
+    require_write(current_user)
     assert_field_ownership(db, field_id, current_user)
     field = db.query(Field).filter(Field.id == field_id).first()
     updates = payload.model_dump(exclude_unset=True)
@@ -356,7 +350,7 @@ def delete_field(
     current_user: User = Depends(get_current_user_or_403),
 ) -> None:
     """Sahiplik + write + cascade-guard sonrası sil."""
-    _require_write(current_user)
+    require_write(current_user)
     assert_field_ownership(db, field_id, current_user)
     sensor_count = db.query(func.count(Sensor.id)).filter(Sensor.field_id == field_id).scalar() or 0
     if sensor_count > 0:

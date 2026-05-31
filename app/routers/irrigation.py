@@ -25,9 +25,9 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
-from app.middleware.exceptions import ForbiddenError, NotFoundError
+from app.middleware.exceptions import NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
-from app.middleware.rbac import _BYPASS_ROLES, _WRITE_ROLES, assert_field_ownership
+from app.middleware.rbac import _BYPASS_ROLES, assert_field_ownership, require_write
 from app.ml.irrigation_model import irrigation_optimizer
 from app.models.models import Farm, Field, IrrigationSchedule, ModelPerformanceLog, User
 from app.routers.auth import get_current_user_or_403
@@ -48,12 +48,6 @@ MAX_PAGE_SIZE = 500
 MAX_SKIP = 1_000_000
 
 router = APIRouter(prefix="/api/irrigation", tags=["Sulama Optimizasyonu"])
-
-
-def _require_write(user: User) -> None:
-    """overseer/developer için 403; farmer + admin OK (write set)."""
-    if user.role not in _WRITE_ROLES:
-        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 def _scope_schedules_to_user(query, user: User):  # noqa: ANN001
@@ -175,7 +169,7 @@ def create_schedule(
     current_user: User = Depends(get_current_user_or_403),
 ) -> IrrigationSchedule:
     """Öneriyi onayla: field ownership + write kontrolünden sonra schedule oluştur."""
-    _require_write(current_user)
+    require_write(current_user)
     assert_field_ownership(db, schedule.field_id, current_user)
     db_schedule = IrrigationSchedule(**schedule.model_dump())
     db.add(db_schedule)
@@ -206,7 +200,7 @@ def update_schedule_status(
     current_user: User = Depends(get_current_user_or_403),
 ) -> IrrigationSchedule:
     """Sahiplik + write kontrolünden sonra durum güncelle."""
-    _require_write(current_user)
+    require_write(current_user)
     schedule = db.query(IrrigationSchedule).filter(IrrigationSchedule.id == schedule_id).first()
     if schedule is None:
         raise NotFoundError("Sulama programı")

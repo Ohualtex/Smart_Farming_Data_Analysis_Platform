@@ -23,9 +23,9 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import MAX_SQLITE_INT, get_db
-from app.middleware.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.middleware.exceptions import ConflictError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
-from app.middleware.rbac import _WRITE_ROLES, assert_farm_ownership, scope_to_user
+from app.middleware.rbac import assert_farm_ownership, require_write, scope_to_user
 from app.models.models import Farm, Field, SoilAnalysis, User
 from app.routers.auth import get_current_user_or_403
 from app.schemas.schemas import (
@@ -43,12 +43,6 @@ router = APIRouter(prefix="/api/farms", tags=["Çiftlik Yönetimi"])
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 500
 MAX_SKIP = 1_000_000
-
-
-def _require_write(user: User) -> None:
-    """overseer/developer için 403; farmer + admin OK (write set)."""
-    if user.role not in _WRITE_ROLES:
-        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 @router.get(
@@ -162,7 +156,7 @@ def create_farm(
     current_user: User = Depends(get_current_user_or_403),
 ) -> Farm:
     """Çiftliği current_user sahipliğinde oluştur."""
-    _require_write(current_user)
+    require_write(current_user)
     farm = Farm(user_id=current_user.id, **payload.model_dump())
     db.add(farm)
     db.commit()
@@ -191,7 +185,7 @@ def update_farm(
     current_user: User = Depends(get_current_user_or_403),
 ) -> Farm:
     """Sahiplik + write kontrolünden sonra kısmi güncelleme."""
-    _require_write(current_user)
+    require_write(current_user)
     assert_farm_ownership(db, farm_id, current_user)
     farm = db.query(Farm).filter(Farm.id == farm_id).first()
     updates = payload.model_dump(exclude_unset=True)
@@ -222,7 +216,7 @@ def delete_farm(
     current_user: User = Depends(get_current_user_or_403),
 ) -> None:
     """Sahiplik + write + cascade-guard sonrası sil."""
-    _require_write(current_user)
+    require_write(current_user)
     assert_farm_ownership(db, farm_id, current_user)
     field_count = db.query(func.count(Field.id)).filter(Field.farm_id == farm_id).scalar() or 0
     if field_count > 0:

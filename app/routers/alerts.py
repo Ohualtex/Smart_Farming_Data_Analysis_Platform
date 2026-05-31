@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.exceptions import ForbiddenError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
-from app.middleware.rbac import _BYPASS_ROLES, _WRITE_ROLES, assert_farm_ownership
+from app.middleware.rbac import _BYPASS_ROLES, assert_farm_ownership, require_write
 from app.models.models import Farm, Field, PlantHealthImage, Sensor, SoilMoistureReading, SystemAlert, User
 from app.routers.auth import get_current_user_or_403
 from app.schemas.schemas import SystemAlertCreate, SystemAlertResponse, SystemAlertUpdate
@@ -40,12 +40,6 @@ LOW_MOISTURE_THRESHOLD = 30.0  # < bu → "low_moisture" uyarısı
 CRITICAL_MOISTURE_THRESHOLD = 20.0  # < bu → severity critical
 MOISTURE_WINDOW_HOURS = 24  # son okuma penceresi
 DISEASE_REMINDER_DAYS = 14  # bu süredir hastalık analizi yoksa hatırlat
-
-
-def _require_write(user: User) -> None:
-    """overseer/developer için 403; farmer + admin OK."""
-    if user.role not in _WRITE_ROLES:
-        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 def _scope_alerts_to_user(query, user: User):  # noqa: ANN001
@@ -131,7 +125,7 @@ def create_alert(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_403),
 ) -> SystemAlert:
-    _require_write(current_user)
+    require_write(current_user)
     # Farmer farm_id verirse kendi farm'ı olmalı; None ise (system-wide alert)
     # yalnız admin yetkili — farmer bunu yapamaz.
     if payload.farm_id is not None:
@@ -169,7 +163,7 @@ def update_alert(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_403),
 ) -> SystemAlert:
-    _require_write(current_user)
+    require_write(current_user)
     alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
     if alert is None:
         raise NotFoundError("Uyarı", detail=f"alert_id={alert_id}")
@@ -213,7 +207,7 @@ def check_alerts(
     current_user: User = Depends(get_current_user_or_403),
 ) -> dict:
     """Kapsamdaki tarlaları tara; düşük nem / hastalık hatırlatması üret (dedup'lı)."""
-    _require_write(current_user)
+    require_write(current_user)
     now = datetime.now(UTC)
     since = now - timedelta(hours=MOISTURE_WINDOW_HOURS)
     disease_cutoff = now - timedelta(days=DISEASE_REMINDER_DAYS)

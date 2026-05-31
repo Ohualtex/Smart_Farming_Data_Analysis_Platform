@@ -23,9 +23,9 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.middleware.exceptions import ConflictError, ForbiddenError
+from app.middleware.exceptions import ConflictError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
-from app.middleware.rbac import _WRITE_ROLES
+from app.middleware.rbac import require_write
 from app.models.models import (
     CropType,
     Farm,
@@ -47,12 +47,6 @@ _DEMO_FIELDS = [
     ("Tarla A", "killi", 3.5, 22.0),  # susuz → demo akışının "Tarla A susuz" adımı
     ("Tarla B", "tınlı", 2.0, 52.0),  # uygun
 ]
-
-
-def _require_write(user: User) -> None:
-    """overseer/developer için 403; farmer + admin OK."""
-    if user.role not in _WRITE_ROLES:
-        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 def _diurnal_factor(hour: int) -> float:
@@ -83,7 +77,7 @@ def load_demo_data(
     current_user: User = Depends(get_current_user_or_403),
 ) -> dict:
     """current_user adına demo çiftlik zincirini kur (yalnız boş hesaba)."""
-    _require_write(current_user)
+    require_write(current_user)
 
     existing = db.query(func.count(Farm.id)).filter(Farm.user_id == current_user.id).scalar() or 0
     if existing > 0:
