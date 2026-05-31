@@ -1,15 +1,11 @@
 /**
  * SFDAP Dashboard — UI helpers (form-error + envelope mesaj).
  *
- * ⚠️  DRIFT NOTE (bağlama eksik)
- * ------------------------------
- * Bu modül şu an YALNIZ Vitest tarafından import edilir; `main.js` bunu
- * henüz import ETMEZ — aynı 4 helper main.js içinde `_` önekiyle
- * (`_setFieldError`/`_clearFieldError`/`_clearAllErrors`/`_extractErrorMessage`)
- * birebir duplike tanımlıdır. Yani test prod kodunun *kopyasını* doğruluyor.
- * İdeal: main.js bu modülü import etsin (skeleton.js deseni) ki test gerçek
- * prod kodunu doğrulasın. O bağlama yapılana kadar main.js'teki bir
- * değişikliği burada da yansıt (aksi halde sessiz drift).
+ * Tek kaynak burasıdır. `main.js` (ES module) bu helper'ları `_` alias'ıyla
+ * import eder (`import { setFieldError as _setFieldError, ... } from
+ * "./lib/ui_helpers.js"`); Vitest de aynı modülü import edip test eder.
+ * Yani test gerçek prod kodunu doğrular — kopyasını değil (duplikasyon
+ * fixroll_v7'de kaldırıldı).
  *
  * Fonksiyonlar:
  *   - setFieldError / clearFieldError / clearAllErrors  (v5-5 form validation)

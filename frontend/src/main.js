@@ -12,6 +12,12 @@
 
 import { _skeletonBlock, _skeletonCards, _skeletonRows, _setBusy } from "./lib/skeleton.js";
 import { loadMap as _loadMapImpl } from "./lib/map.js";
+import {
+    clearAllErrors as _clearAllErrors,
+    clearFieldError as _clearFieldError,
+    extractErrorMessage as _extractErrorMessage,
+    setFieldError as _setFieldError,
+} from "./lib/ui_helpers.js";
 
 const API_BASE = window.location.origin;
 const AUTH_TOKEN_KEY = 'sfdap_auth_token';
@@ -36,23 +42,7 @@ function _authHeaders() {
         : { 'X-API-Key': 'dev-api-key' };  // anonim fallback (eski endpoint'ler)
 }
 
-/**
- * Backend hata envelope'undan kullanıcıya gösterilecek mesaj üret.
- * SFDAPError envelope: {error_code, message, detail}. v5-1 (fixroll_v5):
- * - `message` öncelikli (TR, kullanıcı dostu)
- * - `detail` (string ise) fallback
- * - hiçbiri yoksa generic `HTTP ${status}`
- */
-async function _extractErrorMessage(res) {
-    try {
-        const body = await res.clone().json();
-        if (body && typeof body.message === "string" && body.message.trim()) return body.message;
-        if (body && typeof body.detail === "string" && body.detail.trim()) return body.detail;
-    } catch {
-        // body JSON değil veya parse hatası — generic mesaja düş
-    }
-    return `HTTP ${res.status}`;
-}
+// _extractErrorMessage → src/lib/ui_helpers.js (extractErrorMessage) olarak import edildi (tek kaynak).
 
 async function api(endpoint, options = {}) {
     try {
@@ -1741,42 +1731,8 @@ document.addEventListener('click', (e) => {
     }
 });
 
-/**
- * v5-5: Inline field error helper'ları.
- * - _setFieldError(inputId, msg): form-group'a `has-error` ekler + `.field-error` doldurur,
- *   aria-invalid="true" yapar (screen reader)
- * - _clearFieldError(inputId): tüm error state'i temizler
- * - _clearAllErrors(...ids): birden çok alanı bir kerede temizle
- *
- * Toast'a ek olarak alanı işaretler — kullanıcı hatanın hangi alanda olduğunu görür.
- */
-function _setFieldError(inputId, msg) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    const group = input.closest('.form-group');
-    if (!group) return;
-    group.classList.add('has-error');
-    let errEl = group.querySelector('.field-error');
-    if (!errEl) {
-        errEl = document.createElement('div');
-        errEl.className = 'field-error';
-        errEl.setAttribute('role', 'alert');
-        group.appendChild(errEl);
-    }
-    errEl.textContent = msg;
-    input.setAttribute('aria-invalid', 'true');
-}
-function _clearFieldError(inputId) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    const group = input.closest('.form-group');
-    if (!group) return;
-    group.classList.remove('has-error');
-    input.removeAttribute('aria-invalid');
-    const errEl = group.querySelector('.field-error');
-    if (errEl) errEl.textContent = '';
-}
-function _clearAllErrors(...ids) { ids.forEach(_clearFieldError); }
+// _setFieldError / _clearFieldError / _clearAllErrors → src/lib/ui_helpers.js olarak
+// import edildi (yukarıdaki import bloğu). Tek kaynak artık ui_helpers.js.
 
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
