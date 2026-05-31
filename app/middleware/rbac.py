@@ -86,16 +86,11 @@ def assert_farm_ownership(db: Session, farm_id: int, user: User) -> None:
         raise ForbiddenError(detail="Bu çiftliğe erişim yetkin yok.")
 
 
-def is_write_allowed(user: User) -> bool:
-    """Caller'ın yazma yetkisi var mı? (overseer/developer için False)."""
-    return user.role in _WRITE_ROLES
-
-
 def require_write(user: User) -> None:
-    """Yazma yetkisi yoksa 403 fırlat (overseer/developer read-only).
+    """Yazma yetkisi yoksa ForbiddenError (403) fırlat (overseer/developer read-only).
 
-    `is_write_allowed`'un raise eden versiyonu; router'lardaki yinelenen
-    `_require_write` helper'larının tek kaynağı.
+    Router'lardaki yinelenen `_require_write` helper'larının tek kaynağı
+    (8 router'da birebir kopyalanmıştı; REBUILD/fixroll DRY temizliği).
     """
     if user.role not in _WRITE_ROLES:
         raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
