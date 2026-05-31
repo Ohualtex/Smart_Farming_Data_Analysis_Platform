@@ -17,12 +17,12 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
-from app.middleware.exceptions import ForbiddenError, NotFoundError
+from app.middleware.exceptions import NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import (
-    _WRITE_ROLES,
     assert_field_ownership,
     assert_sensor_ownership,
+    require_write,
     scope_sensors_to_user,
 )
 from app.models.models import Sensor, SoilMoistureReading, User
@@ -37,12 +37,6 @@ MAX_PAGE_SIZE = 500
 # 1M offset is far beyond any realistic pagination scenario; cap here
 # avoids unbounded `skip` causing an int overflow on the DB binding.
 MAX_SKIP = 1_000_000
-
-
-def _require_write(user: User) -> None:
-    """overseer/developer write 403; farmer + admin OK."""
-    if user.role not in _WRITE_ROLES:
-        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 @router.get(
@@ -116,7 +110,7 @@ def create_sensor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_403),
 ) -> Sensor:
-    _require_write(current_user)
+    require_write(current_user)
     # Sensor.field_id sahibi olmalı (farmer için); admin bypass.
     assert_field_ownership(db, sensor.field_id, current_user)
     db_sensor = Sensor(**sensor.model_dump())
@@ -142,7 +136,7 @@ def delete_sensor(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_403),
 ) -> dict:
-    _require_write(current_user)
+    require_write(current_user)
     assert_sensor_ownership(db, sensor_id, current_user)
     sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
     if not sensor:
@@ -174,7 +168,7 @@ def create_reading(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_403),
 ) -> SoilMoistureReading:
-    _require_write(current_user)
+    require_write(current_user)
     assert_sensor_ownership(db, reading.sensor_id, current_user)
     db_reading = SoilMoistureReading(**reading.model_dump())
     db.add(db_reading)
