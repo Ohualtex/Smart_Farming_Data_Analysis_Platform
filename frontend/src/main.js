@@ -1,20 +1,23 @@
 /* ============================================================
-   SFDAP Dashboard — Entry Point
+   SFDAP Dashboard — Entry Point (Orchestrator)
    ============================================================
-   B-batch (Cycle 9): ES module entry-point. Reusable helpers
-   `src/lib/` altına ayrıldı, drift TODO kapandı.
+   Refactored: API, utils, router modülleri `src/lib/` altında.
+   Bu dosya state yönetimi + page handler'ları + window bridge.
 
-   Bu dosya `<script type="module">` ile yüklenir. Inline `onclick`
+   `<script type="module">` ile yüklenir. Inline `onclick`
    handler'lar `window` global'ine ihtiyaç duyar — dosyanın sonunda
-   tüm public function'lar `window.X = X` ile expose edilir
-   (window-bridge bölümü).
+   tüm public function'lar `window.X = X` ile expose edilir.
    ============================================================ */
 
 import { _skeletonBlock, _skeletonCards, _skeletonRows, _setBusy } from "./lib/skeleton.js";
 import { loadMap as _loadMapImpl } from "./lib/map.js";
-
-const API_BASE = window.location.origin;
-const AUTH_TOKEN_KEY = 'sfdap_auth_token';
+import {
+    api, apiAuth, API_BASE, AUTH_TOKEN_KEY,
+    getAuthToken, setAuthToken, clearAuthToken,
+    _authHeaders, initApiCallbacks,
+} from "./lib/api.js";
+import { _fmtDate, _fmtNumber, _escAttr, showToast, updateStatus, updateClock } from "./lib/utils.js";
+import { pageTitles, navigate as _navigateCore, toggleSidebar, initHashRouter } from "./lib/router.js";
 let refreshInterval = null;
 let charts = {};
 let apiOnline = false;
@@ -22,178 +25,31 @@ let apiOnline = false;
 // Login/logout sırasında refreshAuthState() bu objeyi güncelliyor.
 let currentUser = null;
 
-// ─── API SERVICE ──────────────────────────────────────────────
 
-/**
- * Auth header builder — Bearer token varsa Authorization, yoksa X-API-Key.
- * REBUILD Faz 2 / Adım 7: tek noktadan auth header bind'i; rol-aware
- * endpoint'ler (`/api/dashboard/summary`, `/api/auth/me` vb) Bearer ister.
- */
-function _authHeaders() {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    return token
-        ? { 'Authorization': `Bearer ${token}` }
-        : { 'X-API-Key': 'dev-api-key' };  // anonim fallback (eski endpoint'ler)
-}
 
-/**
- * Backend hata envelope'undan kullanıcıya gösterilecek mesaj üret.
- * SFDAPError envelope: {error_code, message, detail}. v5-1 (fixroll_v5):
- * - `message` öncelikli (TR, kullanıcı dostu)
- * - `detail` (string ise) fallback
- * - hiçbiri yoksa generic `HTTP ${status}`
- */
-async function _extractErrorMessage(res) {
-    try {
-        const body = await res.clone().json();
-        if (body && typeof body.message === "string" && body.message.trim()) return body.message;
-        if (body && typeof body.detail === "string" && body.detail.trim()) return body.detail;
-    } catch {
-        // body JSON değil veya parse hatası — generic mesaja düş
-    }
-    return `HTTP ${res.status}`;
-}
 
-async function api(endpoint, options = {}) {
-    try {
-        const res = await fetch(`${API_BASE}${endpoint}`, {
-            headers: { 'Content-Type': 'application/json', ..._authHeaders(), ...options.headers },
-            ...options
-        });
-        if (!res.ok) {
-            const msg = await _extractErrorMessage(res);
-            throw new Error(msg);
-        }
-        return await res.json();
-    } catch (e) {
-        console.warn(`API Error: ${endpoint}`, e);
-        return null;
-    }
-}
-
-/**
- * Bearer-zorunlu API çağrısı — token yoksa null + auth sayfasına yönlendirir.
- * Dashboard summary, sensors, alerts gibi RBAC'lı endpoint'ler için kullanılır.
- * 401/403 dönerse token temizler ve toast gösterir.
- */
-async function apiAuth(endpoint, options = {}) {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-        // Login formuna yumuşak yönlendirme; hard reload yok.
-        if (location.hash !== '#auth') location.hash = '#auth';
-        return null;
-    }
-    try {
-        const res = await fetch(`${API_BASE}${endpoint}`, {
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options.headers },
-            ...options
-        });
-        if (res.status === 401) {
-            // Token expire ya da revoke
-            localStorage.removeItem(AUTH_TOKEN_KEY);
-            currentUser = null;
-            _renderUserBadge(null);
-            showToast('Oturum süresi doldu, tekrar giriş yap', 'warning');
-            location.hash = '#auth';
-            return null;
-        }
-        if (res.status === 403) {
-            // v5-1: backend envelope mesajı varsa toast'ı kişiselleştir
-            const msg = await _extractErrorMessage(res);
-            showToast(msg.startsWith('HTTP ') ? 'Bu işlem için yetkin yok' : msg, 'warning');
-            return null;
-        }
-        if (!res.ok) {
-            // v5-1: 4xx/5xx → envelope message'i toast'a yansıt
-            const msg = await _extractErrorMessage(res);
-            showToast(msg, 'error');
-            throw new Error(msg);
-        }
-        return await res.json();
-    } catch (e) {
-        console.warn(`API Auth Error: ${endpoint}`, e);
-        return null;
-    }
-}
-
-// ─── NAVIGATION ───────────────────────────────────────────────
-const pageTitles = {
-    dashboard: ['Genel Bakış', 'Tarlanın özeti'],
-    fields: ['Tarlalarım', 'Çiftliklerine bağlı tarlalar'],
-    'field-detail': ['Tarla Detayı', 'Sensör, sulama, hastalık ve toprak'],
-    weather: ['Hava Durumu', 'Sıcaklık, nem ve yağış'],
-    irrigation: ['Sulama', 'Önerilen su miktarı ve geçmiş'],
-    fertilizer: ['Gübreleme', 'NPK önerisi ve takvim'],
-    sensors: ['Sensörler', 'Tarladaki ölçüm cihazları'],
-    analytics: ['Raporlar', 'Bölge bazında özet ve dışa aktarma'],
-    map: ['Türkiye Haritası', 'Çiftliklerin coğrafi dağılımı'],
-    plants: ['Bitki Sağlığı', 'Yapraktan hastalık tespiti'],
-    alerts: ['Uyarılar', 'Sistem ve sensör uyarıları'],
-    users: ['Kullanıcı Yönetimi', 'Tüm kullanıcılar (admin)'],
-    auth: ['Hesabım', 'Profil ve şifre'],
+// ─── NAVIGATION (delegates to lib/router.js) ─────────────────
+// Page handler map — navigate() çağrıldığında doğru veri-yükleme fonksiyonunu çalıştırır.
+const pageHandlers = {
+    dashboard: () => loadDashboard(),
+    fields: () => loadFields(),
+    sensors: () => loadSensors(),
+    weather: () => loadWeather(),
+    irrigation: () => loadIrrigation(),
+    analytics: () => loadAnalytics(),
+    map: () => loadMap(),
+    plants: () => loadPlants(),
+    alerts: () => loadAlerts(),
+    users: () => loadUsers(),
+    auth: () => refreshAuthState(),
 };
 
 function navigate(page) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => {
-        n.classList.remove('active');
-        // Drop aria-current from inactive nav items.
-        n.removeAttribute('aria-current');
-    });
-    document.getElementById(`page-${page}`).classList.add('active');
-    const navItem = document.querySelector(`[href="#${page}"]`);
-    if (navItem) {
-        navItem.classList.add('active');
-        navItem.setAttribute('aria-current', 'page');
-    }
-    document.getElementById('pageTitle').textContent = pageTitles[page][0];
-    document.getElementById('pageSubtitle').textContent = pageTitles[page][1];
-    // Focus the <main> programmatically (tabindex=-1) so keyboard users
-    // hear the page change via the screen reader.
-    const main = document.getElementById('main-content');
-    if (main) main.focus({ preventScroll: false });
-    // Load page data
-    if (page === 'dashboard') loadDashboard();
-    else if (page === 'fields') loadFields();
-    else if (page === 'sensors') loadSensors();
-    else if (page === 'weather') loadWeather();
-    else if (page === 'irrigation') loadIrrigation();
-    else if (page === 'analytics') loadAnalytics();
-    else if (page === 'map') loadMap();
-    else if (page === 'plants') loadPlants();
-    else if (page === 'alerts') loadAlerts();
-    else if (page === 'users') loadUsers();
-    else if (page === 'auth') refreshAuthState();
-    // 'field-detail' navigate() ile değil openFieldDetail(id) ile yüklenir.
-    // Hero subtitle dinamik Filiz tipi (Item 8a) — farmer-anlamlı 8 sayfada
-    // sayfa-açıklamasını Filiz havuzundan rastgele tiple değiştirir + 20sn'de refresh.
-    _startHeroTipRotation(page);
-    // Close sidebar on mobile (a11y: hamburger aria-expanded sync)
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.remove('open');
-    const hamburger = document.querySelector('.hamburger');
-    if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
+    _navigateCore(page, pageHandlers, _startHeroTipRotation);
 }
 
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const isOpen = sidebar.classList.toggle('open');
-    // Keep aria-expanded in sync with the visual sidebar state.
-    const hamburger = document.querySelector('.hamburger');
-    if (hamburger) hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-}
+// Hash router'ı init'te başlatacağız (init fonksiyonunda).
 
-// ─── HASH ROUTER ──────────────────────────────────────────────
-window.addEventListener('hashchange', () => {
-    const raw = location.hash.slice(1) || 'dashboard';
-    // Parametrik route: #field/{id} → tarla detayı
-    if (raw.startsWith('field/')) {
-        const id = parseInt(raw.split('/')[1], 10);
-        if (Number.isFinite(id)) openFieldDetail(id);
-        return;
-    }
-    if (pageTitles[raw]) navigate(raw);
-});
 
 // ─── DASHBOARD ────────────────────────────────────────────────
 // REBUILD Faz 2 / Adım 8: "Çiftliğim" rol-aware kartlar
@@ -203,18 +59,8 @@ window.addEventListener('hashchange', () => {
 const _STATUS_LABEL = { dry: 'Susuz', optimal: 'Uygun', wet: 'Aşırı sulu', no_data: 'Veri yok' };
 const _STATUS_EMOJI = { dry: '🥵', optimal: '👌', wet: '💧', no_data: '—' };
 
-function _fmtDate(iso) {
-    if (!iso) return '—';
-    try { return new Date(iso).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }); }
-    catch { return iso; }
-}
-function _fmtNumber(v, decimals = 1) {
-    if (v === null || v === undefined) return '—';
-    return Number(v).toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-}
-function _escAttr(s) {
-    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
+
+
 
 function _renderSummaryCards(summary) {
     const moist = summary.soil_moisture_today || {};
@@ -1555,11 +1401,7 @@ async function resolveAlert(id) {
 }
 
 // ─── AUTH (KULLANICI GİRİŞİ) ──────────────────────────────────
-// `AUTH_TOKEN_KEY` constant'ı dosyanın başında tanımlı (top-level state ile birlikte).
-
-function getAuthToken() { return localStorage.getItem(AUTH_TOKEN_KEY); }
-function setAuthToken(t) { localStorage.setItem(AUTH_TOKEN_KEY, t); }
-function clearAuthToken() { localStorage.removeItem(AUTH_TOKEN_KEY); }
+// Token yönetimi lib/api.js'den import edildi (getAuthToken, setAuthToken, clearAuthToken).
 
 // Rol → kullanıcı dostu Türkçe etiket
 const ROLE_LABELS = {
@@ -2009,42 +1851,63 @@ async function doLogout() {
     if (location.hash) location.hash = '';  // deep route'tan temizle
 }
 
-// ─── STATUS & UTILITIES ───────────────────────────────────────
-function updateStatus(online) {
-    const dot = document.getElementById('statusDot');
-    const text = document.getElementById('statusText');
-    dot.className = `status-dot ${online ? 'online' : 'offline'}`;
-    text.textContent = online ? 'Sistem Aktif' : 'Bağlantı Yok';
-}
-
-function showToast(message, type = 'info', duration = 3500) {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-    toast.innerHTML = `
-        <span class="toast-icon">${icon}</span>
-        <span class="toast-message">${message}</span>
-        <button class="toast-close" aria-label="Kapat" title="Kapat">×</button>
-    `;
-    container.appendChild(toast);
-
-    let timer = null;
-    const dismiss = () => {
-        clearTimeout(timer);
-        toast.classList.add('hide');
-        setTimeout(() => toast.remove(), 250);
-    };
-    toast.querySelector('.toast-close').addEventListener('click', dismiss);
-    if (duration > 0) timer = setTimeout(dismiss, duration);
-}
-
-function updateClock() {
-    document.getElementById('clockDisplay').textContent = new Date().toLocaleTimeString('tr');
-}
+// Status, showToast, updateClock lib/utils.js'den import edildi.
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function init() {
+    // API modülüne callback'leri bağla (circular dep önlemek için)
+    initApiCallbacks({
+        showToast,
+        renderUserBadge: _renderUserBadge,
+        setCurrentUser: (u) => { currentUser = u; },
+    });
+
+    // Hash router'ı başlat
+    initHashRouter(navigate, openFieldDetail);
+
+    // ─── EVENT DELEGATION ─────────────────────────────────────
+    // data-action → handler map. Inline onclick kaldırıldı, CSP uyumlu.
+    const actionMap = {
+        navigate:           (el) => navigate(el.dataset.arg),
+        toggleSidebar:      () => toggleSidebar(),
+        toggleBell:         () => toggleBell(),
+        toggleLandingForm:  (el) => { toggleLandingForm(el.dataset.arg); },
+        doLogin:            () => doLogin(),
+        doRegister:         () => doRegister(),
+        doLogout:           () => doLogout(),
+        doChangePassword:   () => doChangePassword(),
+        predictIrrigation:  () => predictIrrigation(),
+        recommendFertilizer:() => recommendFertilizer(),
+        fertilizerSchedule: () => fertilizerSchedule(),
+        analyzePlantImage:  () => analyzePlantImage(),
+        runAlertCheck:      () => runAlertCheck(),
+        createUser:         () => createUser(),
+        loadAlerts:         () => loadAlerts(),
+        sensorsPrev:        () => loadSensors(sensorsPage - 1),
+        sensorsNext:        () => loadSensors(sensorsPage + 1),
+        irrigationPrev:     () => loadIrrigation(irrigationPage - 1),
+        irrigationNext:     () => loadIrrigation(irrigationPage + 1),
+    };
+
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        const handler = actionMap[action];
+        if (handler) {
+            e.preventDefault();
+            handler(el);
+        }
+    });
+
+    // Select (onchange) delegation — alert filtre dropdowns
+    document.addEventListener('change', (e) => {
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const handler = actionMap[el.dataset.action];
+        if (handler) handler(el);
+    });
+
     // Health check
     const health = await api('/api/health');
     apiOnline = health !== null;
