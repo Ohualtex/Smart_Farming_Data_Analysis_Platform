@@ -84,3 +84,26 @@ export function fmtNumber(v, decimals = 1) {
 export function escAttr(s) {
     return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
+export const STATUS_LABEL = { dry: 'Susuz', optimal: 'Uygun', wet: 'Aşırı sulu', no_data: 'Veri yok' };
+export const STATUS_EMOJI = { dry: '🥵', optimal: '👌', wet: '💧', no_data: '—' };
+
+export function showToast(message, type = 'info') {
+    window.dispatchEvent(new CustomEvent('toast', { detail: { msg: message, type } }));
+}
+
+export const pageTitles = {
+    dashboard: ['Genel Bakış', 'Tarlanın özeti'],
+    fields: ['Tarlalarım', 'Çiftliklerine bağlı tarlalar'],
+    'field-detail': ['Tarla Detayı', 'Sensör, sulama, hastalık ve toprak'],
+    weather: ['Hava Durumu', 'Sıcaklık, nem ve yağış'],
+    irrigation: ['Sulama', 'Önerilen su miktarı ve geçmiş'],
+    fertilizer: ['Gübreleme', 'NPK önerisi ve takvim'],
+    sensors: ['Sensörler', 'Tarladaki ölçüm cihazları'],
+    analytics: ['Raporlar', 'Bölge bazında özet ve dışa aktarma'],
+    map: ['Türkiye Haritası', 'Çiftliklerin coğrafi dağılımı'],
+    plants: ['Bitki Sağlığı', 'Yapraktan hastalık tespiti'],
+    alerts: ['Uyarılar', 'Sistem ve sensör uyarıları'],
+    users: ['Kullanıcı Yönetimi', 'Tüm kullanıcılar (admin)'],
+    auth: ['Hesabım', 'Profil ve şifre'],
+};

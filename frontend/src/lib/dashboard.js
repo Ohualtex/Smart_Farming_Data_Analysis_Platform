@@ -1,10 +1,7 @@
 import { api, apiAuth, getAuthToken } from "./api.js";
 import { _skeletonCards } from "./skeleton.js";
-import { fmtDate, fmtNumber, escAttr } from "./ui_helpers.js";
+import { fmtDate, fmtNumber, escAttr, STATUS_EMOJI as _STATUS_EMOJI, STATUS_LABEL as _STATUS_LABEL } from "./ui_helpers.js";
 import { registerActions } from "./events.js";
-
-const _STATUS_LABEL = { dry: 'Susuz', optimal: 'Uygun', wet: 'Aşırı sulu', no_data: 'Veri yok' };
-const _STATUS_EMOJI = { dry: '🥵', optimal: '👌', wet: '💧', no_data: '—' };
 
 const charts = {};
 
