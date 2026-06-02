@@ -16,11 +16,12 @@ Notes:
     * Chart.js  (jsdelivr)
     * Leaflet   (unpkg + OSM tile sunucuları)
     * Google Fonts (fonts.googleapis.com / fonts.gstatic.com)
-  `'unsafe-inline'` script-src / style-src için geçici olarak açık —
-  `frontend/index.html`'de 23 inline `onclick` handler ve Swagger UI'in
-  inline init script'i var. B-batch refactor'unda (`main.js` ES module
-  split) inline handler'lar kalkınca CSP `'unsafe-inline'` script-src
-  dışına çekilebilir.
+  `'unsafe-inline'` script-src için hâlâ açık — Swagger UI inline
+  init script'i ve `main.js` içinde `innerHTML` ile oluşturulan ~27
+  dinamik onclick handler gerektiriyor. `index.html`'deki tüm inline
+  handler'lar event delegation'a taşındı (Faz 3). Dinamik onclick'ler
+  de data-action'a çevrildiğinde CSP'den `'unsafe-inline'` drop
+  edilebilir.
 
 - HSTS sadece `ENVIRONMENT=production` iken eklenir; dev/HTTPS olmayan
   setup'larda eklenmesi browser'da preload yanlış pin'leyebilir.
@@ -30,8 +31,9 @@ Notes:
 
 ---
 
-EN/TR: Production-ready response header katmanı. CSP geçici olarak
-unsafe-inline'a izin verir (B-batch sonrası daraltılabilir).
+EN/TR: Production-ready response header katmanı. CSP script-src
+unsafe-inline Swagger UI + dynamic innerHTML onclick handler'ları
+yüzünden açık; index.html temizlendi (event delegation).
 """
 
 from __future__ import annotations
