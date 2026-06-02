@@ -69,3 +69,18 @@ export async function extractErrorMessage(res) {
   }
   return `HTTP ${res.status}`;
 }
+
+export function fmtDate(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }); }
+    catch { return iso; }
+}
+
+export function fmtNumber(v, decimals = 1) {
+    if (v === null || v === undefined) return '—';
+    return Number(v).toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+export function escAttr(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}

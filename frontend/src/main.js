@@ -18,93 +18,52 @@ import {
     extractErrorMessage as _extractErrorMessage,
     setFieldError as _setFieldError,
 } from "./lib/ui_helpers.js";
+import { api, apiAuth, API_BASE, getAuthToken, setAuthToken, clearAuthToken } from "./lib/api.js";
+import { setupEventDelegation } from "./lib/events.js";
+import {
+    currentUser, ROLE_LABELS, getCurrentUser, refreshAuthState, _renderUserBadge, _applyRoleVisibility, _applyAuthGate,
+    toggleLandingForm, doLogin, doRegister, doChangePassword, doLogout
+} from "./lib/auth.js";
+import { loadDashboard, loadDemoData } from "./lib/dashboard.js";
 
-const API_BASE = window.location.origin;
-const AUTH_TOKEN_KEY = 'sfdap_auth_token';
 let refreshInterval = null;
 let charts = {};
 let apiOnline = false;
-// Son /me snapshot — header badge + role-aware UI guard'ları için.
-// Login/logout sırasında refreshAuthState() bu objeyi güncelliyor.
-let currentUser = null;
 
-// ─── API SERVICE ──────────────────────────────────────────────
-
-/**
- * Auth header builder — Bearer token varsa Authorization, yoksa X-API-Key.
- * REBUILD Faz 2 / Adım 7: tek noktadan auth header bind'i; rol-aware
- * endpoint'ler (`/api/dashboard/summary`, `/api/auth/me` vb) Bearer ister.
- */
-function _authHeaders() {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    return token
-        ? { 'Authorization': `Bearer ${token}` }
-        : { 'X-API-Key': 'dev-api-key' };  // anonim fallback (eski endpoint'ler)
-}
-
-// _extractErrorMessage → src/lib/ui_helpers.js (extractErrorMessage) olarak import edildi (tek kaynak).
-
-async function api(endpoint, options = {}) {
-    try {
-        const res = await fetch(`${API_BASE}${endpoint}`, {
-            headers: { 'Content-Type': 'application/json', ..._authHeaders(), ...options.headers },
-            ...options
-        });
-        if (!res.ok) {
-            const msg = await _extractErrorMessage(res);
-            throw new Error(msg);
-        }
-        return await res.json();
-    } catch (e) {
-        console.warn(`API Error: ${endpoint}`, e);
-        return null;
+// ─── EVENTS & LISTENERS ───────────────────────────────────────
+window.addEventListener('auth-expired', () => {
+    showToast('Oturum süresi doldu, tekrar giriş yap', 'warning');
+});
+window.addEventListener('auth-forbidden', (e) => {
+    const msg = e.detail;
+    showToast(msg.startsWith('HTTP ') ? 'Bu işlem için yetkin yok' : msg, 'warning');
+});
+window.addEventListener('api-error', (e) => {
+    showToast(e.detail, 'error');
+});
+window.addEventListener('toast', (e) => {
+    showToast(e.detail.msg, e.detail.type);
+});
+window.addEventListener('navigate', (e) => {
+    navigate(e.detail);
+});
+window.addEventListener('auth-status-changed', (e) => {
+    if (e.detail) {
+        refreshBell();
+    } else {
+        _hideBell();
     }
-}
-
-/**
- * Bearer-zorunlu API çağrısı — token yoksa null + auth sayfasına yönlendirir.
- * Dashboard summary, sensors, alerts gibi RBAC'lı endpoint'ler için kullanılır.
- * 401/403 dönerse token temizler ve toast gösterir.
- */
-async function apiAuth(endpoint, options = {}) {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-        // Login formuna yumuşak yönlendirme; hard reload yok.
-        if (location.hash !== '#auth') location.hash = '#auth';
-        return null;
-    }
-    try {
-        const res = await fetch(`${API_BASE}${endpoint}`, {
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options.headers },
-            ...options
-        });
-        if (res.status === 401) {
-            // Token expire ya da revoke
-            localStorage.removeItem(AUTH_TOKEN_KEY);
-            currentUser = null;
-            _renderUserBadge(null);
-            showToast('Oturum süresi doldu, tekrar giriş yap', 'warning');
-            location.hash = '#auth';
-            return null;
-        }
-        if (res.status === 403) {
-            // v5-1: backend envelope mesajı varsa toast'ı kişiselleştir
-            const msg = await _extractErrorMessage(res);
-            showToast(msg.startsWith('HTTP ') ? 'Bu işlem için yetkin yok' : msg, 'warning');
-            return null;
-        }
-        if (!res.ok) {
-            // v5-1: 4xx/5xx → envelope message'i toast'a yansıt
-            const msg = await _extractErrorMessage(res);
-            showToast(msg, 'error');
-            throw new Error(msg);
-        }
-        return await res.json();
-    } catch (e) {
-        console.warn(`API Auth Error: ${endpoint}`, e);
-        return null;
-    }
-}
+});
+window.addEventListener('status-update', (e) => {
+    apiOnline = e.detail.online;
+    updateStatus(apiOnline);
+});
+window.addEventListener('auth-refresh-needed', () => {
+    refreshAuthState();
+});
+window.addEventListener('toggle-form', (e) => {
+    toggleForm(e.detail);
+});
 
 // ─── NAVIGATION ───────────────────────────────────────────────
 const pageTitles = {
@@ -173,7 +132,6 @@ function toggleSidebar() {
     if (hamburger) hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
 
-// ─── HASH ROUTER ──────────────────────────────────────────────
 window.addEventListener('hashchange', () => {
     const raw = location.hash.slice(1) || 'dashboard';
     // Parametrik route: #field/{id} → tarla detayı
@@ -184,191 +142,6 @@ window.addEventListener('hashchange', () => {
     }
     if (pageTitles[raw]) navigate(raw);
 });
-
-// ─── DASHBOARD ────────────────────────────────────────────────
-// REBUILD Faz 2 / Adım 8: "Çiftliğim" rol-aware kartlar
-// /api/dashboard/summary tek endpoint'inden 4 metrik card + hero stats
-// + trend chart'ları (Bearer-aware api() üzerinden).
-
-const _STATUS_LABEL = { dry: 'Susuz', optimal: 'Uygun', wet: 'Aşırı sulu', no_data: 'Veri yok' };
-const _STATUS_EMOJI = { dry: '🥵', optimal: '👌', wet: '💧', no_data: '—' };
-
-function _fmtDate(iso) {
-    if (!iso) return '—';
-    try { return new Date(iso).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }); }
-    catch { return iso; }
-}
-function _fmtNumber(v, decimals = 1) {
-    if (v === null || v === undefined) return '—';
-    return Number(v).toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-}
-function _escAttr(s) {
-    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function _renderSummaryCards(summary) {
-    const moist = summary.soil_moisture_today || {};
-    const irr = summary.last_irrigation || {};
-    const alerts = summary.open_alerts || { by_severity: {} };
-    const disease = summary.last_disease || {};
-    const scopeNote = summary.scope === 'system'
-        ? 'Sistem geneli'
-        : 'Senin tarlalarından';
-    const moistValue = moist.avg_moisture_percent !== null && moist.avg_moisture_percent !== undefined
-        ? `%${_fmtNumber(moist.avg_moisture_percent)}`
-        : '—';
-    const moistStatus = moist.status || 'no_data';
-    const irrAmount = irr.water_amount_liters !== null && irr.water_amount_liters !== undefined
-        ? `${_fmtNumber(irr.water_amount_liters, 0)} L`
-        : '—';
-    const irrTitle = irr.field_name ? `${irr.field_name} · ${_fmtDate(irr.scheduled_date)}` : 'Sulama kaydı yok';
-    const sev = alerts.by_severity || {};
-    const severityChips = [
-        { key: 'critical', label: 'kritik', cls: 'critical' },
-        { key: 'medium', label: 'orta', cls: 'medium' },
-        { key: 'low', label: 'düşük', cls: 'low' },
-    ].map(({ key, label, cls }) => {
-        const cnt = sev[key] || 0;
-        return cnt > 0
-            ? `<span class="severity-chip severity-${cls}">${cnt} ${label}</span>`
-            : '';
-    }).join(' ');
-    const diseaseDx = disease.diagnosis || '—';
-    const diseaseDetail = disease.diagnosis
-        ? `${disease.field_name || 'Tarla'} · ${_fmtDate(disease.captured_at)} · güven %${_fmtNumber((disease.confidence_score || 0) * 100, 0)}`
-        : 'Henüz yaprak görseli analiz edilmedi';
-    return `
-        <div class="metric-card metric-moisture metric-status-${moistStatus}">
-            <div class="metric-head">
-                <span class="metric-icon" aria-hidden="true">💧</span>
-                <span class="metric-title">Bugün toprak nemi</span>
-            </div>
-            <div class="metric-value">${moistValue}</div>
-            <div class="metric-status">
-                <span class="metric-status-pill">${_STATUS_EMOJI[moistStatus]} ${_STATUS_LABEL[moistStatus]}</span>
-            </div>
-            <div class="metric-context">${moist.sensor_count || 0} sensör · ${moist.reading_count || 0} okuma · son 24 sa.</div>
-            <div class="metric-scope">${scopeNote}</div>
-        </div>
-
-        <div class="metric-card metric-irrigation">
-            <div class="metric-head">
-                <span class="metric-icon" aria-hidden="true">🚿</span>
-                <span class="metric-title">Son sulama</span>
-            </div>
-            <div class="metric-value">${irrAmount}</div>
-            <div class="metric-context"><strong>${_escAttr(irr.field_name || '—')}</strong> · ${_fmtDate(irr.scheduled_date)}</div>
-            <div class="metric-context">${_escAttr(irr.status || (irr.irrigation_id ? '—' : 'Sulama kaydı yok'))}</div>
-            <div class="metric-scope">${scopeNote}</div>
-        </div>
-
-        <div class="metric-card metric-alerts ${alerts.total > 0 ? 'has-alerts' : ''}">
-            <div class="metric-head">
-                <span class="metric-icon" aria-hidden="true">🚨</span>
-                <span class="metric-title">Açık uyarılar</span>
-            </div>
-            <div class="metric-value">${alerts.total || 0}</div>
-            <div class="metric-context metric-severities">${severityChips || '<span class="metric-status-pill">Açık uyarı yok ✅</span>'}</div>
-            <div class="metric-context metric-latest">${alerts.latest_message ? _escAttr(alerts.latest_message) : ''}</div>
-            <div class="metric-scope">${scopeNote}</div>
-        </div>
-
-        <div class="metric-card metric-disease metric-severity-${disease.severity || 'none'}">
-            <div class="metric-head">
-                <span class="metric-icon" aria-hidden="true">🦠</span>
-                <span class="metric-title">Son hastalık tanısı</span>
-            </div>
-            <div class="metric-value metric-value-text">${_escAttr(diseaseDx)}</div>
-            <div class="metric-context">${_escAttr(diseaseDetail)}</div>
-            <div class="metric-scope">${scopeNote}</div>
-        </div>
-    `;
-}
-
-// Onboarding banner — boş hesap (farm_count==0) için (REBUILD Faz 6)
-function _onboardingBannerHtml() {
-    return `
-        <div class="onboarding-banner" style="grid-column: 1 / -1;">
-            <div class="onboarding-emoji" aria-hidden="true">🌱</div>
-            <h3>Hoş geldin! Hadi başlayalım.</h3>
-            <p>Henüz çiftliğin yok. İlk çiftliğini ekleyerek başlayabilir ya da
-               tek tıkla örnek verilerle platformu hemen keşfedebilirsin.</p>
-            <div class="onboarding-actions">
-                <button class="btn-primary" onclick="navigate('fields');toggleForm('newFarmForm')">➕ İlk çiftliğimi ekle</button>
-                <button class="btn-secondary" id="loadDemoBtn" onclick="loadDemoData()">🎬 Demo verisi yükle</button>
-            </div>
-        </div>`;
-}
-
-/** Tek-tık demo veri kur (POST /api/onboarding/demo) → dashboard'u tazele. */
-async function loadDemoData() {
-    const btn = document.getElementById('loadDemoBtn');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Kuruluyor...'; }
-    const res = await apiAuth('/api/onboarding/demo', { method: 'POST' });
-    if (res) {
-        showToast('Demo verisi kuruldu ✅ — keşfetmeye başla!', 'success');
-        await refreshAuthState();  // badge owned_farms_count + bell tazele
-        loadDashboard();
-    } else if (btn) {
-        btn.disabled = false; btn.textContent = '🎬 Demo verisi yükle';
-    }
-}
-
-async function loadDashboard() {
-    const cards = document.getElementById('dashboardCards');
-    cards.innerHTML = _skeletonCards(4);
-    _setBusy('dashboardCards', true);
-
-    // Token yoksa rol-aware özet çekilmez; kullanıcıyı auth sayfasına yönlendir.
-    const token = getAuthToken();
-    if (!token) {
-        cards.innerHTML = `
-            <div class="empty-state" style="grid-column: 1 / -1;">
-                <p>🔐 "Çiftliğim" özetini görmek için <a href="#auth">giriş yap</a>.</p>
-            </div>
-        `;
-        _setBusy('dashboardCards', false);
-        updateStatus(apiOnline);
-        return;
-    }
-
-    const [summary, weather] = await Promise.all([
-        apiAuth('/api/dashboard/summary'),
-        api('/api/weather/?limit=30'),
-    ]);
-    apiOnline = summary !== null;
-    updateStatus(apiOnline);
-
-    if (summary && summary.scope === 'user' && summary.farm_count === 0) {
-        // Boş hesap — onboarding banner (REBUILD Faz 6)
-        cards.innerHTML = _onboardingBannerHtml();
-        const heroFarms = document.getElementById('heroFarms');
-        if (heroFarms) heroFarms.textContent = '0';
-    } else if (summary) {
-        cards.innerHTML = _renderSummaryCards(summary);
-        // Hero stats — rol-aware sayım. Farmer için "kendi" çiftlik/sensör;
-        // admin için sistem geneli.
-        const heroFarms = document.getElementById('heroFarms');
-        const heroSensors = document.getElementById('heroSensors');
-        const heroReadings = document.getElementById('heroReadings');
-        if (heroFarms) heroFarms.textContent = summary.farm_count;
-        if (heroSensors) heroSensors.textContent = summary.sensor_count;
-        if (heroReadings) heroReadings.textContent = (summary.soil_moisture_today || {}).reading_count || 0;
-    } else {
-        cards.innerHTML = `
-            <div class="empty-state" style="grid-column: 1 / -1;">
-                <p>⚠️ Özet alınamadı. <button class="btn-link" onclick="loadDashboard()">Tekrar dene</button></p>
-            </div>
-        `;
-    }
-    _setBusy('dashboardCards', false);
-
-    // Trend chart'lar — weather Bearer üzerinden gelir (api() artık _authHeaders kullanıyor).
-    const w = weather || [];
-    renderMoistureChart(w);
-    renderTempHumChart(w);
-    renderPrecipChart(w);
-}
 
 // ─── TARLALARIM (FIELD LIST) ──────────────────────────────────
 // REBUILD Faz 3 / Adım 6: çiftlik bazlı tarla listesi.
@@ -400,8 +173,8 @@ async function loadFields() {
     const farmOpts = farms.map(f => `<option value="${f.id}">${_escAttr(f.name)}</option>`).join('');
     let html = `
         <div class="crud-actionbar">
-            <button class="btn-primary" onclick="toggleForm('newFarmForm')">➕ Çiftlik Ekle</button>
-            ${farms.length ? `<button class="btn-secondary" onclick="toggleForm('newFieldForm')">➕ Tarla Ekle</button>` : ''}
+            <button class="btn-primary" data-action="toggleForm" data-arg="newFarmForm">➕ Çiftlik Ekle</button>
+            ${farms.length ? `<button class="btn-secondary" data-action="toggleForm" data-arg="newFieldForm">➕ Tarla Ekle</button>` : ''}
         </div>
         <div class="form-box crud-form" id="newFarmForm" style="display:none;">
             <h4 style="margin-top:0;">➕ Yeni Çiftlik</h4>
@@ -413,7 +186,7 @@ async function loadFields() {
                 <div class="form-group"><label>Bölge</label><input type="text" id="nfRegion" placeholder="İç Anadolu" /></div>
                 <div class="form-group"><label>Alan (ha)</label><input type="number" id="nfArea" step="0.1" placeholder="8.0" /></div>
             </div>
-            <button class="btn-primary" onclick="submitNewFarm()">Kaydet</button>
+            <button class="btn-primary" data-action="submitNewFarm">Kaydet</button>
         </div>
         <div class="form-box crud-form" id="newFieldForm" style="display:none;">
             <h4 style="margin-top:0;">➕ Yeni Tarla</h4>
@@ -425,7 +198,7 @@ async function loadFields() {
                 <div class="form-group"><label>Toprak tipi</label><input type="text" id="ndSoil" placeholder="killi" /></div>
                 <div class="form-group"><label>Alan (ha)</label><input type="number" id="ndArea" step="0.1" placeholder="3.5" /></div>
             </div>
-            <button class="btn-primary" onclick="submitNewField()">Kaydet</button>
+            <button class="btn-primary" data-action="submitNewField">Kaydet</button>
         </div>
     `;
 
@@ -436,8 +209,8 @@ async function loadFields() {
             <p><strong>Henüz hiç çiftliğin yok.</strong></p>
             <p>İlk çiftliğini ekleyerek başla veya örnek verilerle deneyebilirsin.</p>
             <div class="cta-row">
-                <button class="btn-primary" onclick="toggleForm('newFarmForm')">➕ İlk çiftliğimi ekle</button>
-                <button class="btn-link" onclick="loadDemoData()">veya demo verisi yükle</button>
+                <button class="btn-primary" data-action="toggleForm" data-arg="newFarmForm">➕ İlk çiftliğimi ekle</button>
+                <button class="btn-link" data-action="loadDemoData">veya demo verisi yükle</button>
             </div>
         </div>`;
         container.innerHTML = html;
@@ -454,8 +227,8 @@ async function loadFields() {
             <div class="farm-group-header">
                 <span>🚜 ${_escAttr(farm.name)}${farm.city ? ` · ${_escAttr(farm.city)}` : ''}${farm.region ? ` <span class="farm-region">${_escAttr(farm.region)}</span>` : ''}</span>
                 <span class="farm-actions">
-                    <button class="btn-mini" onclick="editFarm(${farm.id}, '${_escAttr(farm.name)}')">✏️</button>
-                    <button class="btn-mini btn-danger" onclick="deleteFarm(${farm.id}, '${_escAttr(farm.name)}')">🗑</button>
+                    <button class="btn-mini" data-action="editFarm" data-id="${farm.id}" data-name="${_escAttr(farm.name)}">✏️</button>
+                    <button class="btn-mini btn-danger" data-action="deleteFarm" data-id="${farm.id}" data-name="${_escAttr(farm.name)}">🗑</button>
                 </span>
             </div>`;
         if (fields.length === 0) {
@@ -465,12 +238,12 @@ async function loadFields() {
             for (const f of fields) {
                 const area = f.area_hectares != null ? `${_fmtNumber(f.area_hectares)} ha` : '—';
                 html += `<div class="field-card-wrap">
-                    <a class="field-card" href="#field/${f.id}" onclick="openFieldDetail(${f.id});return false;">
+                    <a class="field-card" href="#field/${f.id}" data-action="openFieldDetail" data-id="${f.id}">
                         <div class="field-card-name">🌱 ${_escAttr(f.name)}</div>
                         <div class="field-card-meta">${_escAttr(f.soil_type || 'toprak —')} · ${area}</div>
                         <div class="field-card-cta">Detayı gör →</div>
                     </a>
-                    <button class="btn-mini btn-danger field-card-del" onclick="deleteField(${f.id}, '${_escAttr(f.name)}')" title="Tarlayı sil">🗑</button>
+                    <button class="btn-mini btn-danger field-card-del" data-action="deleteField" data-id="${f.id}" data-name="${_escAttr(f.name)}" title="Tarlayı sil">🗑</button>
                 </div>`;
             }
             html += '</div>';
@@ -637,7 +410,7 @@ function renderFieldDetail(d) {
             <div class="detail-mini-title">📡 ${_escAttr(s.sensor_type)} <span class="sensor-status sensor-${_escAttr(s.status)}">${_escAttr(s.status)}</span></div>
             <div class="detail-mini-row">Nem: <strong>${m}</strong> · Toprak: <strong>${t}</strong></div>
             <div class="detail-mini-sub">${s.latest_reading_at ? _fmtDate(s.latest_reading_at) : 'okuma yok'}</div>
-            <button class="btn-mini btn-danger sensor-card-del" onclick="deleteSensor(${s.id}, '${_escAttr(label)}')" title="Sensörü sil">🗑</button>
+            <button class="btn-mini btn-danger sensor-card-del" data-action="deleteSensor" data-id="${s.id}" data-name="${_escAttr(label)}" title="Sensörü sil">🗑</button>
         </div>`;
     }).join('') || '<p class="detail-empty">Bu tarlada sensör yok.</p>';
 
@@ -645,8 +418,8 @@ function renderFieldDetail(d) {
     const irrRows = (d.recent_irrigations || []).map(i => {
         const amt = i.water_amount_liters != null ? `${_fmtNumber(i.water_amount_liters, 0)} L` : '—';
         const actions = i.status === 'pending'
-            ? `<button class="btn-mini" onclick="updateIrrigationStatus(${i.id}, 'completed')">✓ Tamamlandı</button>
-               <button class="btn-mini btn-danger" onclick="updateIrrigationStatus(${i.id}, 'cancelled')">✗ İptal</button>`
+            ? `<button class="btn-mini" data-action="updateIrrigationStatus" data-id="${i.id}" data-status="completed">✓ Tamamlandı</button>
+               <button class="btn-mini btn-danger" data-action="updateIrrigationStatus" data-id="${i.id}" data-status="cancelled">✗ İptal</button>`
             : '—';
         return `<tr><td>${_fmtDate(i.scheduled_date)}</td><td>${amt}</td><td>${i.duration_min ?? '—'} dk</td><td><span class="irr-status irr-${_escAttr(i.status)}">${_escAttr(i.status)}</span></td><td class="user-actions">${actions}</td></tr>`;
     }).join('') || '<tr><td colspan="5" class="detail-empty">Sulama kaydı yok.</td></tr>';
@@ -680,8 +453,8 @@ function renderFieldDetail(d) {
                 <div class="hero-stat">🪨 ${_escAttr(d.soil_type || '—')}</div>
             </div>
             <div class="field-detail-actions">
-                <button class="btn-mini" onclick="editField(${d.id}, '${_escAttr(d.name)}')">✏️ Düzenle</button>
-                <button class="btn-mini btn-danger" onclick="deleteField(${d.id}, '${_escAttr(d.name)}')">🗑 Sil</button>
+                <button class="btn-mini" data-action="editField" data-id="${d.id}" data-name="${_escAttr(d.name)}">✏️ Düzenle</button>
+                <button class="btn-mini btn-danger" data-action="deleteField" data-id="${d.id}" data-name="${_escAttr(d.name)}">🗑 Sil</button>
             </div>
         </div>
 
@@ -694,7 +467,7 @@ function renderFieldDetail(d) {
         </div>
 
         <div class="section-header">📡 Sensörler
-            <button class="btn-mini" style="float:right;" onclick="toggleForm('newSensorForm')">➕ Sensör Ekle</button>
+            <button class="btn-mini" style="float:right;" data-action="toggleForm" data-arg="newSensorForm">➕ Sensör Ekle</button>
         </div>
         <div class="form-box crud-form" id="newSensorForm" style="display:none;">
             <div class="form-row">
@@ -709,7 +482,7 @@ function renderFieldDetail(d) {
                 <div class="form-group"><label>Seri No *</label><input type="text" id="nsSerial" placeholder="SN-2026-001" /></div>
                 <div class="form-group"><label>Derinlik (cm)</label><input type="number" id="nsDepth" value="20" step="1" /></div>
             </div>
-            <button class="btn-primary" onclick="submitNewSensor(${d.id})">Kaydet</button>
+            <button class="btn-primary" data-action="submitNewSensor" data-id="${d.id}">Kaydet</button>
         </div>
         <div class="detail-mini-grid">${sensorRows}</div>
 
@@ -725,12 +498,12 @@ function renderFieldDetail(d) {
             <div id="fieldLeafPreviewWrap" style="display:none;text-align:center;margin:12px 0;">
                 <img id="fieldLeafPreview" alt="Önizleme" style="max-width:240px;max-height:180px;border-radius:12px;border:1px solid var(--border);" />
             </div>
-            <button class="btn-primary" id="fieldLeafBtn" onclick="analyzeFieldLeaf()">🔬 Hastalığı Tespit Et</button>
+            <button class="btn-primary" id="fieldLeafBtn" data-action="analyzeFieldLeaf">🔬 Hastalığı Tespit Et</button>
             <div id="fieldLeafResult" style="display:none;margin-top:16px;"></div>
         </div>
 
         <div class="section-header">🚿 Sulama Geçmişi
-            <button class="btn-mini" style="float:right;" onclick="addFieldIrrigation(${d.id})">➕ Sulama programı ekle</button>
+            <button class="btn-mini" style="float:right;" data-action="addFieldIrrigation" data-id="${d.id}">➕ Sulama programı ekle</button>
         </div>
         <div class="table-box"><table class="detail-table"><thead><tr><th>Tarih</th><th>Su</th><th>Süre</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>${irrRows}</tbody></table></div>
 
@@ -806,49 +579,6 @@ async function analyzeFieldLeaf() {
     }
 }
 
-function renderMoistureChart(data) {
-    const sorted = [...data].reverse();
-    const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
-    const values = sorted.map(d => d.humidity_percent);
-    if (charts.moisture) charts.moisture.destroy();
-    charts.moisture = new Chart(document.getElementById('moistureChart'), {
-        type: 'line', data: { labels, datasets: [{ label: 'Nem %', data: values, borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .4, pointRadius: 2 }] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
-            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
-    });
-}
-
-function renderTempHumChart(data) {
-    const sorted = [...data].reverse();
-    const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
-    if (charts.tempHum) charts.tempHum.destroy();
-    charts.tempHum = new Chart(document.getElementById('tempHumChart'), {
-        type: 'line', data: { labels, datasets: [
-            { label: 'Sıcaklık °C', data: sorted.map(d => d.temperature_c), borderColor: '#f59e0b', tension: .4, pointRadius: 2, yAxisID: 'y' },
-            { label: 'Nem %', data: sorted.map(d => d.humidity_percent), borderColor: '#3b82f6', tension: .4, pointRadius: 2, yAxisID: 'y1' },
-        ] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
-            scales: {
-                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
-                y: { position: 'left', ticks: { color: '#f59e0b' }, grid: { color: '#1f2937' } },
-                y1: { position: 'right', ticks: { color: '#3b82f6' }, grid: { display: false } },
-            } }
-    });
-}
-
-function renderPrecipChart(data) {
-    const sorted = [...data].reverse();
-    const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
-    if (charts.precip) charts.precip.destroy();
-    charts.precip = new Chart(document.getElementById('precipChart'), {
-        type: 'bar', data: { labels, datasets: [{ label: 'Yağış mm', data: sorted.map(d => d.precipitation_mm),
-            backgroundColor: 'rgba(6,182,212,.5)', borderColor: '#06b6d4', borderWidth: 1 }] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
-            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
-    });
-}
-
 // ─── SENSORS ──────────────────────────────────────────────────
 // Pagination: sayfa basi 50 kayit, slider ile sayfalari gez.
 const PAGE_SIZE = 50;
@@ -888,7 +618,7 @@ async function loadSensors(page = 1) {
     // keyboard navigation acilir.
     document.getElementById('sensorsTable').innerHTML = sensors.map(s => `
         <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${s.sensor_type}) detayını aç"
-            style="cursor:pointer" onclick="loadSensorDetail(${s.id})"
+            style="cursor:pointer" data-action="loadSensorDetail" data-id="${s.id}"
             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();loadSensorDetail(${s.id});}">
             <td>${s.id}</td><td>${s.sensor_type}</td><td>${s.serial_number}</td>
             <td><span class="badge active">${s.status}</span></td>
@@ -1023,7 +753,7 @@ async function predictIrrigation() {
             ? `<div class="irr-approve">
                    <label for="irrApproveField">Tarla seç:</label>
                    <select id="irrApproveField">${fieldOpts}</select>
-                   <button class="btn-primary" onclick="approveIrrigation()">✅ Onayla ve programa ekle</button>
+                   <button class="btn-primary" data-action="approveIrrigation">✅ Onayla ve programa ekle</button>
                </div>`
             : `<p style="font-size:.8rem;color:var(--text-dim)">Programa eklemek için önce <a href="#fields">tarla ekle</a>.</p>`;
         document.getElementById('irrigationResult').innerHTML = `
@@ -1512,7 +1242,7 @@ async function loadAlerts() {
         const date = a.created_at ? new Date(a.created_at).toLocaleString('tr-TR') : '—';
         const status = a.is_resolved
             ? '<span style="color:#22c55e;">✓ Çözüldü</span>'
-            : `<button class="btn-secondary" style="padding:4px 10px;" onclick="resolveAlert(${a.id})" aria-label="Uyarıyı çözüldü olarak işaretle">Çöz</button>`;
+            : `<button class="btn-secondary" style="padding:4px 10px;" data-action="resolveAlert" data-id="${a.id}" aria-label="Uyarıyı çözüldü olarak işaretle">Çöz</button>`;
         html += `<tr>
             <td style="padding:8px;border-bottom:1px solid var(--border);font-size:.85rem;">${date}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${a.severity}</span></td>
@@ -1545,11 +1275,7 @@ async function resolveAlert(id) {
 }
 
 // ─── AUTH (KULLANICI GİRİŞİ) ──────────────────────────────────
-// `AUTH_TOKEN_KEY` constant'ı dosyanın başında tanımlı (top-level state ile birlikte).
-
-function getAuthToken() { return localStorage.getItem(AUTH_TOKEN_KEY); }
-function setAuthToken(t) { localStorage.setItem(AUTH_TOKEN_KEY, t); }
-function clearAuthToken() { localStorage.removeItem(AUTH_TOKEN_KEY); }
+import { getAuthToken, setAuthToken, clearAuthToken, refreshAuthState } from './auth.js';
 
 // Rol → kullanıcı dostu Türkçe etiket
 const ROLE_LABELS = {
@@ -1690,7 +1416,7 @@ async function refreshBell() {
                     <div class="notif-item-msg">${_escAttr(a.message)}</div>
                     <div class="notif-item-foot">
                         <span class="notif-item-sev">${_escAttr(a.severity)}</span>
-                        <button class="btn-mini" onclick="resolveFromBell(${a.id})">Çöz</button>
+                        <button class="btn-mini" data-action="resolveFromBell" data-id="${a.id}">Çöz</button>
                     </div>
                 </div>`).join('');
     }
@@ -1734,118 +1460,6 @@ document.addEventListener('click', (e) => {
 // _setFieldError / _clearFieldError / _clearAllErrors → src/lib/ui_helpers.js olarak
 // import edildi (yukarıdaki import bloğu). Tek kaynak artık ui_helpers.js.
 
-async function doLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    _clearAllErrors('loginEmail', 'loginPassword');
-    let hasError = false;
-    if (!email) { _setFieldError('loginEmail', 'E-posta gerekli.'); hasError = true; }
-    if (!password) { _setFieldError('loginPassword', 'Şifre gerekli.'); hasError = true; }
-    if (hasError) { showToast('Lütfen eksik alanları doldur.', 'warning'); return; }
-    try {
-        const resp = await fetch(`${API_BASE}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            showToast(err.detail || 'Giriş başarısız', 'error');
-            return;
-        }
-        const data = await resp.json();
-        setAuthToken(data.access_token);
-        showToast('Giriş yapıldı', 'success');
-        await refreshAuthState();   // gate'i açar (app görünür)
-        navigate('dashboard');      // gerçek bir sayfaya in
-    } catch (e) {
-        showToast('Sunucuya ulaşılamadı', 'error');
-    }
-}
-
-async function doRegister() {
-    const name = document.getElementById('regName').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPassword').value;
-    _clearAllErrors('regName', 'regEmail', 'regPassword');
-    let hasError = false;
-    if (!name) { _setFieldError('regName', 'Ad gerekli.'); hasError = true; }
-    if (!email) { _setFieldError('regEmail', 'E-posta gerekli.'); hasError = true; }
-    if (!password) {
-        _setFieldError('regPassword', 'Şifre gerekli.');
-        hasError = true;
-    } else if (password.length < 8) {
-        _setFieldError('regPassword', 'Şifre en az 8 karakter olmalı.');
-        hasError = true;
-    }
-    if (hasError) { showToast('Lütfen formu kontrol et.', 'warning'); return; }
-    try {
-        const resp = await fetch(`${API_BASE}/api/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, password }),
-        });
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            showToast(err.detail || 'Kayıt başarısız', 'error');
-            return;
-        }
-        showToast('Hesap oluşturuldu, giriş yapabilirsin', 'success');
-        // Otomatik giriş
-        document.getElementById('loginEmail').value = email;
-        document.getElementById('loginPassword').value = password;
-        doLogin();
-    } catch (e) {
-        showToast('Sunucuya ulaşılamadı', 'error');
-    }
-}
-
-async function doChangePassword() {
-    const current = document.getElementById('pwCurrent').value;
-    const next = document.getElementById('pwNew').value;
-    const confirm = document.getElementById('pwConfirm').value;
-    if (!current || !next || !confirm) {
-        showToast('Tüm alanlar gerekli', 'warning');
-        return;
-    }
-    if (next.length < 8) {
-        showToast('Yeni şifre en az 8 karakter olmalı', 'warning');
-        return;
-    }
-    if (next !== confirm) {
-        showToast('Yeni şifreler eşleşmiyor', 'warning');
-        return;
-    }
-    if (next === current) {
-        showToast('Yeni şifre mevcuttan farklı olmalı', 'warning');
-        return;
-    }
-    const token = getAuthToken();
-    if (!token) { showToast('Giriş yapman gerekiyor', 'warning'); location.hash = '#auth'; return; }
-    try {
-        const resp = await fetch(`${API_BASE}/api/auth/me/password`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ current_password: current, new_password: next }),
-        });
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            showToast(err.detail || 'Şifre güncellenemedi', 'error');
-            return;
-        }
-        showToast('Şifre güncellendi ✅', 'success');
-        // Form temizliği
-        document.getElementById('pwCurrent').value = '';
-        document.getElementById('pwNew').value = '';
-        document.getElementById('pwConfirm').value = '';
-    } catch (e) {
-        showToast('Sunucuya ulaşılamadı', 'error');
-    }
-}
-
 // ─── ADMIN KULLANICI YÖNETİMİ (REBUILD Faz 3.5) ───────────────
 // Tüm çağrılar apiAuth (401→login, 403→yetki toast). Yalnız admin nav görür.
 
@@ -1867,12 +1481,12 @@ async function loadUsers() {
         html += `<tr>
             <td>${_escAttr(u.name)}</td>
             <td>${_escAttr(u.email)}</td>
-            <td><select class="user-role-select" onchange="changeUserRole(${u.id}, this.value)">${roleOpts(u.role)}</select></td>
+            <td><select class="user-role-select" data-change="changeUserRole" data-id="${u.id}">${roleOpts(u.role)}</select></td>
             <td>${u.owned_farms_count ?? 0}</td>
             <td>${_fmtDate(u.created_at)}</td>
             <td class="user-actions">
-                <button class="btn-mini" onclick="resetUserPassword(${u.id}, '${_escAttr(u.email)}')">🔑 Şifre</button>
-                <button class="btn-mini btn-danger" onclick="deleteUser(${u.id}, '${_escAttr(u.email)}')">🗑 Sil</button>
+                <button class="btn-mini" data-action="resetUserPassword" data-id="${u.id}" data-name="${_escAttr(u.email)}">🔑 Şifre</button>
+                <button class="btn-mini btn-danger" data-action="deleteUser" data-id="${u.id}" data-name="${_escAttr(u.email)}">🗑 Sil</button>
             </td>
         </tr>`;
     }
@@ -1948,23 +1562,6 @@ async function deleteUser(userId, email) {
     }
 }
 
-async function doLogout() {
-    const token = getAuthToken();
-    if (token) {
-        try {
-            await fetch(`${API_BASE}/api/auth/logout`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-        } catch (e) { /* ignore */ }
-    }
-    clearAuthToken();
-    showToast('Çıkış yapıldı', 'info');
-    await refreshAuthState();    // gate landing'i geri getirir
-    toggleLandingForm('login');  // login formuna dön
-    if (location.hash) location.hash = '';  // deep route'tan temizle
-}
-
 // ─── STATUS & UTILITIES ───────────────────────────────────────
 function updateStatus(online) {
     const dot = document.getElementById('statusDot');
@@ -2001,6 +1598,48 @@ function updateClock() {
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function init() {
+    setupEventDelegation();
+    registerActions({
+        doLogin,
+        doRegister,
+        doLogout,
+        doChangePassword,
+        toggleLandingForm: (btn) => toggleLandingForm(btn.dataset.arg),
+        toggleSidebar,
+        toggleBell,
+        runAlertCheck,
+        sensorsPrev: () => typeof loadSensors === 'function' && loadSensors(typeof sensorsPage !== 'undefined' ? sensorsPage - 1 : 1),
+        sensorsNext: () => typeof loadSensors === 'function' && loadSensors(typeof sensorsPage !== 'undefined' ? sensorsPage + 1 : 1),
+        predictIrrigation: () => typeof predictIrrigation === 'function' && predictIrrigation(),
+        irrigationPrev: () => typeof loadIrrigation === 'function' && loadIrrigation(typeof irrigationPage !== 'undefined' ? irrigationPage - 1 : 1),
+        irrigationNext: () => typeof loadIrrigation === 'function' && loadIrrigation(typeof irrigationPage !== 'undefined' ? irrigationPage + 1 : 1),
+        recommendFertilizer: () => typeof recommendFertilizer === 'function' && recommendFertilizer(),
+        fertilizerSchedule: () => typeof fertilizerSchedule === 'function' && fertilizerSchedule(),
+        analyzePlantImage: () => typeof analyzePlantImage === 'function' && analyzePlantImage(),
+        createUser: () => typeof createUser === 'function' && createUser(),
+        editFarm: (btn) => typeof editFarm === 'function' && editFarm(btn.dataset.id, btn.dataset.name),
+        deleteFarm: (btn) => typeof deleteFarm === 'function' && deleteFarm(btn.dataset.id, btn.dataset.name),
+        editField: (btn) => typeof editField === 'function' && editField(btn.dataset.id, btn.dataset.name),
+        deleteField: (btn) => typeof deleteField === 'function' && deleteField(btn.dataset.id, btn.dataset.name),
+        deleteSensor: (btn) => typeof deleteSensor === 'function' && deleteSensor(btn.dataset.id, btn.dataset.name),
+        updateIrrigationStatus: (btn) => typeof updateIrrigationStatus === 'function' && updateIrrigationStatus(btn.dataset.id, btn.dataset.status),
+        submitNewSensor: (btn) => typeof submitNewSensor === 'function' && submitNewSensor(btn.dataset.id),
+        analyzeFieldLeaf: () => typeof analyzeFieldLeaf === 'function' && analyzeFieldLeaf(),
+        addFieldIrrigation: (btn) => typeof addFieldIrrigation === 'function' && addFieldIrrigation(btn.dataset.id),
+        loadSensorDetail: (btn) => typeof loadSensorDetail === 'function' && loadSensorDetail(btn.dataset.id),
+        approveIrrigation: () => typeof approveIrrigation === 'function' && approveIrrigation(),
+        resolveAlert: (btn) => typeof resolveAlert === 'function' && resolveAlert(btn.dataset.id),
+        resolveFromBell: (btn) => typeof resolveFromBell === 'function' && resolveFromBell(btn.dataset.id),
+        resetUserPassword: (btn) => typeof resetUserPassword === 'function' && resetUserPassword(btn.dataset.id, btn.dataset.name),
+        deleteUser: (btn) => typeof deleteUser === 'function' && deleteUser(btn.dataset.id, btn.dataset.name),
+        changeUserRole: (el) => typeof changeUserRole === 'function' && changeUserRole(el.dataset.id, el.value),
+        openFieldDetail: (btn) => typeof openFieldDetail === 'function' && openFieldDetail(btn.dataset.id),
+        submitNewFarm: () => typeof submitNewFarm === 'function' && submitNewFarm(),
+        submitNewField: () => typeof submitNewField === 'function' && submitNewField(),
+        toggleForm: (btn) => typeof toggleForm === 'function' && toggleForm(btn.dataset.arg),
+        loadDemoData: () => loadDemoData(),
+    });
+
     // Health check
     const health = await api('/api/health');
     apiOnline = health !== null;
@@ -2506,58 +2145,3 @@ function initFiliz() {
 }
 
 init();
-
-// ─── WINDOW BRIDGE ────────────────────────────────────────────
-// `<script type="module">` module scope'ta function decls global olmuyor.
-// `index.html`'deki 12 inline `on*` handler (navigate, toggleSidebar,
-// loadSensors, loadIrrigation, predictIrrigation, recommendFertilizer,
-// fertilizerSchedule, analyzePlantImage, loadAlerts, doLogin,
-// doRegister, doLogout) için bunları window'a expose etmek gerekiyor.
-//
-// Bu köprü Cycle 9 sonrası event delegation'a çevrilerek kaldırılabilir;
-// o zaman CSP `script-src 'unsafe-inline'`'ı drop edilir.
-Object.assign(window, {
-    navigate,
-    toggleSidebar,
-    loadSensors,
-    loadIrrigation,
-    predictIrrigation,
-    recommendFertilizer,
-    fertilizerSchedule,
-    analyzePlantImage,
-    loadAlerts,
-    loadDashboard,
-    loadDemoData,
-    loadFields,
-    openFieldDetail,
-    analyzeFieldLeaf,
-    toggleForm,
-    submitNewFarm,
-    submitNewField,
-    editFarm,
-    deleteFarm,
-    editField,
-    deleteField,
-    submitNewSensor,
-    deleteSensor,
-    approveIrrigation,
-    updateIrrigationStatus,
-    addFieldIrrigation,
-    toggleBell,
-    runAlertCheck,
-    resolveFromBell,
-    loadUsers,
-    createUser,
-    changeUserRole,
-    resetUserPassword,
-    deleteUser,
-    doLogin,
-    doRegister,
-    doLogout,
-    doChangePassword,
-    toggleLandingForm,
-    // Status panel ve alerts bridge için (showToast başka modüllerden çağrılıyor)
-    showToast,
-    resolveAlert,
-    loadSensorDetail,
-});

@@ -50,9 +50,9 @@
                 <label for="loginPassword">Şifre</label>
                 <input type="password" id="loginPassword" placeholder="Şifren" autocomplete="current-password" />
             </div>
-            <button class="btn-primary btn-block" onclick="doLogin()">Giriş Yap</button>
+            <button class="btn-primary btn-block" data-action="doLogin">Giriş Yap</button>
             <p class="landing-toggle">Hesabın yok mu?
-                <a href="#" id="showRegisterLink" onclick="toggleLandingForm('register');return false;">Kayıt ol</a>
+                <a href="#" id="showRegisterLink" data-action="toggleLandingForm" data-arg="register">Kayıt ol</a>
             </p>
         </div>
 
@@ -71,9 +71,9 @@
                 <label for="regPassword">Şifre</label>
                 <input type="password" id="regPassword" placeholder="En az 8 karakter" autocomplete="new-password" />
             </div>
-            <button class="btn-primary btn-block" onclick="doRegister()">Hesap Oluştur</button>
+            <button class="btn-primary btn-block" data-action="doRegister">Hesap Oluştur</button>
             <p class="landing-toggle">Zaten hesabın var mı?
-                <a href="#" id="showLoginLink" onclick="toggleLandingForm('login');return false;">Giriş yap</a>
+                <a href="#" id="showLoginLink" data-action="toggleLandingForm" data-arg="login">Giriş yap</a>
             </p>
         </div>
 
@@ -89,40 +89,40 @@
             <p>Akıllı Tarım Veri Analizi</p>
         </div>
         <nav class="sidebar-nav" aria-label="Ana menü">
-            <a class="nav-item active" href="#dashboard" onclick="navigate('dashboard')" aria-current="page">
+            <a class="nav-item active" href="#dashboard" aria-current="page">
                 <span class="icon" aria-hidden="true">📊</span> Genel Bakış
             </a>
-            <a class="nav-item" href="#fields" onclick="navigate('fields')">
+            <a class="nav-item" href="#fields">
                 <span class="icon" aria-hidden="true">🌱</span> Tarlalarım
             </a>
-            <a class="nav-item" href="#weather" onclick="navigate('weather')">
+            <a class="nav-item" href="#weather">
                 <span class="icon" aria-hidden="true">🌤️</span> Hava Durumu
             </a>
-            <a class="nav-item" href="#irrigation" onclick="navigate('irrigation')">
+            <a class="nav-item" href="#irrigation">
                 <span class="icon" aria-hidden="true">💧</span> Sulama
             </a>
-            <a class="nav-item" href="#fertilizer" onclick="navigate('fertilizer')">
+            <a class="nav-item" href="#fertilizer">
                 <span class="icon" aria-hidden="true">🌱</span> Gübreleme
             </a>
-            <a class="nav-item" href="#sensors" onclick="navigate('sensors')">
+            <a class="nav-item" href="#sensors">
                 <span class="icon" aria-hidden="true">📡</span> Sensörler
             </a>
-            <a class="nav-item" href="#analytics" onclick="navigate('analytics')" data-role="admin,overseer,developer">
+            <a class="nav-item" href="#analytics" data-role="admin,overseer,developer">
                 <span class="icon" aria-hidden="true">📈</span> Raporlar
             </a>
-            <a class="nav-item" href="#map" onclick="navigate('map')">
+            <a class="nav-item" href="#map">
                 <span class="icon" aria-hidden="true">🗺️</span> Harita
             </a>
-            <a class="nav-item" href="#plants" onclick="navigate('plants')">
+            <a class="nav-item" href="#plants">
                 <span class="icon" aria-hidden="true">🦠</span> Bitki Sağlığı
             </a>
-            <a class="nav-item" href="#alerts" onclick="navigate('alerts')">
+            <a class="nav-item" href="#alerts">
                 <span class="icon" aria-hidden="true">🚨</span> Uyarılar
             </a>
-            <a class="nav-item" href="#users" onclick="navigate('users')" data-role="admin" style="display:none;">
+            <a class="nav-item" href="#users" data-role="admin" style="display:none;">
                 <span class="icon" aria-hidden="true">👥</span> Kullanıcılar
             </a>
-            <a class="nav-item" href="#auth" onclick="navigate('auth')">
+            <a class="nav-item" href="#auth">
                 <span class="icon" aria-hidden="true">👤</span> Hesabım
             </a>
             <!-- API Rehberi sidebar'dan çıkarıldı, header'a `</>` ikonu olarak taşındı.
@@ -139,7 +139,7 @@
     <div class="main">
         <header class="header">
             <div style="display:flex;align-items:center;gap:12px;">
-                <button class="hamburger" onclick="toggleSidebar()" aria-label="Kenar menüyü aç/kapat" aria-controls="sidebar" aria-expanded="false">☰</button>
+                <button class="hamburger" data-action="toggleSidebar" aria-label="Kenar menüyü aç/kapat" aria-controls="sidebar" aria-expanded="false">☰</button>
                 <div class="header-left">
                     <h2 id="pageTitle">Dashboard</h2>
                     <p id="pageSubtitle">Genel Bakış</p>
@@ -149,17 +149,17 @@
                 <!-- Bildirim çanı — REBUILD Faz 5: açık uyarı sayısı + dropdown.
                      refreshBell() doldurur; login yoksa gizli. -->
                 <div class="notif-wrap" id="notifWrap" style="display:none;">
-                    <button class="notif-bell" id="notifBell" onclick="toggleBell()"
+                    <button class="notif-bell" id="notifBell" data-action="toggleBell"
                             aria-label="Bildirimler" aria-haspopup="true" aria-expanded="false" title="Bildirimler">
                         🔔<span class="notif-count" id="notifCount" style="display:none;">0</span>
                     </button>
                     <div class="notif-dropdown" id="notifDropdown" role="region" aria-label="Bildirimler" style="display:none;">
                         <div class="notif-head">
                             <strong>Bildirimler</strong>
-                            <button class="btn-mini" onclick="runAlertCheck()" title="Tarlaları tara">🔄 Kontrol et</button>
+                            <button class="btn-mini" data-action="runAlertCheck" title="Tarlaları tara">🔄 Kontrol et</button>
                         </div>
                         <div class="notif-list" id="notifList" aria-live="polite"></div>
-                        <a class="notif-footer" href="#alerts" onclick="navigate('alerts')">Tümünü gör →</a>
+                        <a class="notif-footer" href="#alerts">Tümünü gör →</a>
                     </div>
                 </div>
                 <!-- Kullanıcı rozeti — login sonrası refreshAuthState() doldurur.
@@ -257,7 +257,7 @@
 
             <!-- ═══ TARLA DETAYI (FIELD DETAIL) PAGE ═══ -->
             <section class="page" id="page-field-detail">
-                <a class="back-link" href="#fields" onclick="navigate('fields')">← Tarlalarıma dön</a>
+                <a class="back-link" href="#fields">← Tarlalarıma dön</a>
                 <div id="fieldDetailContainer" aria-busy="true" aria-live="polite"></div>
             </section>
 
@@ -282,9 +282,9 @@
                             <tbody id="sensorsTable" aria-busy="true" aria-live="polite"></tbody></table>
                     </div>
                     <div class="pagination-bar">
-                        <button class="page-nav-btn" id="sensorsPrevBtn" onclick="loadSensors(sensorsPage - 1)" disabled>◀ Önceki</button>
+                        <button class="page-nav-btn" id="sensorsPrevBtn" data-action="sensorsPrev" disabled>◀ Önceki</button>
                         <div class="page-status" id="sensorsPageStatus">Yükleniyor…</div>
-                        <button class="page-nav-btn" id="sensorsNextBtn" onclick="loadSensors(sensorsPage + 1)" disabled>Sonraki ▶</button>
+                        <button class="page-nav-btn" id="sensorsNextBtn" data-action="sensorsNext" disabled>Sonraki ▶</button>
                     </div>
                 </div>
             </section>
@@ -319,7 +319,7 @@
                         <div class="form-group"><label>Hava Sıcaklığı (°C)</label><input type="number" id="irr_temp" value="28" step="0.1"></div>
                         <div class="form-group"><label>Yağış (mm)</label><input type="number" id="irr_precip" value="0" step="0.1"></div>
                     </div>
-                    <button class="btn-primary" onclick="predictIrrigation()" style="margin-top:16px;">💧 Öneri Hesapla</button>
+                    <button class="btn-primary" data-action="predictIrrigation" style="margin-top:16px;">💧 Öneri Hesapla</button>
                     <div id="irrigationResult"></div>
                 </div>
                 <div class="table-box scroll-table">
@@ -331,9 +331,9 @@
                             <tbody id="irrigationTable" aria-busy="true" aria-live="polite"></tbody></table>
                     </div>
                     <div class="pagination-bar">
-                        <button class="page-nav-btn" id="irrigationPrevBtn" onclick="loadIrrigation(irrigationPage - 1)" disabled>◀ Önceki</button>
+                        <button class="page-nav-btn" id="irrigationPrevBtn" data-action="irrigationPrev" disabled>◀ Önceki</button>
                         <div class="page-status" id="irrigationPageStatus">Yükleniyor…</div>
-                        <button class="page-nav-btn" id="irrigationNextBtn" onclick="loadIrrigation(irrigationPage + 1)" disabled>Sonraki ▶</button>
+                        <button class="page-nav-btn" id="irrigationNextBtn" data-action="irrigationNext" disabled>Sonraki ▶</button>
                     </div>
                 </div>
             </section>
@@ -380,7 +380,7 @@
                         <div class="form-group"><label>Toprak Fosfor (mg/kg)</label><input type="number" id="fert_p" value="20" step="1"></div>
                         <div class="form-group"><label>Toprak Potasyum (mg/kg)</label><input type="number" id="fert_k" value="30" step="1"></div>
                     </div>
-                    <button class="btn-primary" onclick="recommendFertilizer()" style="margin-top:16px;">🌱 Öneri Hesapla</button>
+                    <button class="btn-primary" data-action="recommendFertilizer" style="margin-top:16px;">🌱 Öneri Hesapla</button>
                     <div id="fertilizerResult"></div>
                 </div>
                 <div class="form-box">
@@ -388,7 +388,7 @@
                     <div class="form-grid">
                         <div class="form-group"><label>Ekim Tarihi</label><input type="date" id="fert_date" value="2026-05-01"></div>
                     </div>
-                    <button class="btn-primary" onclick="fertilizerSchedule()" style="margin-top:16px;">📅 Takvim Oluştur</button>
+                    <button class="btn-primary" data-action="fertilizerSchedule" style="margin-top:16px;">📅 Takvim Oluştur</button>
                     <div id="scheduleResult"></div>
                 </div>
             </section>
@@ -466,7 +466,7 @@
                     <div id="plantsPreviewWrap" style="display:none;text-align:center;margin:12px 0;">
                         <img id="plantsPreview" alt="Önizleme" style="max-width:240px;max-height:180px;border-radius:12px;border:1px solid var(--border);" />
                     </div>
-                    <button class="btn-primary" id="plantsAnalyzeBtn" onclick="analyzePlantImage()">🔬 Hastalığı Tespit Et</button>
+                    <button class="btn-primary" id="plantsAnalyzeBtn" data-action="analyzePlantImage">🔬 Hastalığı Tespit Et</button>
                 </div>
                 <div id="plantsResultBox" style="display:none;margin-top:20px;"></div>
                 <div class="section-header">🗂️ Geçmiş Analizler</div>
@@ -539,7 +539,7 @@
                             </select>
                         </div>
                     </div>
-                    <button class="btn-primary" onclick="createUser()">Kullanıcı Oluştur</button>
+                    <button class="btn-primary" data-action="createUser">Kullanıcı Oluştur</button>
                 </div>
                 <div class="section-header">📋 Tüm Kullanıcılar</div>
                 <div class="table-box"><div id="usersTable" aria-busy="true" aria-live="polite"></div></div>
@@ -573,7 +573,7 @@
                                     <span id="authOwnedFarms" class="account-value">0</span>
                                 </div>
                             </div>
-                            <button class="btn-primary" onclick="doLogout()">Çıkış Yap</button>
+                            <button class="btn-primary" data-action="doLogout">Çıkış Yap</button>
                         </div>
                         <div class="form-box">
                             <h3 style="margin-top:0;">🔒 Şifre Değiştir</h3>
@@ -589,7 +589,7 @@
                                 <label for="pwConfirm">Yeni şifre (tekrar)</label>
                                 <input type="password" id="pwConfirm" placeholder="Tekrar gir" autocomplete="new-password" />
                             </div>
-                            <button class="btn-primary" onclick="doChangePassword()">Şifreyi Güncelle</button>
+                            <button class="btn-primary" data-action="doChangePassword">Şifreyi Güncelle</button>
                         </div>
                     </div>
                 </div>
