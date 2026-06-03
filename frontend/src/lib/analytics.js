@@ -1,8 +1,8 @@
 import { api, API_BASE, getAuthToken } from "./api.js";
-import { _skeletonBlock, _setBusy } from "./skeleton.js";
+import { _skeletonBlock, _skeletonCards, _setBusy } from "./skeleton.js";
 import { showToast, escAttr as _escAttr, fmtNumber as _fmtNumber } from "./ui_helpers.js";
 
-let analyticsChart = null;
+const charts = {};
 
 // ─── ANALYTICS ─────────────────────────────────────────────────
 const analyticsColors = {

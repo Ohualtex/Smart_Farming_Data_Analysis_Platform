@@ -25,7 +25,7 @@ import {
 import { api, apiAuth, API_BASE, getAuthToken, setAuthToken, clearAuthToken } from "./lib/api.js";
 import { setupEventDelegation } from "./lib/events.js";
 import {
-    currentUser, ROLE_LABELS, getCurrentUser, refreshAuthState, _renderUserBadge, _applyRoleVisibility, _applyAuthGate,
+    currentUser, refreshAuthState,
     toggleLandingForm, doLogin, doRegister, doChangePassword, doLogout
 } from "./lib/auth.js";
 import { loadDashboard, loadDemoData } from "./lib/dashboard.js";
@@ -39,9 +39,8 @@ import { loadIrrigation, predictIrrigation, approveIrrigation, updateIrrigationS
 import { recommendFertilizer, fertilizerSchedule } from "./lib/fertilizer.js";
 import { loadAnalytics } from "./lib/analytics.js";
 import { loadPlants, analyzePlantImage } from "./lib/plants.js";
-import { loadAlerts, resolveAlert, runAlertCheck } from "./lib/alerts.js";
+import { loadAlerts, resolveAlert } from "./lib/alerts.js";
 import { loadUsers, createUser, changeUserRole, resetUserPassword, deleteUser } from "./lib/users.js";
-import { doLogin, doRegister, doLogout, doChangePassword, toggleLandingForm, refreshAuthState, currentUser } from "./lib/auth.js";
 
 let refreshInterval = null;
 let charts = {};
@@ -79,6 +78,9 @@ window.addEventListener('auth-refresh-needed', () => {
 });
 window.addEventListener('hideBell', () => {
     _hideBell();
+});
+window.addEventListener('refreshBell', () => {
+    refreshBell();
 });
 window.addEventListener('toggle-form', (e) => {
     toggleForm(e.detail);

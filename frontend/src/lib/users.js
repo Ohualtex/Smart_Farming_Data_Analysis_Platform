@@ -1,8 +1,15 @@
-import { api, apiAuth } from "./api.js";
-import { _skeletonRows, _setBusy } from "./skeleton.js";
+import { api, apiAuth, API_BASE, getAuthToken } from "./api.js";
+import { _skeletonBlock, _skeletonRows, _setBusy } from "./skeleton.js";
 import { showToast, escAttr as _escAttr, fmtDate as _fmtDate } from "./ui_helpers.js";
 
 const PAGE_SIZE = 50;
+
+const ROLE_LABELS = {
+    farmer: 'çiftçi',
+    developer: 'geliştirici',
+    overseer: 'gözetmen',
+    admin: 'yönetici',
+};
 
 // ─── ADMIN KULLANICI YÖNETİMİ (REBUILD Faz 3.5) ───────────────
 // Tüm çağrılar apiAuth (401→login, 403→yetki toast). Yalnız admin nav görür.

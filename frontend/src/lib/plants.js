@@ -1,5 +1,11 @@
-import { api } from "./api.js";
+import { api, API_BASE, getAuthToken } from "./api.js";
+import { _skeletonBlock, _setBusy } from "./skeleton.js";
 import { showToast } from "./ui_helpers.js";
+
+function _authHeaders() {
+    const token = getAuthToken();
+    return token ? { 'Authorization': `Bearer ${token}` } : { 'X-API-Key': 'dev-api-key' };
+}
 
 // ─── PLANTS (BİTKİ SAĞLIĞI) ───────────────────────────────────
 export async function loadPlants() {
