@@ -439,3 +439,8 @@ export async function analyzeFieldLeaf() {
         btn.disabled = false; btn.textContent = '🔬 Hastalığı Tespit Et';
     }
 }
+
+// Dinamik yenileme (örneğin irrigation modülünden sulama programı eklenince detay yenilensin)
+window.addEventListener('refreshFieldDetail', () => {
+    if (currentFieldId) loadFieldDetail(currentFieldId);
+});
