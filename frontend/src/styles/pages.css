@@ -7,13 +7,39 @@
 .landing {
     position: fixed; inset: 0; z-index: 1000;
     display: flex; align-items: center; justify-content: center; padding: 24px;
-    background: radial-gradient(1200px 600px at 50% -10%, var(--primary-glow), transparent), var(--bg);
+    background:
+        radial-gradient(620px 380px at 14% 16%, var(--primary-glow), transparent),
+        radial-gradient(660px 440px at 86% 84%, var(--primary-glow), transparent),
+        radial-gradient(1200px 600px at 50% -10%, var(--primary-glow), transparent),
+        var(--bg);
+}
+/* Light = gündüz teması: beyaz yerine yumuşak gök + yeşil/mavi köşe ışıkları (boşlukları süsler) */
+[data-theme="light"] .landing {
+    background:
+        radial-gradient(640px 420px at 14% 18%, rgba(56,189,248,.22), transparent),
+        radial-gradient(620px 420px at 86% 80%, rgba(16,185,129,.18), transparent),
+        radial-gradient(900px 520px at 50% -8%, rgba(125,211,252,.30), transparent),
+        linear-gradient(180deg, #dceefb 0%, #eaf6f0 56%, #f1faf3 100%);
 }
 .landing-card {
+    position: relative;
     width: 100%; max-width: 420px;
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 18px; padding: 32px 28px; box-shadow: var(--shadow);
+    border-radius: 18px; padding: 34px 28px 30px; box-shadow: var(--shadow);
 }
+/* Geri dön (ana sayfa / welcome) */
+.landing-back {
+    position: absolute; top: 14px; left: 14px;
+    display: inline-flex; align-items: center; gap: 5px;
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: .82rem; font-weight: 600;
+    padding: 6px 10px; border-radius: 9px; transition: color .2s ease, background .2s ease;
+}
+.landing-back:hover { color: var(--primary); background: var(--surface-2); }
+.landing-back:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* Form alanları arası nefes payı (etiketler input'lara yapışmasın) */
+.landing-form .form-group { margin-bottom: 16px; }
+.landing-form .form-group:last-of-type { margin-bottom: 20px; }
 .landing-brand { text-align: center; margin-bottom: 24px; }
 .landing-brand h1 { margin: 0; font-size: 2rem; }
 .landing-brand p { margin: 6px 0 0; color: var(--text-muted); font-size: .9rem; }
