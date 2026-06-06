@@ -47,11 +47,6 @@
 .landing-toggle { text-align: center; margin: 14px 0 0; font-size: .85rem; color: var(--text-muted); }
 .landing-toggle a { color: var(--primary); text-decoration: none; font-weight: 600; }
 .landing-toggle a:hover { text-decoration: underline; }
-.landing-hint {
-    text-align: center; margin: 20px 0 0; padding-top: 16px;
-    border-top: 1px dashed var(--border);
-    font-size: .72rem; color: var(--text-dim);
-}
 
 /* ─── HERO BANNER ────────────────────────────────── */
 .hero-banner {
