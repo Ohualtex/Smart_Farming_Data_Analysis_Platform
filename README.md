@@ -19,6 +19,7 @@
 
 - [Özellikler](#-özellikler)
 - [Hızlı Başlangıç](#-hızlı-başlangıç)
+- [Demo Hesaplar](#-demo-hesaplar)
 - [Teknoloji Yığını](#️-teknoloji-yığını)
 - [Kullanıcı Rolleri](#-kullanıcı-rolleri)
 - [Mimari](#️-mimari)
@@ -69,6 +70,23 @@ Açılan adresler:
 - **Dashboard:** http://localhost:8000/dashboard/
 - **Swagger API:** http://localhost:8000/docs
 - **Health probe:** http://localhost:8000/api/health/deep
+
+---
+
+## 🔑 Demo Hesaplar
+
+`python database/seed_data.py` çalıştırıldığında aşağıdaki demo hesaplar oluşur (yalnız yerel/demo amaçlı):
+
+| Rol | E-posta | Şifre |
+|:--|:--|:--|
+| 👑 Admin | `admin@demo.test` | `123456` |
+| 🏛️ Gözetmen | `overseer@demo.test` | `123456` |
+| 🛠️ Geliştirici | `developer@demo.test` | `123456` |
+| 🧑‍🌾 Çiftçi *(ana persona)* | `ahmet@demo.test` | `123456` |
+| 🧑‍🌾 Çiftçi | `ayse@demo.test` | `123456` |
+| 🧑‍🌾 Çiftçi | `mehmet@demo.test` | `123456` |
+
+> Dashboard'da **Giriş Yap** → bu kimlik bilgileriyle oturum aç. Bunlar yalnızca demo seed hesaplarıdır; **production'da kullanılmamalıdır**.
 
 ---
 

@@ -14,11 +14,13 @@ ve sunum demosu için yeterli küçük bir veri seti üretir.
 - 17 bitki türü referansı (turkey_data.CROP_DATA)
 
 Demo giriş bilgileri (script sonunda yazdırılır):
-    admin@demo.test     / DemoAdmin2026     (admin)
-    overseer@demo.test  / DemoGozetmen2026  (overseer — sistem özeti)
-    ahmet@demo.test     / DemoCiftci2026     (farmer — ana persona)
-    ayse@demo.test      / DemoCiftci2026     (farmer)
-    mehmet@demo.test    / DemoCiftci2026     (farmer)
+    Tüm demo hesapların şifresi: 123456
+    admin@demo.test      (admin)
+    overseer@demo.test   (overseer — sistem özeti)
+    developer@demo.test  (developer — read-only + test)
+    ahmet@demo.test      (farmer — ana persona)
+    ayse@demo.test       (farmer)
+    mehmet@demo.test     (farmer)
 
 Kullanım:
     python database/seed_data.py
@@ -54,9 +56,12 @@ from app.routers.auth import _hash_password
 from database.turkey_data import CROP_DATA
 
 # ─── Demo kullanıcı + çiftlik tanımları ───────────────────────
-FARMER_PASSWORD = "DemoCiftci2026"  # noqa: S105 — demo seed, gerçek secret değil
-ADMIN_PASSWORD = "DemoAdmin2026"  # noqa: S105
-OVERSEER_PASSWORD = "DemoGozetmen2026"  # noqa: S105
+# Tüm demo hesaplar tek basit şifre kullanır (yalnız yerel/demo — production değil).
+DEMO_PASSWORD = "123456"  # noqa: S105 — demo seed, gerçek secret değil
+FARMER_PASSWORD = DEMO_PASSWORD
+ADMIN_PASSWORD = DEMO_PASSWORD
+OVERSEER_PASSWORD = DEMO_PASSWORD
+DEVELOPER_PASSWORD = DEMO_PASSWORD
 
 # Her tarla: (ad, bitki_adı, toprak_tipi, alan_ha, taban_nem%) — taban_nem
 # status'u belirler: <30 dry, 30-70 optimal, >70 wet.
@@ -148,8 +153,8 @@ def seed_database():
             crop_by_name[name] = crop
         db.flush()
 
-        # ─── 2. KULLANICILAR (admin + gözetmen) ──────────────────────
-        logger.info("  👤 Kullanıcılar oluşturuluyor (admin + gözetmen + 3 çiftçi)...")
+        # ─── 2. KULLANICILAR (admin + gözetmen + geliştirici) ────────
+        logger.info("  👤 Kullanıcılar oluşturuluyor (admin + gözetmen + geliştirici + 3 çiftçi)...")
         db.add(
             User(
                 name="Yönetici Demo",
@@ -164,6 +169,14 @@ def seed_database():
                 email="overseer@demo.test",
                 password_hash=_hash_password(OVERSEER_PASSWORD),
                 role="overseer",
+            )
+        )
+        db.add(
+            User(
+                name="Geliştirici Demo",
+                email="developer@demo.test",
+                password_hash=_hash_password(DEVELOPER_PASSWORD),
+                role="developer",
             )
         )
 
@@ -300,10 +313,10 @@ def seed_database():
 
         # ─── Özet ────────────────────────────────────────────────────
         logger.info("✅ Demo seed tamamlandı:")
-        logger.info(f"   👤 {db.query(User).count()} kullanıcı (admin + gözetmen + 3 çiftçi)")
+        logger.info(f"   👤 {db.query(User).count()} kullanıcı (admin + gözetmen + geliştirici + 3 çiftçi)")
         logger.info(f"   🚜 {db.query(Farm).count()} çiftlik · 🌱 {total_fields} tarla")
         logger.info(f"   📡 {total_sensors} sensör · 📊 {total_readings} okuma")
-        logger.info("   🔑 Giriş: ahmet@demo.test / DemoCiftci2026 (çiftçi), admin@demo.test / DemoAdmin2026")
+        logger.info("   🔑 Giriş: tüm demo hesaplar şifre '123456' (ör. ahmet@demo.test çiftçi, admin@demo.test admin)")
     finally:
         db.close()
 
