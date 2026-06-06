@@ -34,8 +34,8 @@ Modelin `predict()` fonksiyonu şu formatta bir sonuç döndürür:
 Bitki yaprak görüntülerinden hastalık teşhisi yapan CNN sarıcısı `app/ml/plant_disease_model.py` içinde canlıdır.
 
 ### Mevcut Yapı
-- **Sarıcı sınıf:** `PlantDiseaseClassifier` — Pillow tabanlı heuristic mod (renk histogramı + sağlıklı yeşil oranı + lezyon oranı). `app/ml/models/plant_disease_cnn.onnx` mevcutsa `onnxruntime` ile gerçek CNN inference'a otomatik geçer.
-- **API endpoint'i:** `POST /api/plants/health-images/analyze` (multipart upload). Yüklenen görseli `app/ml/plant_uploads/` altına kaydedip `PlantHealthImage` ve `ModelPerformanceLog` tablolarına yazar.
+- **Sarıcı sınıf:** `PlantDiseaseModel` (`app/ml/plant_disease_model.py`) — Pillow tabanlı heuristic mod (HSV renk analizi + sağlıklı yeşil oranı + lezyon oranı). `app/ml/models/plant_disease_cnn.onnx` mevcutsa `onnxruntime` ile gerçek CNN inference'a otomatik geçer.
+- **API endpoint'i:** `POST /api/plants/health-images/analyze` (multipart upload). Yüklenen görseli kaydedip `PlantHealthImage` tablosuna yazar.
 - **Test kapsamı:** `tests/test_plants.py` (heuristic ve ONNX path'leri için integration testleri).
 
 ### CNN Eğitim Adımları
@@ -45,4 +45,4 @@ Bitki yaprak görüntülerinden hastalık teşhisi yapan CNN sarıcısı `app/ml
 - Model dosyası `app/ml/models/plant_disease_cnn.onnx` olarak yerleştirildiğinde sarıcı otomatik olarak ONNX moduna geçer.
 
 ### Otomatik Loglama
-Her tahmin `ModelPerformanceLog` tablosuna yazılır (`model_name='plant_disease_cnn'`). Drift detection endpoint'i (`GET /api/model-performance/drift/plant_disease_cnn`) eşik altı düşüşte otomatik `SystemAlert` üretir.
+Şu an `ModelPerformanceLog`'a otomatik yazan tek akış **sulama** tahminleridir (`model_name='irrigation_rf'`, `app/routers/irrigation.py` içinde `_log_prediction`). Bitki hastalığı analizi (`plant_disease`) henüz bu loglamaya bağlanmadı — yalnız `PlantHealthImage` kaydı oluşur. Drift detection endpoint'i (`GET /api/model-performance/drift/{model_name}`) parametriktir; bir modelin log kaydı oluştuğunda eşik altı düşüşte `SystemAlert` üretir.
