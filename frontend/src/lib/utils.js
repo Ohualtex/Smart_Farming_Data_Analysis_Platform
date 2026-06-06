@@ -4,6 +4,12 @@
    Format helpers, toast notifications ve saat göstergesi.
    ============================================================ */
 
+// ─── Toprak nemi durum etiketleri (fixroll_v9b-2) ─────────────
+// main.js (_renderSummaryCards) + lib/render.js (renderFieldDetail) ortak
+// kullanır → cycle olmaması için utils'te tek kaynak.
+export const _STATUS_LABEL = { dry: 'Susuz', optimal: 'Uygun', wet: 'Aşırı sulu', no_data: 'Veri yok' };
+export const _STATUS_EMOJI = { dry: '🥵', optimal: '👌', wet: '💧', no_data: '—' };
+
 // ─── Format Helpers ───────────────────────────────────────────
 
 export function _fmtDate(iso) {
