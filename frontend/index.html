@@ -806,8 +806,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin="anonymous"></script>
-<!-- main.js ES module entry-point (B-batch). Inline `on*` handler'lara
-     köprü için sonunda window-bridge bölümü var. -->
+<!-- main.js ES module entry-point. Tüm etkileşimler data-action event
+     delegation ile (v9a: window-bridge kaldırıldı, global pollution yok). -->
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

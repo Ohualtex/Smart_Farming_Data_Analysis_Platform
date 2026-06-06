@@ -150,8 +150,8 @@ function _onboardingBannerHtml() {
             <p>Henüz çiftliğin yok. İlk çiftliğini ekleyerek başlayabilir ya da
                tek tıkla örnek verilerle platformu hemen keşfedebilirsin.</p>
             <div class="onboarding-actions">
-                <button class="btn-primary" onclick="navigate('fields');toggleForm('newFarmForm')">➕ İlk çiftliğimi ekle</button>
-                <button class="btn-secondary" id="loadDemoBtn" onclick="loadDemoData()">🎬 Demo verisi yükle</button>
+                <button class="btn-primary" data-action="addFirstFarm">➕ İlk çiftliğimi ekle</button>
+                <button class="btn-secondary" id="loadDemoBtn" data-action="loadDemoData">🎬 Demo verisi yükle</button>
             </div>
         </div>`;
 }
@@ -213,7 +213,7 @@ async function loadDashboard() {
     } else {
         cards.innerHTML = `
             <div class="empty-state" style="grid-column: 1 / -1;">
-                <p>⚠️ Özet alınamadı. <button class="btn-link" onclick="loadDashboard()">Tekrar dene</button></p>
+                <p>⚠️ Özet alınamadı. <button class="btn-link" data-action="loadDashboard">Tekrar dene</button></p>
             </div>
         `;
     }
@@ -256,8 +256,8 @@ async function loadFields() {
     const farmOpts = farms.map(f => `<option value="${f.id}">${_escAttr(f.name)}</option>`).join('');
     let html = `
         <div class="crud-actionbar">
-            <button class="btn-primary" onclick="toggleForm('newFarmForm')">➕ Çiftlik Ekle</button>
-            ${farms.length ? `<button class="btn-secondary" onclick="toggleForm('newFieldForm')">➕ Tarla Ekle</button>` : ''}
+            <button class="btn-primary" data-action="toggleForm" data-arg="newFarmForm">➕ Çiftlik Ekle</button>
+            ${farms.length ? `<button class="btn-secondary" data-action="toggleForm" data-arg="newFieldForm">➕ Tarla Ekle</button>` : ''}
         </div>
         <div class="form-box crud-form" id="newFarmForm" style="display:none;">
             <h4 style="margin-top:0;">➕ Yeni Çiftlik</h4>
@@ -269,7 +269,7 @@ async function loadFields() {
                 <div class="form-group"><label>Bölge</label><input type="text" id="nfRegion" placeholder="İç Anadolu" /></div>
                 <div class="form-group"><label>Alan (ha)</label><input type="number" id="nfArea" step="0.1" placeholder="8.0" /></div>
             </div>
-            <button class="btn-primary" onclick="submitNewFarm()">Kaydet</button>
+            <button class="btn-primary" data-action="submitNewFarm">Kaydet</button>
         </div>
         <div class="form-box crud-form" id="newFieldForm" style="display:none;">
             <h4 style="margin-top:0;">➕ Yeni Tarla</h4>
@@ -281,7 +281,7 @@ async function loadFields() {
                 <div class="form-group"><label>Toprak tipi</label><input type="text" id="ndSoil" placeholder="killi" /></div>
                 <div class="form-group"><label>Alan (ha)</label><input type="number" id="ndArea" step="0.1" placeholder="3.5" /></div>
             </div>
-            <button class="btn-primary" onclick="submitNewField()">Kaydet</button>
+            <button class="btn-primary" data-action="submitNewField">Kaydet</button>
         </div>
     `;
 
@@ -292,8 +292,8 @@ async function loadFields() {
             <p><strong>Henüz hiç çiftliğin yok.</strong></p>
             <p>İlk çiftliğini ekleyerek başla veya örnek verilerle deneyebilirsin.</p>
             <div class="cta-row">
-                <button class="btn-primary" onclick="toggleForm('newFarmForm')">➕ İlk çiftliğimi ekle</button>
-                <button class="btn-link" onclick="loadDemoData()">veya demo verisi yükle</button>
+                <button class="btn-primary" data-action="toggleForm" data-arg="newFarmForm">➕ İlk çiftliğimi ekle</button>
+                <button class="btn-link" data-action="loadDemoData">veya demo verisi yükle</button>
             </div>
         </div>`;
         container.innerHTML = html;
@@ -310,8 +310,8 @@ async function loadFields() {
             <div class="farm-group-header">
                 <span>🚜 ${_escAttr(farm.name)}${farm.city ? ` · ${_escAttr(farm.city)}` : ''}${farm.region ? ` <span class="farm-region">${_escAttr(farm.region)}</span>` : ''}</span>
                 <span class="farm-actions">
-                    <button class="btn-mini" onclick="editFarm(${farm.id}, '${_escAttr(farm.name)}')">✏️</button>
-                    <button class="btn-mini btn-danger" onclick="deleteFarm(${farm.id}, '${_escAttr(farm.name)}')">🗑</button>
+                    <button class="btn-mini" data-action="editFarm" data-id="${farm.id}" data-name="${_escAttr(farm.name)}">✏️</button>
+                    <button class="btn-mini btn-danger" data-action="deleteFarm" data-id="${farm.id}" data-name="${_escAttr(farm.name)}">🗑</button>
                 </span>
             </div>`;
         if (fields.length === 0) {
@@ -321,12 +321,12 @@ async function loadFields() {
             for (const f of fields) {
                 const area = f.area_hectares != null ? `${_fmtNumber(f.area_hectares)} ha` : '—';
                 html += `<div class="field-card-wrap">
-                    <a class="field-card" href="#field/${f.id}" onclick="openFieldDetail(${f.id});return false;">
+                    <a class="field-card" href="#field/${f.id}" data-action="openFieldDetail" data-id="${f.id}">
                         <div class="field-card-name">🌱 ${_escAttr(f.name)}</div>
                         <div class="field-card-meta">${_escAttr(f.soil_type || 'toprak —')} · ${area}</div>
                         <div class="field-card-cta">Detayı gör →</div>
                     </a>
-                    <button class="btn-mini btn-danger field-card-del" onclick="deleteField(${f.id}, '${_escAttr(f.name)}')" title="Tarlayı sil">🗑</button>
+                    <button class="btn-mini btn-danger field-card-del" data-action="deleteField" data-id="${f.id}" data-name="${_escAttr(f.name)}" title="Tarlayı sil">🗑</button>
                 </div>`;
             }
             html += '</div>';
@@ -493,7 +493,7 @@ function renderFieldDetail(d) {
             <div class="detail-mini-title">📡 ${_escAttr(s.sensor_type)} <span class="sensor-status sensor-${_escAttr(s.status)}">${_escAttr(s.status)}</span></div>
             <div class="detail-mini-row">Nem: <strong>${m}</strong> · Toprak: <strong>${t}</strong></div>
             <div class="detail-mini-sub">${s.latest_reading_at ? _fmtDate(s.latest_reading_at) : 'okuma yok'}</div>
-            <button class="btn-mini btn-danger sensor-card-del" onclick="deleteSensor(${s.id}, '${_escAttr(label)}')" title="Sensörü sil">🗑</button>
+            <button class="btn-mini btn-danger sensor-card-del" data-action="deleteSensor" data-id="${s.id}" data-name="${_escAttr(label)}" title="Sensörü sil">🗑</button>
         </div>`;
     }).join('') || '<p class="detail-empty">Bu tarlada sensör yok.</p>';
 
@@ -501,8 +501,8 @@ function renderFieldDetail(d) {
     const irrRows = (d.recent_irrigations || []).map(i => {
         const amt = i.water_amount_liters != null ? `${_fmtNumber(i.water_amount_liters, 0)} L` : '—';
         const actions = i.status === 'pending'
-            ? `<button class="btn-mini" onclick="updateIrrigationStatus(${i.id}, 'completed')">✓ Tamamlandı</button>
-               <button class="btn-mini btn-danger" onclick="updateIrrigationStatus(${i.id}, 'cancelled')">✗ İptal</button>`
+            ? `<button class="btn-mini" data-action="updateIrrigationStatus" data-id="${i.id}" data-status="completed">✓ Tamamlandı</button>
+               <button class="btn-mini btn-danger" data-action="updateIrrigationStatus" data-id="${i.id}" data-status="cancelled">✗ İptal</button>`
             : '—';
         return `<tr><td>${_fmtDate(i.scheduled_date)}</td><td>${amt}</td><td>${i.duration_min ?? '—'} dk</td><td><span class="irr-status irr-${_escAttr(i.status)}">${_escAttr(i.status)}</span></td><td class="user-actions">${actions}</td></tr>`;
     }).join('') || '<tr><td colspan="5" class="detail-empty">Sulama kaydı yok.</td></tr>';
@@ -536,8 +536,8 @@ function renderFieldDetail(d) {
                 <div class="hero-stat">🪨 ${_escAttr(d.soil_type || '—')}</div>
             </div>
             <div class="field-detail-actions">
-                <button class="btn-mini" onclick="editField(${d.id}, '${_escAttr(d.name)}')">✏️ Düzenle</button>
-                <button class="btn-mini btn-danger" onclick="deleteField(${d.id}, '${_escAttr(d.name)}')">🗑 Sil</button>
+                <button class="btn-mini" data-action="editField" data-id="${d.id}" data-name="${_escAttr(d.name)}">✏️ Düzenle</button>
+                <button class="btn-mini btn-danger" data-action="deleteField" data-id="${d.id}" data-name="${_escAttr(d.name)}">🗑 Sil</button>
             </div>
         </div>
 
@@ -550,7 +550,7 @@ function renderFieldDetail(d) {
         </div>
 
         <div class="section-header">📡 Sensörler
-            <button class="btn-mini" style="float:right;" onclick="toggleForm('newSensorForm')">➕ Sensör Ekle</button>
+            <button class="btn-mini" style="float:right;" data-action="toggleForm" data-arg="newSensorForm">➕ Sensör Ekle</button>
         </div>
         <div class="form-box crud-form" id="newSensorForm" style="display:none;">
             <div class="form-row">
@@ -565,7 +565,7 @@ function renderFieldDetail(d) {
                 <div class="form-group"><label>Seri No *</label><input type="text" id="nsSerial" placeholder="SN-2026-001" /></div>
                 <div class="form-group"><label>Derinlik (cm)</label><input type="number" id="nsDepth" value="20" step="1" /></div>
             </div>
-            <button class="btn-primary" onclick="submitNewSensor(${d.id})">Kaydet</button>
+            <button class="btn-primary" data-action="submitNewSensor" data-id="${d.id}">Kaydet</button>
         </div>
         <div class="detail-mini-grid">${sensorRows}</div>
 
@@ -581,12 +581,12 @@ function renderFieldDetail(d) {
             <div id="fieldLeafPreviewWrap" style="display:none;text-align:center;margin:12px 0;">
                 <img id="fieldLeafPreview" alt="Önizleme" style="max-width:240px;max-height:180px;border-radius:12px;border:1px solid var(--border);" />
             </div>
-            <button class="btn-primary" id="fieldLeafBtn" onclick="analyzeFieldLeaf()">🔬 Hastalığı Tespit Et</button>
+            <button class="btn-primary" id="fieldLeafBtn" data-action="analyzeFieldLeaf">🔬 Hastalığı Tespit Et</button>
             <div id="fieldLeafResult" style="display:none;margin-top:16px;"></div>
         </div>
 
         <div class="section-header">🚿 Sulama Geçmişi
-            <button class="btn-mini" style="float:right;" onclick="addFieldIrrigation(${d.id})">➕ Sulama programı ekle</button>
+            <button class="btn-mini" style="float:right;" data-action="addFieldIrrigation" data-id="${d.id}">➕ Sulama programı ekle</button>
         </div>
         <div class="table-box"><table class="detail-table"><thead><tr><th>Tarih</th><th>Su</th><th>Süre</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>${irrRows}</tbody></table></div>
 
@@ -744,8 +744,7 @@ async function loadSensors(page = 1) {
     // keyboard navigation acilir.
     document.getElementById('sensorsTable').innerHTML = sensors.map(s => `
         <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${s.sensor_type}) detayını aç"
-            style="cursor:pointer" onclick="loadSensorDetail(${s.id})"
-            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();loadSensorDetail(${s.id});}">
+            style="cursor:pointer" data-action="loadSensorDetail" data-id="${s.id}">
             <td>${s.id}</td><td>${s.sensor_type}</td><td>${s.serial_number}</td>
             <td><span class="badge active">${s.status}</span></td>
         </tr>
@@ -879,7 +878,7 @@ async function predictIrrigation() {
             ? `<div class="irr-approve">
                    <label for="irrApproveField">Tarla seç:</label>
                    <select id="irrApproveField">${fieldOpts}</select>
-                   <button class="btn-primary" onclick="approveIrrigation()">✅ Onayla ve programa ekle</button>
+                   <button class="btn-primary" data-action="approveIrrigation">✅ Onayla ve programa ekle</button>
                </div>`
             : `<p style="font-size:.8rem;color:var(--text-dim)">Programa eklemek için önce <a href="#fields">tarla ekle</a>.</p>`;
         document.getElementById('irrigationResult').innerHTML = `
@@ -1368,7 +1367,7 @@ async function loadAlerts() {
         const date = a.created_at ? new Date(a.created_at).toLocaleString('tr-TR') : '—';
         const status = a.is_resolved
             ? '<span style="color:#22c55e;">✓ Çözüldü</span>'
-            : `<button class="btn-secondary" style="padding:4px 10px;" onclick="resolveAlert(${a.id})" aria-label="Uyarıyı çözüldü olarak işaretle">Çöz</button>`;
+            : `<button class="btn-secondary" style="padding:4px 10px;" data-action="resolveAlert" data-id="${a.id}" aria-label="Uyarıyı çözüldü olarak işaretle">Çöz</button>`;
         html += `<tr>
             <td style="padding:8px;border-bottom:1px solid var(--border);font-size:.85rem;">${date}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${a.severity}</span></td>
@@ -1542,7 +1541,7 @@ async function refreshBell() {
                     <div class="notif-item-msg">${_escAttr(a.message)}</div>
                     <div class="notif-item-foot">
                         <span class="notif-item-sev">${_escAttr(a.severity)}</span>
-                        <button class="btn-mini" onclick="resolveFromBell(${a.id})">Çöz</button>
+                        <button class="btn-mini" data-action="resolveFromBell" data-id="${a.id}">Çöz</button>
                     </div>
                 </div>`).join('');
     }
@@ -1753,12 +1752,12 @@ async function loadUsers() {
         html += `<tr>
             <td>${_escAttr(u.name)}</td>
             <td>${_escAttr(u.email)}</td>
-            <td><select class="user-role-select" onchange="changeUserRole(${u.id}, this.value)">${roleOpts(u.role)}</select></td>
+            <td><select class="user-role-select" data-action="changeUserRole" data-id="${u.id}">${roleOpts(u.role)}</select></td>
             <td>${u.owned_farms_count ?? 0}</td>
             <td>${_fmtDate(u.created_at)}</td>
             <td class="user-actions">
-                <button class="btn-mini" onclick="resetUserPassword(${u.id}, '${_escAttr(u.email)}')">🔑 Şifre</button>
-                <button class="btn-mini btn-danger" onclick="deleteUser(${u.id}, '${_escAttr(u.email)}')">🗑 Sil</button>
+                <button class="btn-mini" data-action="resetUserPassword" data-id="${u.id}" data-name="${_escAttr(u.email)}">🔑 Şifre</button>
+                <button class="btn-mini btn-danger" data-action="deleteUser" data-id="${u.id}" data-name="${_escAttr(u.email)}">🗑 Sil</button>
             </td>
         </tr>`;
     }
@@ -1887,6 +1886,35 @@ async function init() {
         sensorsNext:        () => loadSensors(sensorsPage + 1),
         irrigationPrev:     () => loadIrrigation(irrigationPage - 1),
         irrigationNext:     () => loadIrrigation(irrigationPage + 1),
+        // ─── v9a: window-bridge'den taşınan dinamik handler'lar ───────
+        // Argümanlar data-* attribute'lerinden okunur (data-id sayı,
+        // data-name/data-status/data-arg string). Eski inline onclick'ler
+        // template string'lerden data-action'a çevrildi; window global yok.
+        openFieldDetail:        (el) => openFieldDetail(+el.dataset.id),
+        loadSensorDetail:       (el) => loadSensorDetail(+el.dataset.id),
+        addFieldIrrigation:     (el) => addFieldIrrigation(+el.dataset.id),
+        resolveAlert:           (el) => resolveAlert(+el.dataset.id),
+        resolveFromBell:        (el) => resolveFromBell(+el.dataset.id),
+        submitNewSensor:        (el) => submitNewSensor(+el.dataset.id),
+        analyzeFieldLeaf:       () => analyzeFieldLeaf(),
+        approveIrrigation:      () => approveIrrigation(),
+        loadDashboard:          () => loadDashboard(),
+        loadDemoData:           () => loadDemoData(),
+        submitNewFarm:          () => submitNewFarm(),
+        submitNewField:         () => submitNewField(),
+        toggleForm:             (el) => toggleForm(el.dataset.arg),
+        deleteFarm:             (el) => deleteFarm(+el.dataset.id, el.dataset.name),
+        deleteField:            (el) => deleteField(+el.dataset.id, el.dataset.name),
+        deleteSensor:           (el) => deleteSensor(+el.dataset.id, el.dataset.name),
+        deleteUser:             (el) => deleteUser(+el.dataset.id, el.dataset.name),
+        editFarm:               (el) => editFarm(+el.dataset.id, el.dataset.name),
+        editField:              (el) => editField(+el.dataset.id, el.dataset.name),
+        resetUserPassword:      (el) => resetUserPassword(+el.dataset.id, el.dataset.name),
+        updateIrrigationStatus: (el) => updateIrrigationStatus(+el.dataset.id, el.dataset.status),
+        // changeUserRole: <select> change event'i — yeni rol el.value'dan okunur
+        changeUserRole:         (el) => changeUserRole(+el.dataset.id, el.value),
+        // Bileşik aksiyon: boş-durum "İlk çiftliğimi ekle" (navigate + form aç)
+        addFirstFarm:           () => { navigate('fields'); toggleForm('newFarmForm'); },
     };
 
     document.addEventListener('click', (e) => {
@@ -1900,12 +1928,26 @@ async function init() {
         }
     });
 
-    // Select (onchange) delegation — alert filtre dropdowns
+    // Select (onchange) delegation — alert filtre dropdown'ları + changeUserRole
     document.addEventListener('change', (e) => {
         const el = e.target.closest('[data-action]');
         if (!el) return;
         const handler = actionMap[el.dataset.action];
         if (handler) handler(el);
+    });
+
+    // Keydown delegation — klavye a11y: role="button" taşıyan data-action
+    // elemanlarında (örn. sensör satırı) Enter/Space tıklama gibi davranır.
+    // v9a: inline onkeydown kaldırıldı, window-bridge'siz event delegation.
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const el = e.target.closest('[data-action][role="button"]');
+        if (!el) return;
+        const handler = actionMap[el.dataset.action];
+        if (handler) {
+            e.preventDefault();
+            handler(el);
+        }
     });
 
     // Health check
@@ -2414,57 +2456,13 @@ function initFiliz() {
 
 init();
 
-// ─── WINDOW BRIDGE ────────────────────────────────────────────
-// `<script type="module">` module scope'ta function decls global olmuyor.
-// `index.html`'deki 12 inline `on*` handler (navigate, toggleSidebar,
-// loadSensors, loadIrrigation, predictIrrigation, recommendFertilizer,
-// fertilizerSchedule, analyzePlantImage, loadAlerts, doLogin,
-// doRegister, doLogout) için bunları window'a expose etmek gerekiyor.
+// ─── WINDOW BRIDGE KALDIRILDI (v9a) ───────────────────────────
+// Eskiden tüm public function'lar inline `on*` handler'lar için window'a
+// expose ediliyordu. v9a'da statik + dinamik tüm inline handler'lar
+// `data-action` event delegation'a çevrildi (yukarıdaki actionMap +
+// click/change/keydown listener'ları). Artık global window pollution yok;
+// fonksiyonlar modül scope'unda closure olarak dispatcher'dan çağrılıyor.
 //
-// Bu köprü Cycle 9 sonrası event delegation'a çevrilerek kaldırılabilir;
-// o zaman CSP `script-src 'unsafe-inline'`'ı drop edilir.
-Object.assign(window, {
-    navigate,
-    toggleSidebar,
-    loadSensors,
-    loadIrrigation,
-    predictIrrigation,
-    recommendFertilizer,
-    fertilizerSchedule,
-    analyzePlantImage,
-    loadAlerts,
-    loadDashboard,
-    loadDemoData,
-    loadFields,
-    openFieldDetail,
-    analyzeFieldLeaf,
-    toggleForm,
-    submitNewFarm,
-    submitNewField,
-    editFarm,
-    deleteFarm,
-    editField,
-    deleteField,
-    submitNewSensor,
-    deleteSensor,
-    approveIrrigation,
-    updateIrrigationStatus,
-    addFieldIrrigation,
-    toggleBell,
-    runAlertCheck,
-    resolveFromBell,
-    loadUsers,
-    createUser,
-    changeUserRole,
-    resetUserPassword,
-    deleteUser,
-    doLogin,
-    doRegister,
-    doLogout,
-    doChangePassword,
-    toggleLandingForm,
-    // Status panel ve alerts bridge için (showToast başka modüllerden çağrılıyor)
-    showToast,
-    resolveAlert,
-    loadSensorDetail,
-});
+// NOT: CSP `script-src 'unsafe-inline'` HÂLÂ gerekli — Swagger UI (/docs)
+// inline script kullanıyor. Yani bridge kaldırma CSP'yi sıkılaştırmıyor;
+// kazanım kod temizliği (no global namespace pollution).
