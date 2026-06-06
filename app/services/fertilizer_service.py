@@ -23,12 +23,12 @@ class FertilizerService:
     NPK hesaplaması ve gübreleme takvimi oluşturma.
     """
 
-    # Per-crop ideal NPK demand (mg/kg soil). Covers 15 crop species
+    # Per-crop ideal NPK demand (mg/kg soil). Covers 17 crop species
     # spanning the 7 geographic regions of Türkiye (see
     # `database/turkey_data.py`).
     # ---
     # Bitki türüne göre ideal NPK ihtiyacı (mg/kg toprak). Türkiye'nin
-    # 7 bölgesinde yetiştirilen 15 bitki türünü kapsar.
+    # 7 bölgesinde yetiştirilen 17 bitki türünü kapsar.
     CROP_NPK_REQUIREMENTS: dict[str, dict[str, float]] = {
         # ─── Tahıllar ──────────────────────────────────────────
         "wheat": {"N": 120.0, "P": 60.0, "K": 40.0, "name_tr": "Buğday"},

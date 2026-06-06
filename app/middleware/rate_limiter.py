@@ -1,13 +1,15 @@
 """
 Rate Limiting Middleware
 ==========================
-SlowAPI-based request throttling.
-- General endpoints: 100 req/min
-- Auth endpoints: 30 req/min
+SlowAPI-based request throttling (per-decorator; no global default_limits).
+- Write (strict) endpoints: 30 req/min  (STRICT_RATE)
+- Auth endpoints:          10 req/min  (AUTH_RATE)
+- DEFAULT_RATE (100/min) is defined for convenience but not currently bound.
 
 ---
 
-SlowAPI tabanlı istek hız sınırlaması; genel uçlar 100/dk, auth 30/dk.
+SlowAPI tabanlı istek hız sınırlaması (dekoratör bazlı; global default yok):
+yazma uçları 30/dk (STRICT_RATE), auth uçları 10/dk (AUTH_RATE).
 """
 
 from slowapi import Limiter
