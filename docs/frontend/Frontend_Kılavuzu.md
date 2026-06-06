@@ -3,27 +3,27 @@
 Bu doküman, kullanıcıların sistemle etkileşim kurduğu "Veri Görselleştirme Panosu" (Dashboard) hakkında teknik bilgi sağlar.
 
 ## 📁 Dizin Yapısı
-Frontend kodları projenin kök dizinindeki `frontend/` klasörü altında bulunur ve şu an **tek dosyalı SPA** mimarisindedir:
-- `index.html` (~3 100 satır): Tüm uygulama — HTML iskelet, CSS (inline `<style>`, dark/light tema, glassmorphism), JavaScript (vanilla, asenkron `fetch`, Chart.js render, Filiz mascot logic, a11y/skeleton helpers).
-- `package.json` + `vite.config.js`: Vite build scaffold (ES module split ileride yapılacak).
-
-> Vite scaffold hazır; `index.html` ileride `src/styles/*.css` + `src/main.js`'e bölünüp HMR + minify + cache busting akışına geçirilecek.
+Frontend kodları `frontend/` altında, **modüler vanilla-JS ESM** mimarisindedir (ES module split tamamlandı):
+- `index.html` (~1 000 satır): yalnız markup — inline `<style>`/`<script>` yok; stiller `<link>`, JS `<script type="module">` ile yüklenir.
+- `src/main.js`: SPA giriş noktası; 8 lib modülünü import eder.
+- `src/lib/*.js` (8 modül): `api`, `router`, `map`, `charts`, `render`, `skeleton`, `ui_helpers`, `utils`.
+- `src/styles/*.css` (10 modül): `main.css` import-hub ile `variables → base → layout → components → pages → welcome → filiz → theme-toggle → theme-light`.
+- `package.json` + `vite.config.js`: Vite **yalnız** dev/build aracı (HMR + `/api` proxy); üretimde bundle servis edilmez.
 
 ## 🚀 Çalıştırma ve Test
-Frontend dosyaları doğrudan tarayıcıda açılabilir veya FastAPI üzerinden sunulur:
-1. FastAPI'yi başlatın (`make run`).
-2. Tarayıcıdan [http://localhost:8000/dashboard](http://localhost:8000/dashboard) adresine gidin.
-3. FastAPI'nin `StaticFiles` modülü sayesinde `frontend/` dizini otomatik olarak serve edilir.
+1. **Üretim/demo:** FastAPI'yi başlatın (`make run`) → [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/). `StaticFiles` `frontend/` kökünü mount eder; tarayıcı ham ES modüllerini ve Chart.js/Leaflet'i CDN'den yükler (build yok).
+2. **Geliştirme (HMR):** `cd frontend && npm install && npm run dev` → :5173 (`/api`, `/metrics`, `/static` → :8000 proxy).
+3. **Test:** `npm test` (Vitest + jsdom, 59 test) · `npm run a11y:axe` (axe-core, çalışan sunucu gerekir).
 
 ## 🔗 API İletişimi (Backend Entegrasyonu)
-Frontend tarafı, backend ile konuşurken global olarak tanımlanmış bir yapı kullanır:
-- İstekler asenkron `fetch()` fonksiyonu ile yapılır.
-- Korunan (Protected) endpoint'lere veri gönderilirken `Headers` kısmında `"X-API-Key": "dev-api-key"` bilgisi iletilir.
-- Gelen JSON verisi `Chart.js` kütüphanesi aracılığıyla (Doughnut, Bar, Polar Area ve Radar grafikleri olarak) görselleştirilir.
+İstekler `src/lib/api.js` üzerinden asenkron `fetch()` ile yapılır:
+- **Birincil kimlik:** JWT **Bearer token** (`localStorage['sfdap_auth_token']`); `apiAuth` 401'de logout, 403'te yetki uyarısı verir.
+- **Fallback:** token yoksa anonim/dev erişim için `X-API-Key: dev-api-key`.
+- Gelen JSON, `Chart.js` (çizgi/bar/doughnut vb.) ve `Leaflet` (harita) ile görselleştirilir.
 
 ## 🎨 Tasarım Sistemi (Aesthetics)
-- **Tema:** Dark Mode ve Glassmorphism (Bulanık arka plan) kombinasyonu.
+- **Tema:** Dark/Light (gün-gece) + glassmorphism; `localStorage['sfdap-theme']` + `<html data-theme>` ile yönetilir, tüm toggle'lar `.js-theme-toggle` paylaşır.
 - **Kütüphaneler:**
   - Fontlar: Google Fonts (Inter)
-  - Grafikler: Chart.js
-  - İkonlar: FontAwesome (Gelecek cycle'larda eklenecek).
+  - Grafikler: Chart.js · Harita: Leaflet
+  - İkonlar: emoji + inline SVG (FontAwesome kullanılmaz).
