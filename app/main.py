@@ -50,7 +50,6 @@ from app.routers import (
     onboarding,
     plants,
     sensors,
-    users,
     weather,
 )
 from app.services.mqtt_listener import mqtt_listener
@@ -256,7 +255,6 @@ app.include_router(alerts.router)
 app.include_router(metrics.router)
 app.include_router(model_performance.router)
 app.include_router(auth.router)
-app.include_router(users.router)
 
 
 @app.get("/", tags=["Root"])
