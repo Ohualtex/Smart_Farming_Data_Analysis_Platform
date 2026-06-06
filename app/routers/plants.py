@@ -19,20 +19,14 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
-from app.middleware.exceptions import ForbiddenError, ValidationError
+from app.middleware.exceptions import ValidationError
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
-from app.middleware.rbac import _WRITE_ROLES, assert_field_ownership
+from app.middleware.rbac import assert_field_ownership, require_write
 from app.ml.plant_disease_model import plant_disease_model
 from app.models.models import Farm, Field, PlantHealthImage, User
 from app.routers.auth import get_current_user_or_403
 
 router = APIRouter(prefix="/api/plants", tags=["Bitki Sağlığı"])
-
-
-def _require_write(user: User) -> None:
-    """overseer/developer için 403; farmer + admin OK."""
-    if user.role not in _WRITE_ROLES:
-        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 def _scope_images_to_user(query, user: User):  # noqa: ANN001
@@ -112,7 +106,7 @@ def upload_health_image(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_403),
 ) -> dict:
-    _require_write(current_user)
+    require_write(current_user)
     assert_field_ownership(db, field_id, current_user)
     image = PlantHealthImage(field_id=field_id, image_url=image_url)
     db.add(image)
@@ -143,7 +137,7 @@ async def analyze_plant_image(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_403),
 ) -> dict:
-    _require_write(current_user)
+    require_write(current_user)
     assert_field_ownership(db, field_id, current_user)
     # ─── Validasyon ──────────────────────────────────────────────
     ext = Path(image.filename or "").suffix.lower()

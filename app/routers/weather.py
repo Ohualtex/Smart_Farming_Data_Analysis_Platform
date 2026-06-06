@@ -20,21 +20,15 @@ from fastapi import APIRouter, Depends, Path, Query, Request
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
-from app.middleware.exceptions import ExternalServiceError, ForbiddenError, NotFoundError, SFDAPError
+from app.middleware.exceptions import ExternalServiceError, NotFoundError, SFDAPError
 from app.middleware.rate_limiter import AUTH_RATE, STRICT_RATE, limiter
-from app.middleware.rbac import _WRITE_ROLES, assert_farm_ownership, scope_to_user
+from app.middleware.rbac import assert_farm_ownership, require_write, scope_to_user
 from app.models.models import User, WeatherData
 from app.routers.auth import get_current_user_or_403
 from app.schemas.schemas import WeatherDataCreate, WeatherDataResponse
 from app.services.weather_service import weather_service
 
 router = APIRouter(prefix="/api/weather", tags=["Hava Durumu"])
-
-
-def _require_write(user: User) -> None:
-    """overseer/developer için 403; farmer + admin OK."""
-    if user.role not in _WRITE_ROLES:
-        raise ForbiddenError(detail=f"Yazma yetkisi yok (rol: {user.role}); farmer veya admin gerek.")
 
 
 @router.get(
@@ -88,7 +82,7 @@ def create_weather_data(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_403),
 ) -> WeatherData:
-    _require_write(current_user)
+    require_write(current_user)
     assert_farm_ownership(db, data.farm_id, current_user)
     db_weather = WeatherData(**data.model_dump())
     db.add(db_weather)
@@ -145,7 +139,7 @@ async def fetch_weather_from_api(
     Farmer ise farm sahibi olmalı. Admin/developer bypass; overseer write
     yetkisi olmadığı için 403.
     """
-    _require_write(current_user)
+    require_write(current_user)
     assert_farm_ownership(db, farm_id, current_user)
     try:
         raw_data = await weather_service.fetch_current_weather(lat, lon)

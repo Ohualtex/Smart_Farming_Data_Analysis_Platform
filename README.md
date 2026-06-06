@@ -7,7 +7,7 @@
 [![A11y](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue)
 ![Coverage 95%](https://img.shields.io/badge/Coverage-95%25-brightgreen)
-![Tests 622+32](https://img.shields.io/badge/Tests-622%20backend%20%2B%2032%20frontend-success)
+![Tests 649+59](https://img.shields.io/badge/Tests-649%20backend%20%2B%2059%20frontend-success)
 
 ---
 
@@ -62,7 +62,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
             └─ APScheduler (haftalık archive, günlük hava verisi fetch)
 ```
 
-**Ölçek:** 15 router · ~65 endpoint · 15 ORM tablo · çiftçi-odaklı demo seed (birkaç çiftçi · çoklu çiftlik/tarla · 17 bitki türü referansı).
+**Ölçek:** 16 router · 67 endpoint · 15 ORM tablo · çiftçi-odaklı demo seed (birkaç çiftçi · çoklu çiftlik/tarla · 17 bitki türü referansı).
 
 **Diyagram + ER şeması:** [`docs/architecture.md`](docs/architecture.md) · [`database/sfdap_schema.sql`](database/sfdap_schema.sql)
 
@@ -70,7 +70,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
 
 ## 📡 API
 
-- **Swagger UI:** http://localhost:8000/docs (15 router, OpenAPI 3.1 contract)
+- **Swagger UI:** http://localhost:8000/docs (16 router, OpenAPI 3.1 contract)
 - **OpenAPI JSON:** http://localhost:8000/openapi.json
 - **Endpoint + auth + örnek istekler:** [`docs/api/API_Kullanim_Kilavuzu.md`](docs/api/API_Kullanim_Kilavuzu.md)
 
@@ -80,7 +80,7 @@ Sistem dört farklı kullanıcı türünü destekler — her rol kendi dashboard
 
 | Kategori | Değer | Komut |
 |:--|:--|:--|
-| Backend test | **622** geçer | `make test` |
+| Backend test | **649** geçer (586 + 63 fuzz) | `make test` |
 | Frontend test | **32** geçer (Vitest + jsdom) | `cd frontend && npm test` |
 | Coverage | **%95.04** (eşik %80) | `make test` |
 | Lint + format | Ruff temiz (17 kural grubu) | `make lint && make format` |
