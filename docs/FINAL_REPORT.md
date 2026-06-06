@@ -120,16 +120,16 @@ eyleme yönelik akış yok). Karar: "81 il / ulusal bakanlık paneli" çerçeves
 zaman (fertilizer), komşulara göre durum (admin/gözetmen analytics), haberim olur mu
 (bildirim çanı). **Geri-dönüş güvencesi:** `v0.9.0-pre-rebuild` tag'i.
 
-**Metrikler (REBUILD sonu):** pytest **622/622** · Vitest 32/32 · ruff+format temiz ·
-bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla).
+**Metrikler (güncel):** pytest **650** (586 + 64 fuzz) · Vitest **59** · coverage %95 (eşik %80) ·
+ruff+format temiz · bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla).
 
 ## 4. Mimari
 
 > 🚧 **TODO Cycle 9 — Miraç:** `docs/architecture.md`'den Mermaid diyagramları + açıklama paragrafları aktar.
 
 **Üst düzey:**
-- **Frontend katmanı:** Tek dosyalı SPA (`frontend/index.html` ≈ 3 100 satır + Vite scaffold) — shiftFinal A3'te a11y/skeleton refactor + Vite build pipeline iskeleti eklendi; ES module split Cycle 9 sonrası kademeli
-- **API katmanı:** FastAPI Gateway → 15 router × ~65 endpoint (REBUILD sonrası: dashboard/fields/onboarding router'ları + CRUD + RBAC user mgmt eklendi)
+- **Frontend katmanı:** Vanilla JS ESM SPA — `index.html` (markup) + `src/main.js` + `src/lib/*.js` (8 modül) + `src/styles/*.css` (10 modül); üretimde ham ESM + CDN servis edilir, Vite yalnız dev/build aracıdır
+- **API katmanı:** FastAPI Gateway → 16 router × 66 endpoint (REBUILD sonrası: dashboard/fields/onboarding router'ları + CRUD + RBAC user mgmt eklendi)
 - **İş katmanı:** Servisler (`weather_service`, `fertilizer_service`, `mqtt_listener`, `sensor_archiver`, `report_service`, `data_quality`)
 - **ML katmanı:** RandomForest (sulama) + heuristic+ONNX (bitki hastalığı) + APScheduler periyodik görevler
 - **Veri katmanı:** SQLAlchemy 2.0 ORM, SQLite (dev) / PostgreSQL (prod), Alembic migration
@@ -143,15 +143,17 @@ bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla)
 
 `User`, `Farm`, `Field`, `CropType`, `Sensor`, `SoilMoistureReading`, `WeatherData`, `IrrigationSchedule`, `PlantHealthImage`, `SystemAlert`, `ModelPerformanceLog`, `SoilAnalysis`, `CropPlanting`, `FertilizerRecommendationLog`, `SensorReadingMonthlyAggregate` *(Cycle 8 archiving)*
 
-**Alembic migration zinciri:**
+**Alembic migration zinciri (4 revision, head = `c2d3e4f5a6b7`):**
 1. `9021458f6b9f` — initial schema (14 tablo, Cycle 8 #4)
 2. `4d1a1503f306` — sensor_reading_monthly_aggregates (Cycle 7 slip kapanışı)
+3. `b1c2d3e4f5a6` — RBAC role CHECK constraint + index + backfill
+4. `c2d3e4f5a6b7` — eksik FK index'leri (farms.user_id, fields.farm_id, fields.crop_id)
 
 **Schema detayı:** [`docs/database/Veritabani_Semasi_Tasarimi.md`](database/Veritabani_Semasi_Tasarimi.md)
 
 ## 6. API Endpoint'leri
 
-**~65 endpoint × 15 router** (REBUILD sonrası dashboard/fields/onboarding + CRUD + RBAC user mgmt dahil)**:**
+**66 endpoint × 16 router** (REBUILD sonrası dashboard/fields/onboarding + CRUD + RBAC user mgmt dahil)**:**
 
 | Router | Endpoint | Anahtar Yetenek |
 |:--|:--:|:--|
@@ -232,10 +234,11 @@ bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla)
 ## 10. Test, Coverage ve CI/CD
 
 ```
-Test sayısı:        622 backend + 32 frontend (Vitest)
+Test sayısı:        650 backend (586 + 64 fuzz) + 59 frontend (Vitest)
                     246 → 313 → 425 → 485 (shiftFinal kapanış)
                     → 499 (REBUILD Faz 1 RBAC) → 565 (Faz 3.5 admin user mgmt)
                     → 605 (Faz 4 CRUD) → 613 (Faz 5 bildirim) → 622 (Faz 6 onboarding)
+                    → 650 (cila/fixroll); frontend Vitest 32 → 59
 Coverage:           %95+ (CI gate %80; Cycle 8 ölçümü %95.04)
 Linter:             Ruff (17 kural grubu) — All checks passed
 Source security:    Bandit medium+ — 0 issue
