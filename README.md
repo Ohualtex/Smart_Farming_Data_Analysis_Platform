@@ -81,6 +81,7 @@ Açılan adresler:
 |:--|:--|:--|
 | 👑 Admin | `admin@demo.test` | `DemoAdmin2026` |
 | 🏛️ Gözetmen | `overseer@demo.test` | `DemoGozetmen2026` |
+| 🛠️ Geliştirici | `developer@demo.test` | `DemoGelistirici2026` |
 | 🧑‍🌾 Çiftçi *(ana persona)* | `ahmet@demo.test` | `DemoCiftci2026` |
 | 🧑‍🌾 Çiftçi | `ayse@demo.test` | `DemoCiftci2026` |
 | 🧑‍🌾 Çiftçi | `mehmet@demo.test` | `DemoCiftci2026` |
