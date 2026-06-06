@@ -106,9 +106,16 @@ gözlem modu olarak konumlandırıldı. Detaylar: `REBUILD_ROADMAP.md`.
 
 ---
 
-## 📊 Proje Metrikleri (Cycle 6 sonu)
+## 📊 Proje Metrikleri
 
-| Metrik | Değer |
+> **Güncel (sürüm 1.0.0):** 16 router · **66 endpoint** · 15 ORM tablo · 4 Alembic migration ·
+> **650 backend** (586 + 64 fuzz) + **59 frontend** test · coverage %95 (eşik %80) ·
+> **3 CI workflow** (`ci` + `security` + `a11y`) · çiftçi-odaklı demo seed (5 kullanıcı / 3 çiftlik / 6 tarla).
+
+Aşağıdaki tablo **Cycle 6 sonu tarihsel snapshot'ıdır** — REBUILD pivotunda ölçek
+ulusal (81 il) hedeften çiftçi-odaklıya çekildi; güncel değerler için yukarıdaki bloğa bakın.
+
+| Metrik | Değer (Cycle 6 sonu) |
 |:---|:---:|
 | Toplam Python LOC | **~9 500** (`app/` 4 803 + `tests/` ~4 200 + `database/` 533) |
 | Frontend LOC | 2 972 satır (`frontend/index.html`, 9 sayfa, slider pagination) |

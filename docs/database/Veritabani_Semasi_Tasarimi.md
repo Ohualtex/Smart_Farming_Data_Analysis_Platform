@@ -121,7 +121,7 @@ reports
 alert_rules
 Teslim Edilecek Dosyalar
 Dosya	Açıklama
-database/sfdap_schema.sql	Tüm CREATE TABLE, indeksler, constraint'ler, örnek seed verileri
+database/sfdap_schema.sql	Tüm CREATE TABLE, indeksler, constraint'ler (DDL dump, seed içermez — seed için database/seed_data.py)
 database/schema_documentation.md	ER diyagramı, tablo açıklamaları, ilişki detayları
 Verification Plan
 Manual Verification

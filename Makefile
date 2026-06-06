@@ -65,10 +65,10 @@ restore: ## Veritabanını geri yükle (BACKUP=path/to/file kullan)
 	@./scripts/restore.sh "$(BACKUP)"
 
 docker-up: ## Start the application using Docker
-	docker-compose up -d
+	docker compose up -d
 
 docker-down: ## Stop the Docker application
-	docker-compose down
+	docker compose down
 
 clean: ## Remove python cache files
 	find . -type d -name "__pycache__" -exec rm -rf {} +

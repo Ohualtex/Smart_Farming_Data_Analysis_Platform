@@ -2,7 +2,7 @@
   "name": "sfdap-dashboard",
   "version": "0.1.0",
   "private": true,
-  "description": "SFDAP Dashboard — Vite build + axe-core a11y CI (shiftFinal A3 + Ayşe paketi)",
+  "description": "SFDAP Dashboard — modüler vanilla-JS ESM SPA (src/main.js + lib + styles); Vitest + axe-core; Vite dev/build aracı",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -29,11 +29,208 @@
     <div class="bg-leaf"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg></div>
 </div>
 
+<!-- ═══ HOŞGELDİN / WELCOME EKRANI ═══════════════════════════════
+     Site açılışında ilk karşılayan ekran. Sağ üstte tema + "Giriş Yap".
+     Alt-ortada toprağa gömülü Filiz; tıklayınca topraktan fırlar.
+     `_applyAuthGate(null)` bunu gösterir; "Giriş Yap" → #landing. -->
+<div id="welcome" class="welcome">
+    <!-- 🌤️ Gökyüzü: light=bulutlar (gündüz), dark=yıldızlar (gece). Tema geçişinde
+         bulutlar yanlara dağılır; yıldızların bir kısmı yukarıdan iner, bir kısmı yerinde belirir. -->
+    <div class="welcome-sky" aria-hidden="true">
+        <span class="wcloud wcloud-1"></span>
+        <span class="wcloud wcloud-2"></span>
+        <span class="wcloud wcloud-3"></span>
+        <span class="wcloud wcloud-4"></span>
+        <span class="wcloud wcloud-5"></span>
+        <span class="wstar wstar-descend" style="top:9%;left:17%;--s:6px"></span>
+        <span class="wstar wstar-bright"  style="top:15%;left:33%;--s:3px"></span>
+        <span class="wstar wstar-descend" style="top:7%;left:57%;--s:4px"></span>
+        <span class="wstar wstar-bright"  style="top:21%;left:71%;--s:4px"></span>
+        <span class="wstar wstar-descend" style="top:13%;left:85%;--s:5px"></span>
+        <span class="wstar wstar-bright"  style="top:31%;left:11%;--s:3px"></span>
+        <span class="wstar wstar-bright"  style="top:35%;left:49%;--s:4px"></span>
+        <span class="wstar wstar-descend" style="top:25%;left:43%;--s:3px"></span>
+        <span class="wstar wstar-bright"  style="top:40%;left:88%;--s:3px"></span>
+        <span class="wstar wstar-descend" style="top:30%;left:64%;--s:4px"></span>
+    </div>
+
+    <!-- ☀️/🌙 Gün-gece toggle: light=güneş (sol-üst köşe, ışınlı), dark=ay/hilal (sağ-üst köşe).
+         Tıkla → görünen cisim aşağı batar/yok olur, diğeri aşağıdan doğar. Tersinir. -->
+    <button class="welcome-sun js-theme-toggle" aria-label="Karanlık temaya geç" title="Karanlık temaya geç">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+            <defs>
+                <radialGradient id="wsSunG" cx="42%" cy="38%" r="62%">
+                    <stop offset="0%" stop-color="#fff7cc"/><stop offset="55%" stop-color="#fcd34d"/><stop offset="100%" stop-color="#f59e0b"/>
+                </radialGradient>
+            </defs>
+            <g class="sun-rays" stroke="#fcd34d" stroke-width="4" stroke-linecap="round">
+                <line x1="90" y1="60" x2="115" y2="60"/>
+                <line x1="86" y1="75" x2="108" y2="88"/>
+                <line x1="75" y1="86" x2="88" y2="108"/>
+                <line x1="60" y1="90" x2="60" y2="115"/>
+                <line x1="45" y1="86" x2="32" y2="108"/>
+                <line x1="34" y1="75" x2="12" y2="88"/>
+                <line x1="30" y1="60" x2="5" y2="60"/>
+                <line x1="34" y1="45" x2="12" y2="32"/>
+                <line x1="45" y1="34" x2="32" y2="12"/>
+                <line x1="60" y1="30" x2="60" y2="5"/>
+                <line x1="75" y1="34" x2="88" y2="12"/>
+                <line x1="86" y1="45" x2="108" y2="32"/>
+            </g>
+            <circle cx="60" cy="60" r="22" fill="url(#wsSunG)"/>
+        </svg>
+    </button>
+    <button class="welcome-moon js-theme-toggle" aria-label="Aydınlık temaya geç" title="Aydınlık temaya geç">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+            <defs>
+                <radialGradient id="wmMoonG" cx="40%" cy="36%" r="72%">
+                    <stop offset="0%" stop-color="#f8fafc"/><stop offset="70%" stop-color="#cbd5e1"/><stop offset="100%" stop-color="#94a3b8"/>
+                </radialGradient>
+                <mask id="wmCresc">
+                    <rect width="100" height="100" fill="black"/>
+                    <circle cx="48" cy="52" r="34" fill="white"/>
+                    <circle cx="66" cy="40" r="30" fill="black"/>
+                </mask>
+            </defs>
+            <circle cx="48" cy="52" r="34" fill="url(#wmMoonG)" mask="url(#wmCresc)"/>
+        </svg>
+    </button>
+
+    <header class="welcome-topbar">
+        <div class="welcome-logo">🌾 <span>SFDAP</span></div>
+    </header>
+
+    <div class="welcome-hero">
+        <h1 class="welcome-title">Toprağın <span>dijital</span> nabzı</h1>
+        <button class="btn-primary welcome-login-btn" data-action="goToLogin">Giriş Yap</button>
+    </div>
+
+    <div class="welcome-stage" id="welcomeStage">
+        <!-- Toprak parçacıkları (pop'ta fırlar) -->
+        <span class="welcome-dirt" style="--dx:-46px;--dy:-70px;--delay:0s"></span>
+        <span class="welcome-dirt" style="--dx:-22px;--dy:-92px;--delay:.04s"></span>
+        <span class="welcome-dirt" style="--dx:0px;--dy:-104px;--delay:.02s"></span>
+        <span class="welcome-dirt" style="--dx:26px;--dy:-88px;--delay:.06s"></span>
+        <span class="welcome-dirt" style="--dx:50px;--dy:-64px;--delay:.03s"></span>
+        <span class="welcome-dirt" style="--dx:-64px;--dy:-44px;--delay:.08s"></span>
+        <span class="welcome-dirt" style="--dx:66px;--dy:-40px;--delay:.07s"></span>
+
+        <!-- FİLİZ — toprağa gömülü, tıklayınca fırlar -->
+        <button class="welcome-filiz" id="welcomeFiliz" data-action="popFiliz"
+                aria-label="Filiz'i topraktan çıkar" title="Tıkla — Filiz topraktan fırlasın!">
+            <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <radialGradient id="wfBody" cx="35%" cy="30%" r="80%">
+                        <stop offset="0%" stop-color="#bbf7d0"/><stop offset="35%" stop-color="#86efac"/>
+                        <stop offset="75%" stop-color="#22c55e"/><stop offset="100%" stop-color="#15803d"/>
+                    </radialGradient>
+                    <radialGradient id="wfBodyShade" cx="50%" cy="100%" r="60%">
+                        <stop offset="0%" stop-color="#14532d" stop-opacity=".55"/><stop offset="100%" stop-color="#14532d" stop-opacity="0"/>
+                    </radialGradient>
+                    <radialGradient id="wfLeaf" cx="35%" cy="30%" r="80%">
+                        <stop offset="0%" stop-color="#86efac"/><stop offset="60%" stop-color="#22c55e"/><stop offset="100%" stop-color="#15803d"/>
+                    </radialGradient>
+                    <radialGradient id="wfCheek" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#fb7185" stop-opacity=".85"/><stop offset="60%" stop-color="#fb7185" stop-opacity=".4"/><stop offset="100%" stop-color="#fb7185" stop-opacity="0"/>
+                    </radialGradient>
+                    <radialGradient id="wfEyeBg" cx="35%" cy="30%" r="80%">
+                        <stop offset="0%" stop-color="#1e293b"/><stop offset="100%" stop-color="#020617"/>
+                    </radialGradient>
+                    <linearGradient id="wfGloss" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stop-color="#fff" stop-opacity=".55"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+
+                <!-- SAP -->
+                <path d="M 60 38 Q 59 30 60 22" fill="none" stroke="#15803d" stroke-width="3.5" stroke-linecap="round"/>
+                <!-- YAPRAK SOL -->
+                <g class="filiz-leaf-l">
+                    <path d="M 60 26 Q 40 6 24 22 Q 32 36 60 32 Z" fill="url(#wfLeaf)"/>
+                    <path d="M 60 28 Q 45 22 30 26" stroke="#15803d" stroke-width="1" fill="none" opacity=".55"/>
+                    <ellipse cx="42" cy="20" rx="9" ry="3" fill="#fff" opacity=".22" transform="rotate(-25 42 20)"/>
+                </g>
+                <!-- YAPRAK SAĞ -->
+                <g class="filiz-leaf-r">
+                    <path d="M 60 26 Q 80 6 96 22 Q 88 36 60 32 Z" fill="url(#wfLeaf)"/>
+                    <path d="M 60 28 Q 75 22 90 26" stroke="#15803d" stroke-width="1" fill="none" opacity=".55"/>
+                    <ellipse cx="78" cy="20" rx="9" ry="3" fill="#fff" opacity=".22" transform="rotate(25 78 20)"/>
+                </g>
+                <!-- GÖVDE -->
+                <ellipse cx="60" cy="78" rx="42" ry="44" fill="url(#wfBody)"/>
+                <ellipse cx="60" cy="78" rx="42" ry="44" fill="url(#wfBodyShade)"/>
+                <path d="M 28 52 Q 40 36 70 38 Q 50 42 32 62 Z" fill="url(#wfGloss)" opacity=".8"/>
+                <ellipse cx="78" cy="56" rx="4" ry="2.5" fill="#fff" opacity=".55"/>
+                <!-- KOLLAR -->
+                <g class="filiz-arm-l">
+                    <ellipse cx="18" cy="92" rx="7" ry="11" fill="#16a34a" transform="rotate(-25 18 92)"/>
+                    <circle cx="14" cy="100" r="6" fill="#22c55e"/>
+                </g>
+                <g class="filiz-arm-r">
+                    <ellipse cx="102" cy="92" rx="7" ry="11" fill="#16a34a" transform="rotate(25 102 92)"/>
+                    <circle cx="106" cy="100" r="6" fill="#22c55e"/>
+                </g>
+                <!-- YANAKLAR -->
+                <ellipse cx="30" cy="86" rx="10" ry="7" fill="url(#wfCheek)"/>
+                <ellipse cx="90" cy="86" rx="10" ry="7" fill="url(#wfCheek)"/>
+                <!-- SOL GÖZ -->
+                <g class="filiz-eye">
+                    <g class="eye-open">
+                        <ellipse cx="42" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
+                        <circle cx="44" cy="66" r="4" fill="#fff"/>
+                        <circle cx="40" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                    </g>
+                    <path class="eye-closed" d="M 32 70 Q 42 73 52 70" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round"/>
+                </g>
+                <!-- SAĞ GÖZ -->
+                <g class="filiz-eye">
+                    <g class="eye-open">
+                        <ellipse cx="78" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
+                        <circle cx="80" cy="66" r="4" fill="#fff"/>
+                        <circle cx="76" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                    </g>
+                    <path class="eye-closed" d="M 68 70 Q 78 73 88 70" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round"/>
+                </g>
+                <!-- AĞIZ (gülümseme) -->
+                <path d="M 50 91 Q 60 99 70 91" fill="none" stroke="#0a1224" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+
+        <!-- TOPRAK (tam genişlik; ortada hafif höyük, filiz'in önünde) -->
+        <div class="welcome-soil" aria-hidden="true">
+            <svg class="welcome-soil-svg" viewBox="0 0 1200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="wfSoil" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stop-color="#a06a3a"/><stop offset="45%" stop-color="#7a4f28"/><stop offset="100%" stop-color="#4e3119"/>
+                    </linearGradient>
+                </defs>
+                <!-- Zemin: kenarlardan ortaya yükselen yumuşak höyük -->
+                <path d="M0,200 L0,108 Q300,58 600,60 Q900,58 1200,108 L1200,200 Z" fill="url(#wfSoil)"/>
+                <!-- Yüzey çizgisi (açık toprak) -->
+                <path d="M0,108 Q300,58 600,60 Q900,58 1200,108" fill="none" stroke="#b67c44" stroke-width="3" opacity=".5"/>
+                <!-- Doku noktaları (çakıl/kesek) — tüm genişliğe yayılı -->
+                <circle cx="120" cy="120" r="3" fill="#5b3a1a" opacity=".45"/>
+                <circle cx="260" cy="96" r="2.5" fill="#5b3a1a" opacity=".4"/>
+                <circle cx="380" cy="118" r="3.2" fill="#3d2613" opacity=".45"/>
+                <circle cx="500" cy="90" r="2.4" fill="#5b3a1a" opacity=".4"/>
+                <circle cx="700" cy="92" r="2.6" fill="#5b3a1a" opacity=".4"/>
+                <circle cx="820" cy="120" r="3.2" fill="#3d2613" opacity=".45"/>
+                <circle cx="940" cy="98" r="2.5" fill="#5b3a1a" opacity=".4"/>
+                <circle cx="1080" cy="122" r="3" fill="#3d2613" opacity=".45"/>
+                <circle cx="600" cy="132" r="2.6" fill="#3d2613" opacity=".4"/>
+            </svg>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ ÖN PANEL (LANDING / AUTH GATE) ═══════════════════════════
      REBUILD Faz 3.5: giriş yapmadan app shell görünmez. JS auth kontrolü
-     sonrası `_applyAuthGate()` ya bu paneli ya da `.app`'i gösterir. -->
-<div id="landing" class="landing">
+     sonrası `_applyAuthGate()` ya bu paneli ya da `.app`'i gösterir.
+     Welcome'daki "Giriş Yap" bu paneli açar (default display:none). -->
+<div id="landing" class="landing" style="display:none;">
     <div class="landing-card">
+        <button class="landing-back" data-action="goToWelcome" aria-label="Ana sayfaya dön" title="Ana sayfaya dön">
+            <span aria-hidden="true">←</span> Geri
+        </button>
         <div class="landing-brand">
             <h1>🌾 SFDAP</h1>
             <p>Akıllı Tarım Veri Analizi Platformu</p>
@@ -77,7 +274,6 @@
             </p>
         </div>
 
-        <p class="landing-hint">Çiftçi · Geliştirici · Gözetmen · Yönetici rolleriyle giriş.</p>
     </div>
 </div>
 
@@ -175,7 +371,7 @@
                 <a class="dev-link" href="/docs" target="_blank" rel="noopener"
                    aria-label="API Rehberi (Geliştiriciler için)"
                    title="API Rehberi · Geliştiriciler için (Swagger /docs)">&lt;/&gt;</a>
-                <button class="theme-toggle" id="themeToggle" aria-label="Tema değiştir" title="Tema değiştir">
+                <button class="theme-toggle js-theme-toggle" id="themeToggle" aria-label="Tema değiştir" title="Tema değiştir">
                     <span class="toggle-track">
                         <!-- Aydınlık arka plan: gökyüzü + bulutlar -->
                         <span class="toggle-bg toggle-bg-light">

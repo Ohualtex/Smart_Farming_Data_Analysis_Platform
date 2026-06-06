@@ -15,14 +15,14 @@ Bu doküman, repo'nun mevcut kalite durumunu fotoğraflar ve hâlâ açık olan 
 | **Ruff (genişletilmiş kural seti)** | 0 hata | 0 | ✅ |
 | **Bandit (medium+ severity)** | 0 issue | 0 | ✅ |
 | **pip-audit** | (CI) | 0 CVE | ⏳ CI'da koşar |
-| **Schemathesis fuzz** | 25 GET endpoint × ~10 case = 250 fuzz çağrısı | 0 server error | ✅ Bug bulundu + fix'lendi |
+| **Schemathesis fuzz** | auth-aware GET/POST/PATCH/DELETE, parametrized ~10 case/endpoint | 0 server error | ✅ Bug bulundu + fix'lendi |
 | **axe-core CI** | WCAG 2.0 + 2.1 A/AA, weekly cron | 0 critical violation | ⏳ İlk run sonrası kalan warning'lar değerlendirilir |
 | **CI/CD pipeline** | 3 workflow (ci + security + a11y) | — | ✅ |
 | **CI job sayısı** | 4 (lint + test + migrations + fuzz) + 2 security + 1 a11y | — | ✅ |
-| **Endpoint sayısı** | 43 (2× pagination count dahil) | — | ✅ |
+| **Endpoint sayısı** | 66 (16 router) | — | ✅ |
 | **ORM tablo sayısı** | 15 (initial 14 + aggregate) | — | ✅ |
-| **Alembic migration zinciri** | 2 revision (initial + aggregate) | — | ✅ |
-| **Frontend SPA satır sayısı** | ~3 100 (`frontend/index.html`, pagination + a11y/skeleton) | bundling scaffold | ✅ Vite scaffold + a11y + skeleton |
+| **Alembic migration zinciri** | 4 revision (initial + aggregate + RBAC + FK index) | — | ✅ |
+| **Frontend mimarisi** | modüler ESM: markup-only `index.html` + `src/main.js` + 8 lib + 10 CSS modülü | — | ✅ a11y + skeleton + welcome |
 | **Vite + axe-core CLI** | `frontend/package.json` scaffolded | — | ✅ |
 | **Dış bağımlılık güncelliği** | 7 minor outdated | major-stable | 🟡 |
 

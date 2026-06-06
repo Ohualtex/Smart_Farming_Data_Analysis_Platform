@@ -1081,16 +1081,53 @@ function _renderUserBadge(user) {
  * yoksa tersi. Tek kaynak: refreshAuthState her durumda çağırır.
  */
 function _applyAuthGate(user) {
+    const welcome = document.getElementById('welcome');
     const landing = document.getElementById('landing');
     const app = document.querySelector('.app');
     if (!landing || !app) return;
     if (user) {
+        if (welcome) welcome.style.display = 'none';
         landing.style.display = 'none';
         app.style.display = '';  // flex (CSS default)
     } else {
-        landing.style.display = 'flex';
+        // Girişsiz akış: önce hoşgeldin ekranı. Login formu (#landing) yalnız
+        // welcome'daki "Giriş Yap" (goToLogin) ile açılır. Logout → welcome'a döner.
+        if (welcome) welcome.style.display = 'flex';
+        landing.style.display = 'none';
         app.style.display = 'none';
     }
+}
+
+/** Welcome → login formu (#landing) geçişi. */
+function goToLogin() {
+    const welcome = document.getElementById('welcome');
+    const landing = document.getElementById('landing');
+    if (welcome) welcome.style.display = 'none';
+    if (landing) landing.style.display = 'flex';
+    const email = document.getElementById('loginEmail');
+    if (email) email.focus();
+}
+
+/** Login formundan welcome'a geri dön. */
+function goToWelcome() {
+    const welcome = document.getElementById('welcome');
+    const landing = document.getElementById('landing');
+    if (landing) landing.style.display = 'none';
+    if (welcome) welcome.style.display = 'flex';
+}
+
+/** Filiz'i topraktan yavaşça çıkar; 3 sn sonra geri gömül. (welcome ekranı)
+ *  Konuşma yok — sadece çık/gir animasyonu. Tekrar tıklanırsa süre yenilenir. */
+let _filizPopTimer = null;
+function popFiliz() {
+    const stage = document.getElementById('welcomeStage');
+    if (!stage) return;
+    stage.classList.add('popped');
+    if (_filizPopTimer) clearTimeout(_filizPopTimer);
+    _filizPopTimer = setTimeout(() => {
+        stage.classList.remove('popped');
+        _filizPopTimer = null;
+    }, 3000);
 }
 
 /**
@@ -1517,6 +1554,9 @@ async function init() {
         toggleSidebar:      () => toggleSidebar(),
         toggleBell:         () => toggleBell(),
         toggleLandingForm:  (el) => { toggleLandingForm(el.dataset.arg); },
+        goToLogin:          () => goToLogin(),
+        goToWelcome:        () => goToWelcome(),
+        popFiliz:           () => popFiliz(),
         doLogin:            () => doLogin(),
         doRegister:         () => doRegister(),
         doLogout:           () => doLogout(),
@@ -1666,8 +1706,10 @@ function animateHeroStats() {
 function initTheme() {
     const STORAGE_KEY = 'sfdap-theme';
     const root = document.documentElement;
-    const btn = document.getElementById('themeToggle');
-    if (!btn) return;
+    // Birden çok toggle: header (#themeToggle) + welcome (.welcome-sun / .welcome-moon).
+    // Hepsi `.js-theme-toggle` class'ı taşır ve aynı state'i paylaşır.
+    const btns = Array.from(document.querySelectorAll('.js-theme-toggle'));
+    if (!btns.length) return;
 
     // İlk tema: localStorage > sistem tercihi > dark default
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -1675,25 +1717,23 @@ function initTheme() {
     const initial = stored || (prefersLight ? 'light' : 'dark');
     applyTheme(initial);
 
-    btn.addEventListener('click', () => {
+    btns.forEach(btn => btn.addEventListener('click', () => {
         const current = root.dataset.theme || 'dark';
         const next = current === 'light' ? 'dark' : 'light';
         applyTheme(next);
         localStorage.setItem(STORAGE_KEY, next);
         // Sayfa yeniden yüklenmiyor — toast bildirimi çıkmasın diye.
         // Chart.js renkleri mevcut sayfada eski temada kalır; sayfa değişince güncellenir.
-    });
+    }));
 
     function applyTheme(theme) {
-        if (theme === 'light') {
-            root.dataset.theme = 'light';
-            btn.setAttribute('aria-label', 'Karanlık temaya geç');
-            btn.setAttribute('title', 'Karanlık temaya geç');
-        } else {
-            delete root.dataset.theme;
-            btn.setAttribute('aria-label', 'Aydınlık temaya geç');
-            btn.setAttribute('title', 'Aydınlık temaya geç');
-        }
+        const label = theme === 'light' ? 'Karanlık temaya geç' : 'Aydınlık temaya geç';
+        if (theme === 'light') root.dataset.theme = 'light';
+        else delete root.dataset.theme;
+        btns.forEach(btn => {
+            btn.setAttribute('aria-label', label);
+            btn.setAttribute('title', label);
+        });
     }
 }
 
