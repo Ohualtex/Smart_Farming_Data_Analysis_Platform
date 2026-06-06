@@ -161,6 +161,8 @@ API güvenlik iyileştirmeleri yap: rate limiting ekleme (slowapi), request logg
 #### 📌 Veri Görselleştirme Panosu Oluşturma
 Elde edilen içgörüleri ve model sonuçlarını görsel olarak temsil eden bir veri görselleştirme panosu oluştur. Panoyu kullanıcı dostu ve anlaşılır hale getir.
 
+> ⚠️ **Tarihsel (REBUILD pivotunda terk edildi):** Aşağıdaki "81 il / ulusal ölçek / 7500+ kayıt mega seed" hedefleri REBUILD sprintinde **çiftçi-odaklı** yapıya (birkaç çiftçi · çoklu çiftlik/tarla) çekildi. Güncel ölçek için README ve `CONTRIBUTORS.md` güncel metrik bloğuna bakın.
+
 #### 📌 Dashboard Analitik Panosunun Ulusal Ölçekte Yeniden Düzenlenmesi
 81 ile genişleyen veri tabanındaki büyük verinin dashboard üzerinde görsel yığılmaya sebep olmasını engellemek için, backend üzerinden iletilen 'region' verisi ile grafiklerin bölge bazlı (7 Coğrafi Bölge) kırılımda görüntülenmesini sağla. Çiftlik bazlı sıcaklık ve günlük trend grafiklerini Chart.js üzerinde bu bölge kırılımı ile çalışacak şekilde revize et.
 
