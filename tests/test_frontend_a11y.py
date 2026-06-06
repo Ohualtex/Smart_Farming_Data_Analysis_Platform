@@ -25,7 +25,10 @@ import pytest
 
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 FRONTEND_HTML = FRONTEND_DIR / "index.html"
-FRONTEND_CSS = FRONTEND_DIR / "src" / "styles" / "main.css"
+# fixroll_v7: main.css artık @import hub; stiller 8 modüle bölündü
+# (variables/base/layout/components/pages/filiz/theme-toggle/theme-light).
+# Testler kuralları herhangi bir modülde arıyor → hepsini birleştiriyoruz.
+FRONTEND_CSS_DIR = FRONTEND_DIR / "src" / "styles"
 FRONTEND_JS = FRONTEND_DIR / "src" / "main.js"
 # B-batch (Cycle 9): skeleton helper'ları main.js'ten extract edildi —
 # drift TODO kapandı, artık tek kaynak `src/lib/skeleton.js`.
@@ -40,8 +43,13 @@ def html() -> str:
 
 @pytest.fixture(scope="module")
 def css() -> str:
-    """Extracted dashboard stylesheet (`frontend/src/styles/main.css`)."""
-    return FRONTEND_CSS.read_text(encoding="utf-8")
+    """Tüm dashboard stylesheet modülleri birleştirilmiş (fixroll_v7).
+
+    main.css artık sadece `@import` hub'ı; kurallar variables/base/layout/
+    components/pages/filiz/theme-* modüllerinde. Test'ler kuralın hangi
+    modülde olduğunu umursamadan arasın diye hepsini concat ediyoruz.
+    """
+    return "\n".join(f.read_text(encoding="utf-8") for f in sorted(FRONTEND_CSS_DIR.glob("*.css")))
 
 
 @pytest.fixture(scope="module")
