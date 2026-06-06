@@ -3,7 +3,7 @@
 # ============================================================
 # Her push ve Pull Request'te otomatik olarak:
 #   1. Kod kalitesi kontrolü (Ruff lint + format)
-#   2. Testleri çalıştırma (pytest, 400+ test)
+#   2. Testleri çalıştırma (pytest — tüm test paketi, Python 3.11 + 3.12)
 #   3. Test coverage raporu (HTML + XML artifact)
 #   4. Alembic migration smoke test (boş DB → upgrade head)
 #   5. Schemathesis property-based API fuzz (shiftFinal Ayşe paketi)
@@ -138,10 +138,9 @@ jobs:
   frontend-test:
     name: 🧩 Frontend Birim Testleri (Vitest)
     runs-on: ubuntu-latest
-    # shiftFinal cila — `frontend/src/lib/skeleton.js` (main.js'in 4 a11y
-    # helper'ının ESM mirror'ı) için Vitest birim testleri. Drift TODO
-    # `frontend/src/lib/skeleton.js` header'ında; Cycle 9 frontend split
-    # tamamlanınca main.js doğrudan lib'den import edecek.
+    # Vitest birim testleri (frontend/src/lib/*). ESM split tamamlandı:
+    # main.js doğrudan src/lib/*'tan import eder (skeleton, map, charts,
+    # render, router, api, utils, ui_helpers) — drift TODO kapandı.
 
     steps:
       - name: 📥 Kodu indir
