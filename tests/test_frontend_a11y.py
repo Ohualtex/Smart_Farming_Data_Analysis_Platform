@@ -196,11 +196,17 @@ class TestSkeletonHelpersAndCss:
             f"JS helper `{helper}` bulunamadi — skeleton placeholder akisi bozulur."
         )
 
-    def test_main_js_imports_skeleton_helpers(self, js: str):
-        """main.js artık skeleton helper'ları lib'den import etmeli."""
-        # B-batch: ES module entry-point; skeleton helper'lar lib'den geliyor.
-        assert "from './lib/skeleton.js'" in js or 'from "./lib/skeleton.js"' in js, (
-            "main.js skeleton helper'larını `./lib/skeleton.js`'ten import etmeli."
+    def test_skeleton_helpers_imported_from_lib(self):
+        """Skeleton helper'ları `lib/skeleton.js`'ten import edilmeli (tek kaynak, ölü değil).
+
+        main.js sayfa modüllerine bölündükten sonra (refactor/split-large-files)
+        skeleton helper'larını artık `lib/pages/*.js` import ediyor — main.js değil.
+        Bu yüzden tüm `src/**/*.js` dosyalarında en az bir `skeleton.js` import'u ararız
+        (CSS modüllerini concat eden `css` fixture'ıyla aynı mantık).
+        """
+        src_js = "\n".join(f.read_text(encoding="utf-8") for f in sorted((FRONTEND_DIR / "src").rglob("*.js")))
+        assert "skeleton.js'" in src_js or 'skeleton.js"' in src_js, (
+            "Skeleton helper'ları hiçbir src JS dosyasında `lib/skeleton.js`'ten import edilmiyor."
         )
 
 
