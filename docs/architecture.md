@@ -25,8 +25,8 @@ graph TB
         Auth[🔐 Auth Middleware<br/>X-API-Key + JWT]
         RateLimit[🚦 SlowAPI Rate Limiter]
         ReqLog[📝 Request Logger]
-        Routers[15 Router<br/>65 Endpoint]
-        Services[İş Mantığı<br/>weather, fertilizer, ml_eval]
+        Routers[16 Router<br/>66 Endpoint]
+        Services[İş Mantığı<br/>weather, fertilizer, report]
         Tasks[⏰ APScheduler<br/>Daily weather fetch]
         MQTT[📨 MQTT Listener]
     end
@@ -87,7 +87,7 @@ app/
 ├── schemas/
 │   └── schemas.py             # 30+ Pydantic request/response modeli
 │
-├── routers/                   # 15 router, 65 endpoint (REBUILD pivot sonrası)
+├── routers/                   # 16 router, 66 endpoint
 │   ├── health.py              # Sığ sağlık (load balancer için)
 │   ├── metrics.py             # Derin sağlık (DB+scheduler+ML+freshness+alerts)
 │   ├── dashboard.py           # Frontend hero özet (REBUILD Faz 3.5)
