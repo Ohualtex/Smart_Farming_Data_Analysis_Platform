@@ -1,18 +1,9 @@
 -- ============================================================
 -- SFDAP Database Schema (auto-generated from Alembic head)
 -- ============================================================
--- Bu dosya `alembic upgrade head` cikti'sinin SQL dump'idir.
--- Generated: 2026-05-14 17:14 UTC
--- Migration zinciri (sira):
---   9021458f6b9f  initial_schema_14_tables
---   4d1a1503f306  add sensor_reading_monthly_aggregates table
---
--- ELLE DUZENLEMEYIN — regenerate icin:
---   make schema-dump   (Makefile target)
--- veya manuel:
---   rm -f /tmp/_s.db && DATABASE_URL=sqlite:////tmp/_s.db \
---     python -m alembic upgrade head
---   sqlite3 /tmp/_s.db .schema > database/sfdap_schema.sql && rm /tmp/_s.db
+-- Bu dosya 'alembic upgrade head' cikti'sinin SQL dump'idir.
+-- Generated: 2026-06-06 19:18 UTC
+-- Regenerate: make schema-dump
 -- ============================================================
 
 CREATE TABLE alembic_version (
@@ -44,18 +35,6 @@ CREATE TABLE model_performance_logs (
 CREATE INDEX ix_model_performance_logs_id ON model_performance_logs (id);
 CREATE INDEX ix_model_performance_logs_logged_at ON model_performance_logs (logged_at);
 CREATE INDEX ix_model_performance_logs_model_name ON model_performance_logs (model_name);
-CREATE TABLE users (
-	id INTEGER NOT NULL,
-	name VARCHAR(100) NOT NULL,
-	email VARCHAR(150) NOT NULL,
-	password_hash VARCHAR(255) NOT NULL,
-	role VARCHAR(20),
-	phone VARCHAR(20),
-	created_at DATETIME,
-	CONSTRAINT pk_users PRIMARY KEY (id)
-);
-CREATE UNIQUE INDEX ix_users_email ON users (email);
-CREATE INDEX ix_users_id ON users (id);
 CREATE TABLE farms (
 	id INTEGER NOT NULL,
 	user_id INTEGER NOT NULL,
@@ -243,3 +222,20 @@ CREATE TABLE sensor_reading_monthly_aggregates (
 CREATE INDEX ix_sensor_reading_aggregate_year_month ON sensor_reading_monthly_aggregates (year, month);
 CREATE INDEX ix_sensor_reading_monthly_aggregates_id ON sensor_reading_monthly_aggregates (id);
 CREATE INDEX ix_sensor_reading_monthly_aggregates_sensor_id ON sensor_reading_monthly_aggregates (sensor_id);
+CREATE TABLE IF NOT EXISTS "users" (
+	id INTEGER NOT NULL,
+	name VARCHAR(100) NOT NULL,
+	email VARCHAR(150) NOT NULL,
+	password_hash VARCHAR(255) NOT NULL,
+	role VARCHAR(20),
+	phone VARCHAR(20),
+	created_at DATETIME,
+	CONSTRAINT pk_users PRIMARY KEY (id),
+	CONSTRAINT ck_users_ck_users_role_valid CHECK (role IN ('farmer', 'developer', 'overseer', 'admin'))
+);
+CREATE UNIQUE INDEX ix_users_email ON users (email);
+CREATE INDEX ix_users_id ON users (id);
+CREATE INDEX ix_users_role ON users (role);
+CREATE INDEX ix_farms_user_id ON farms (user_id);
+CREATE INDEX ix_fields_farm_id ON fields (farm_id);
+CREATE INDEX ix_fields_crop_id ON fields (crop_id);
