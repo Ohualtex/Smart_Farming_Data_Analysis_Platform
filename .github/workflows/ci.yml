@@ -3,7 +3,7 @@
 # ============================================================
 # Her push ve Pull Request'te otomatik olarak:
 #   1. Kod kalitesi kontrolü (Ruff lint + format)
-#   2. Testleri çalıştırma (pytest — tüm test paketi, Python 3.11 + 3.12)
+#   2. Testleri çalıştırma (pytest — tüm test paketi, Python 3.12)
 #   3. Test coverage raporu (HTML + XML artifact)
 #   4. Alembic migration smoke test (boş DB → upgrade head)
 #   5. Schemathesis property-based API fuzz (shiftFinal Ayşe paketi)
@@ -53,12 +53,13 @@ jobs:
     name: 🧪 Test & Coverage (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     needs: lint
-    # v4-3: Python 3.11 + 3.12 matrix (compatibility coverage).
-    # fail-fast=false → bir versiyondaki hata diğerini iptal etmesin.
+    # Yalnız Python 3.12 — pyproject requires-python>=3.12 ile hizalı
+    # (3.11'de pip kurulumu zaten reddederdi). fail-fast=false ileride
+    # matris genişlerse bir slot'un hatası diğerini iptal etmesin.
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.12"]
 
     steps:
       - name: 📥 Kodu indir
@@ -88,8 +89,8 @@ jobs:
         # tekrar -v eklemiyoruz (gereksiz log).
 
       - name: 📊 HTML coverage artifact
-        # v4-3: yalnız Python 3.12 matrix slot'u upload eder; 3.11 yalnız test çalıştırır
-        # (artifact ismi unique olmalı). Codecov XML için aynı yaklaşım.
+        # Yalnız 3.12 matrix slot'u artifact upload eder (matris genişlerse
+        # tek slot upload etsin, isim çakışmasın). Codecov XML için aynı yaklaşım.
         if: matrix.python-version == '3.12'
         uses: actions/upload-artifact@v4
         with:
