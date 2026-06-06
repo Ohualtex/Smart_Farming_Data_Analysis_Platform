@@ -1706,8 +1706,8 @@ function animateHeroStats() {
 function initTheme() {
     const STORAGE_KEY = 'sfdap-theme';
     const root = document.documentElement;
-    // Birden çok toggle: header (#themeToggle) + welcome (#welcomeThemeToggle).
-    // İkisi de `.js-theme-toggle` taşır; hepsi aynı state'i paylaşır.
+    // Birden çok toggle: header (#themeToggle) + welcome (.welcome-sun / .welcome-moon).
+    // Hepsi `.js-theme-toggle` class'ı taşır ve aynı state'i paylaşır.
     const btns = Array.from(document.querySelectorAll('.js-theme-toggle'));
     if (!btns.length) return;
 

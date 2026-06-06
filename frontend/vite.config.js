@@ -1,18 +1,18 @@
 // SFDAP Dashboard — Vite Build Configuration
 // shiftFinal A3 — Ecenur Üner: bundling scaffold
 //
-// EN: Vite scaffold for the static SPA dashboard. Today the dashboard is
-//     a single `index.html` with inline CSS + inline JS. The scaffold is
-//     ready so future PRs can split styles/scripts into ES modules without
-//     touching FastAPI's StaticFiles mount.
+// EN: Vite dev/build tooling for the SPA dashboard. The ES-module split is
+//     done: markup-only `index.html` + `src/main.js` + `src/lib/*.js` (8) +
+//     `src/styles/*.css` (10). Production serves raw ESM + CDN via FastAPI's
+//     StaticFiles mount; Vite is only the dev server (HMR + /api proxy) and
+//     test/build runner — its bundle is not served.
 //
 // ---
 //
-// TR: Statik dashboard SPA'si icin Vite iskeleti. Su an dashboard tek
-//     bir `index.html` (inline CSS + inline JS). Ileride stilleri ve
-//     script'leri ES modullerine bolmek istedigimizde FastAPI'nin
-//     StaticFiles mount'una dokunmadan calisir hale gelsin diye iskelet
-//     hazirlandi.
+// TR: SPA dashboard icin Vite dev/build araci. ES-modul ayrimi tamamlandi:
+//     markup-only `index.html` + `src/main.js` + `src/lib/*.js` (8) +
+//     `src/styles/*.css` (10). Uretimde FastAPI ham ESM + CDN servis eder;
+//     Vite yalnizca dev sunucusu (HMR + /api proxy) ve test/build aracidir.
 
 import { defineConfig } from "vite";
 
