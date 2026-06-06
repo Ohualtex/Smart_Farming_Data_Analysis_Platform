@@ -148,6 +148,8 @@ kendi `User.id`'sine bağlı veri ile sınırlandırılması; `developer`/
   `farms` (Adım 7), `sensors` (Adım 8), `weather` (Adım 9),
   `irrigation` (Adım 10), `plants` (Adım 12), `alerts` (Adım 13),
   `analytics` (Adım 14). Eski `verify_api_key` Depends'leri kaldırıldı.
+  _İstisna:_ `model_performance` (dev/ops metrik endpoint'leri) bilinçli olarak
+  `X-API-Key` (`verify_api_key`) ile korunmaya devam eder.
   Write endpoint'leri `_require_write(user)` helper'ı ile koruma
   altında — overseer/developer 403 alır. Public kalan endpoint'ler:
   `GET /api/health`, `POST /api/irrigation/predict` (stateless ML),
@@ -168,9 +170,10 @@ kendi `User.id`'sine bağlı veri ile sınırlandırılması; `developer`/
 #### Removed
 - **`verify_api_key` legacy dependency** — X-API-Key header kontrolü
   Cycle 5'ten beri yardımcı koruma katmanıydı; JWT + RBAC tek-source
-  yetki olduğu için kaldırıldı. Hâlâ deployment'larda environment
-  variable olarak duruyor (geriye dönük config uyumluluğu) ama
-  hiçbir route artık okumuyor.
+  yetki olduğu için son-kullanıcı router'larından kaldırıldı. Hâlâ
+  deployment'larda environment variable olarak duruyor (geriye dönük
+  config uyumluluğu); router'lar arasında yalnız `model_performance`
+  (dev/ops metrik endpoint'leri) bunu bilinçli olarak okumaya devam eder.
 
 #### Fixed
 - **`PATCH /api/alerts/{alert_id}` `is_resolved: None` 500 audit bug**
