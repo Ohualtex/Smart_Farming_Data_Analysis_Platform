@@ -14,6 +14,7 @@ import { showToast, updateStatus, updateClock } from "./lib/utils.js";
 import { pageTitles, toggleSidebar, initHashRouter, navigate as _navigateCore } from "./lib/router.js";
 import { getCurrentUser, setCurrentUser, setApiOnline } from "./lib/session.js";
 import { setNavigate } from "./lib/nav.js";
+import { rethemeCharts } from "./lib/charts.js";
 
 // ─── Sayfa modülleri ─────────────────────────────────────────
 import {
@@ -233,8 +234,9 @@ function initTheme() {
         const next = current === 'light' ? 'dark' : 'light';
         applyTheme(next);
         localStorage.setItem(STORAGE_KEY, next);
-        // Sayfa yeniden yüklenmiyor — toast bildirimi çıkmasın diye.
-        // Chart.js renkleri mevcut sayfada eski temada kalır; sayfa değişince güncellenir.
+        // Chart.js canvas'ı CSS değişkenlerini almaz → tema değişince renkleri
+        // YERİNDE güncelle ki yazılar yeni temada görünür kalsın (refresh gerekmesin).
+        rethemeCharts();
     }));
 
     function applyTheme(theme) {
