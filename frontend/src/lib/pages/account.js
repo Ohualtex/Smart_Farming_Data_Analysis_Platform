@@ -85,11 +85,14 @@ export function goToWelcome() {
 }
 
 /**
- * Rol-aware nav görünürlüğü — `[data-role]` taşıyan nav item'ları yalnız
- * eşleşen role gösterir (örn. admin "Kullanıcılar"). user null ise hepsi gizli.
+ * Rol-aware görünürlük — `[data-role]` taşıyan elemanları yalnız eşleşen role
+ * gösterir (örn. admin "Kullanıcılar"). user null ise hepsi gizli.
+ * `.user-badge-role` HARİÇ tutulur: o span data-role'ü SADECE CSS renk kodu için
+ * taşır, görünürlük gating'ine girmemeli (badge görünürken her zaman görünmeli).
+ * (export: vitest birim testi için.)
  */
-function _applyRoleVisibility(user) {
-    document.querySelectorAll('[data-role]').forEach(el => {
+export function _applyRoleVisibility(user) {
+    document.querySelectorAll('[data-role]:not(.user-badge-role)').forEach(el => {
         // data-role tek rol ("admin") veya virgüllü çoklu rol ("admin,overseer,developer")
         const roles = (el.getAttribute('data-role') || '').split(',').map(r => r.trim());
         el.style.display = (user && roles.includes(user.role)) ? '' : 'none';
