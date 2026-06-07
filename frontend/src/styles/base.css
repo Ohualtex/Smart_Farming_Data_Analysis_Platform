@@ -28,11 +28,8 @@ input, select { font-family: var(--font); }
 
 /* Body atmosphere */
 body {
-    background:
-        radial-gradient(ellipse 80% 60% at 0% 0%, rgba(16,185,129,.05) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 50% at 100% 100%, rgba(139,92,246,.04) 0%, transparent 50%),
-        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(59,130,246,.03) 0%, transparent 60%),
-        var(--bg);
+    /* welcome ekranıyla ORTAK arka plan (--page-bg) — tema tutarlılığı */
+    background: var(--page-bg);
     background-attachment: fixed;
     position: relative;
 }

@@ -15,6 +15,12 @@
     --font: 'Inter', -apple-system, sans-serif;
     --sidebar-w: 260px;
 
+    /* Sayfa arka planı — welcome + dashboard ORTAK kaynağı (tema tutarlılığı).
+       Dark = gece: üst yeşil glow + lacivert→surface dikey gradyan. */
+    --page-bg:
+        radial-gradient(1100px 520px at 50% -8%, var(--primary-glow), transparent),
+        linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
+
     /* Gradient helpers */
     --gradient-primary: linear-gradient(135deg, #10b981, #06b6d4);
     --gradient-warm: linear-gradient(135deg, #f59e0b, #ef4444);
