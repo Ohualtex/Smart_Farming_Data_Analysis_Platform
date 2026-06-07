@@ -28,6 +28,28 @@ export const chartTick = () => (_isLight() ? '#314257' : '#aeb9c9');     // ekse
 export const chartLegend = () => (_isLight() ? '#1e293b' : '#dbe2ec');   // legend / başlık
 export const chartGrid = () => (_isLight() ? 'rgba(20,80,140,.14)' : 'rgba(148,163,184,.16)'); // ızgara
 
+// Tema değişince TÜM kayıtlı grafiklerin canvas-içi renklerini YERİNDE günceller
+// (re-render/re-fetch/flash YOK). Accent tick'ler (amber sıcaklık / mavi nem
+// data eksenleri) korunur. Toggle anında çağrılır → yazılar yeni temada görünür.
+const _ACCENT = new Set(['#f59e0b', '#3b82f6']);
+export function rethemeCharts() {
+    Object.values(charts).forEach(ch => {
+        if (!ch || !ch.options) return;
+        const lg = ch.options.plugins?.legend?.labels;
+        if (lg) lg.color = chartLegend();
+        const ttl = ch.options.plugins?.title;
+        if (ttl && ttl.color) ttl.color = chartLegend();
+        Object.values(ch.options.scales || {}).forEach(sc => {
+            if (!sc) return;
+            if (sc.ticks && !_ACCENT.has(sc.ticks.color)) sc.ticks.color = chartTick();
+            if (sc.grid && sc.grid.display !== false) sc.grid.color = chartGrid();
+            if (sc.pointLabels) sc.pointLabels.color = chartLegend();
+            if (sc.title && sc.title.color) sc.title.color = chartTick();
+        });
+        ch.update('none');
+    });
+}
+
 export function renderMoistureChart(data) {
     const sorted = [...data].reverse();
     const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));

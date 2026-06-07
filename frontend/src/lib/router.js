@@ -33,16 +33,19 @@ export function navigate(page, handlers, startHeroTipRotation) {
         n.removeAttribute('aria-current');
     });
     document.getElementById(`page-${page}`).classList.add('active');
-    const navItem = document.querySelector(`[href="#${page}"]`);
+    // Hash'i mevcut sayfaya senkronla (history spam'siz) → refresh aynı sayfada kalır.
+    if (window.history?.replaceState) history.replaceState(null, '', `#${page}`);
+    const navItem = document.querySelector(`.nav-item[href="#${page}"]`);
     if (navItem) {
         navItem.classList.add('active');
         navItem.setAttribute('aria-current', 'page');
     }
     document.getElementById('pageTitle').textContent = pageTitles[page][0];
     document.getElementById('pageSubtitle').textContent = pageTitles[page][1];
-    // Focus the <main> programmatically for a11y
+    // Sayfa her zaman TEPEDEN açılsın + a11y odağı (odak kaydırmasın → preventScroll).
+    window.scrollTo(0, 0);
     const main = document.getElementById('main-content');
-    if (main) main.focus({ preventScroll: false });
+    if (main) main.focus({ preventScroll: true });
 
     // Load page data
     const handler = handlers[page];
