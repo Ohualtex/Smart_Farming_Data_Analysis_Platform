@@ -4,6 +4,8 @@
 | :--- | :--- |
 | Veri Seti İncelemesi ve Ön İşleme Adımları | 08.03.2026 |
 
+> ⚠️ **Tarihsel plan dökümanı** — Cycle 1-2 planlamasıdır; nihai sistemle farklılıklar içerebilir. Güncel durum için README ve docs/FINAL_REPORT.md'ye bakın.
+
 ---
 
 ## 📊 Veri İnceleme ve Ön İşleme Stratejisi Raporu

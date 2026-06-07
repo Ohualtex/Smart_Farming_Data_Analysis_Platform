@@ -33,7 +33,7 @@
 
 **Tek satır:** SFDAP, sensör ve hava durumu verilerini ML modelleriyle birleştirerek çiftçilere sulama, gübreleme ve bitki sağlığı önerileri sunan kapsamlı bir veri analizi ve karar destek platformudur.
 
-**Ölçek:** Çiftçi-odaklı demo seed — 5 kullanıcı (3 çiftçi + admin + gözetmen), 3 çiftlik (farklı bölgeler), 6 tarla, 6 sensör, ~90 sensör okuması, hava/sulama/hastalık/toprak/uyarı kayıtları. (Üretim ölçeği kullanıcı sayısıyla doğrusal büyür; sistem 81-il "ulusal" iddiasından vazgeçti.)
+**Ölçek:** Çiftçi-odaklı demo seed — 6 kullanıcı (3 çiftçi + admin + gözetmen + geliştirici), 3 çiftlik (farklı bölgeler), 6 tarla, 6 sensör, ~90 sensör okuması, hava/sulama/hastalık/toprak/uyarı kayıtları. (Üretim ölçeği kullanıcı sayısıyla doğrusal büyür; sistem 81-il "ulusal" iddiasından vazgeçti.)
 
 ## 2. Hedefler ve Kapsam
 
@@ -120,8 +120,8 @@ eyleme yönelik akış yok). Karar: "81 il / ulusal bakanlık paneli" çerçeves
 zaman (fertilizer), komşulara göre durum (admin/gözetmen analytics), haberim olur mu
 (bildirim çanı). **Geri-dönüş güvencesi:** `v0.9.0-pre-rebuild` tag'i.
 
-**Metrikler (güncel):** pytest **650** (586 + 64 fuzz) · Vitest **59** · coverage %95 (eşik %80) ·
-ruff+format temiz · bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 3 çiftlik / 6 tarla).
+**Metrikler (güncel):** pytest **586** passed (+64 schemathesis fuzz lokalde skip) · Vitest **74** · coverage %95 (eşik %80) ·
+ruff+format temiz · bandit medium+ 0 · seed çiftçi-odaklı (6 demo hesap / 3 çiftlik / 6 tarla).
 
 ## 4. Mimari
 
@@ -129,7 +129,7 @@ ruff+format temiz · bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 
 
 **Üst düzey:**
 - **Frontend katmanı:** Vanilla JS ESM SPA — `index.html` (markup) + `src/main.js` + `src/lib/*.js` (8 modül) + `src/styles/*.css` (10 modül); üretimde ham ESM + CDN servis edilir, Vite yalnız dev/build aracıdır
-- **API katmanı:** FastAPI Gateway → 16 router × 66 endpoint (REBUILD sonrası: dashboard/fields/onboarding router'ları + CRUD + RBAC user mgmt eklendi)
+- **API katmanı:** FastAPI Gateway → 16 router × 67 endpoint (REBUILD sonrası: dashboard/fields/onboarding router'ları + CRUD + RBAC user mgmt eklendi)
 - **İş katmanı:** Servisler (`weather_service`, `fertilizer_service`, `mqtt_listener`, `sensor_archiver`, `report_service`, `data_quality`)
 - **ML katmanı:** RandomForest (sulama) + heuristic+ONNX (bitki hastalığı) + APScheduler periyodik görevler
 - **Veri katmanı:** SQLAlchemy 2.0 ORM, SQLite (dev) / PostgreSQL (prod), Alembic migration
@@ -153,7 +153,7 @@ ruff+format temiz · bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 
 
 ## 6. API Endpoint'leri
 
-**66 endpoint × 16 router** (REBUILD sonrası dashboard/fields/onboarding + CRUD + RBAC user mgmt dahil)**:**
+**67 endpoint × 16 router** (REBUILD sonrası dashboard/fields/onboarding + CRUD + RBAC user mgmt dahil)**:**
 
 | Router | Endpoint | Anahtar Yetenek |
 |:--|:--:|:--|
@@ -176,10 +176,15 @@ ruff+format temiz · bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 
 
 ## 7. Makine Öğrenimi Bileşenleri
 
-> 🚧 **TODO Cycle 9 — Ayşe:** Model performans metrikleri tablosu (accuracy, MAE), eğitim setleri, drift detection sonuçları.
+> **Özet:** Sulama modeli RandomForestRegressor (sentetik eğitim seti, deterministic
+> seed=42); bitki hastalığı tespiti Pillow HSV heuristic + ONNX-ready iskelet
+> (gerçek CNN eğitimi yapılmadı — bkz. §14). Her tahmin `ModelPerformanceLog`'a
+> sessizce kaydedilir; drift detection son N gün vs. baseline karşılaştırmasıyla
+> eşik aşımında `SystemAlert` üretir. Gerçek-veri accuracy/MAE ölçümü, harici
+> dataset entegrasyonu sonrası anlamlı olacağından gelecek çalışmalara bırakıldı.
 
 ### 7.1 Sulama Optimizasyon Modeli
-- **Algoritma:** RandomForestRegressor (sklearn 1.8.0)
+- **Algoritma:** RandomForestRegressor (scikit-learn; `n_estimators=100`, `max_depth=10`)
 - **Girdi:** soil_moisture, soil_temperature, humidity, temperature, precipitation
 - **Çıktı:** önerilen su miktarı (litre), aciliyet seviyesi
 - **Eğitim:** 1000 sentetik örnek, deterministic seed=42
@@ -198,7 +203,7 @@ ruff+format temiz · bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 
 
 > 🚧 **TODO Cycle 9 — Ecenur:** Ekran görüntüleri + sayfa-sayfa anlatım.
 
-**Mevcut yapı:** Tek dosya SPA, ~3 100 satır, 9 sayfa, dark/light tema, Chart.js, vanilla JS.
+**Mevcut yapı:** Modüler vanilla-JS ESM SPA — markup-only `index.html` + `src/main.js` (264 satır) + `src/lib/*.js` (11 modül) + `src/styles/*.css` (10 modül); dark/light tema, Chart.js, Leaflet. Üretimde ham ESM + CDN servis edilir (Vite yalnız dev/build aracı).
 
 **Filiz maskotu** (Cycle 7 — Miraç):
 - Inline SVG, idle/blink/mood animasyonları
@@ -219,8 +224,8 @@ ruff+format temiz · bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 
 **Çok katmanlı savunma:**
 | Katman | Mekanizma | Cycle |
 |:--|:--|:--:|
-| Yetkilendirme | `X-API-Key` header (writes) | 4 |
-| Yetkilendirme | JWT bearer (HS256) + bcrypt | 8 |
+| Yetkilendirme | JWT bearer (HS256) + bcrypt — tüm API | 8 |
+| Yetkilendirme (legacy) | `X-API-Key` — yalnız `/api/model-performance` (2 route) | 4 |
 | Hız sınırlama | slowapi 30/min STRICT + 10/min AUTH (17 endpoint) | 8 |
 | TLS | nginx reverse proxy + Let's Encrypt | 8 |
 | **Response header'lar** | **CSP + HSTS (prod) + XFO + XCTO + Referrer-Policy + Permissions-Policy** | **shiftFinal** |
@@ -234,11 +239,12 @@ ruff+format temiz · bandit medium+ 0 · seed çiftçi-odaklı (5 kullanıcı / 
 ## 10. Test, Coverage ve CI/CD
 
 ```
-Test sayısı:        650 backend (586 + 64 fuzz) + 59 frontend (Vitest)
+Test sayısı:        586 backend pytest passed (+64 schemathesis fuzz,
+                    lokalde skip) + 74 frontend (Vitest)
                     246 → 313 → 425 → 485 (shiftFinal kapanış)
                     → 499 (REBUILD Faz 1 RBAC) → 565 (Faz 3.5 admin user mgmt)
-                    → 605 (Faz 4 CRUD) → 613 (Faz 5 bildirim) → 622 (Faz 6 onboarding)
-                    → 650 (cila/fixroll); frontend Vitest 32 → 59
+                    → 586 (Faz 4-6 CRUD/bildirim/onboarding + cila);
+                    frontend Vitest 32 → 74
 Coverage:           %95+ (CI gate %80; Cycle 8 ölçümü %95.04)
 Linter:             Ruff (17 kural grubu) — All checks passed
 Source security:    Bandit medium+ — 0 issue
@@ -373,15 +379,13 @@ fırlatıyor — fail-fast.
 
 > Tüm 4 maddenin kapsamlı testleri `tests/test_jti_blacklist.py`,
 > `tests/test_security_headers.py` ve `tests/test_edge_cases.py` içinde
-> yaşıyor (toplam **475+ pytest** + **32 Vitest** test).
+> yaşıyor (güncel toplam **586 pytest** + **74 Vitest** test).
 
 ## 14. Gelecek Çalışmalar
 
 **Bilinen teknik borçlar (Cycle 9 ve sonrası için):**
 - `bcrypt 5.0` geçişi (passlib yeni sürümünü bekliyoruz)
-- RBAC (role-based access control) — kullanıcı bazlı izolasyon
 - Refresh token + JWT blacklist Redis'e taşıma
-- Frontend Vitest birim test scaffold'u — şu an sadece axe-core E2E var
 - pip-audit lokal venv subprocess hatası (CI'da temiz, dev makine env sorunu)
 - `.venv` recreate yardımcısı — eski mutlak path shebang'leri kaldıktan
   sonra Python script'leri (`bandit`, `pip-audit`) `python -m` üzerinden
@@ -427,8 +431,14 @@ fırlatıyor — fail-fast.
 - [`docs/database/Veritabani_Semasi_Tasarimi.md`](database/Veritabani_Semasi_Tasarimi.md) — DB şema detayı
 - [`docs/research/`](research/) — Cycle 1-2 araştırma raporları
 
-**Akademik kaynaklar:**
-> 🚧 **TODO Cycle 9:** Kullanılan kütüphane referansları (FastAPI, SQLAlchemy, scikit-learn, ONNX, Chart.js, ...), ilgili makaleler, dataset kaynakları.
+**Kullanılan başlıca kütüphaneler ve araçlar:**
+- **Backend:** FastAPI, Starlette, Pydantic v2, SQLAlchemy 2.0, Alembic, Uvicorn
+- **ML:** scikit-learn (RandomForestRegressor — sulama), ONNX Runtime + Pillow (bitki hastalığı heuristic + ONNX-ready), NumPy
+- **Veri/altyapı:** SQLite (dev) / PostgreSQL (prod), paho-mqtt, APScheduler, python-jose (JWT), passlib + bcrypt
+- **Frontend:** Vanilla JS (ESM), Chart.js, Leaflet, Vite (dev/build), Vitest + jsdom (test)
+- **Kalite/CI:** pytest + pytest-cov, Ruff, Bandit, pip-audit, Schemathesis, axe-core, pre-commit, GitHub Actions
+
+> **Not:** Sistem sentetik/heuristik veri ve modellerle çalışır; harici akademik dataset (örn. PlantVillage) ve hakemli makale referansları gelecek çalışmalar kapsamındadır (bkz. §14).
 
 ---
 

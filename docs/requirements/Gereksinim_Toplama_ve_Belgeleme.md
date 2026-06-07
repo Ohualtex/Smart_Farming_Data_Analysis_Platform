@@ -1,5 +1,7 @@
 # 🚀 Akıllı Tarım Veri Analizi Platformu: Detaylı Gereksinim Analizi
 
+> ⚠️ **Tarihsel plan dökümanı** — Cycle 1-2 planlamasıdır; nihai sistemle farklılıklar içerebilir. Güncel durum için README ve docs/FINAL_REPORT.md'ye bakın.
+
 ---
 
 ## 1. İşlevsel Gereksinimler (Functional Requirements)

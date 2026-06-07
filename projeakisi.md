@@ -470,19 +470,23 @@ hastalık tanısı → kayıtlara ekler. **~3.5 dakikalık demo akışı.**
 
 ---
 
-## 🟣 Cycle 9 — Final Rapor, Sunum ve Akademik Teslim
+## 🟣 Cycle 9 — Final Rapor, Sunum ve Akademik Teslim ✅ *(kapandı — 7 Haz 2026)*
 
 📅 **1 – 7 Haziran 2026** *(Haziran ilk haftası)*
 
-> Sunum ve akademik teslime özel döngü. **Teknik geliştirme yapılmaz**
-> — backend/frontend kod değişikliği yalnız REBUILD branch'inde
-> (Miraç solo, 18–30 May) yapılır. Ekip bu döngüde **yalnız dokümantasyon,
-> sunum, raporlama** üretir.
+> Sunum ve akademik teslime özel döngü. Ağırlık **dokümantasyon, sunum,
+> raporlama** üzerinde; backend kod değişikliği yapılmadı. Frontend tarafında
+> yalnızca sunum-öncesi UX cilası (tema, rol görünürlük, tema-duyarlı
+> grafikler) eklendi — aşağıdaki **Fixroll / Cila turları** bölümüne bakın.
 >
 > **31 May:** REBUILD merge + demo prova buffer (1 gün); ekip Cycle 9
-> görevlerine 22 May'dan itibaren paralel başlayabilir.
+> görevlerine 22 May'dan itibaren paralel çalıştı.
+>
+> **Kapanış (7 Haz 2026):** Tüm Cycle 9 dokümantasyon/sunum görevleri ✅;
+> sürüm `1.0.0` etiketlendi. Test suite: **586 backend pytest + 74 frontend
+> vitest** geçer (lokalde +64 Schemathesis fuzz skip).
 
-### 👤 MİRAÇ DURAN *(Scrum Master / Manager)*
+### 👤 MİRAÇ DURAN *(Scrum Master / Manager)* — ✅ Tamamlandı
 
 #### 📌 Proje Dokümantasyonunun Tamamlanması
 Projenin tüm aşamalarını detaylı bir şekilde belgele. Kod açıklamaları,
@@ -490,7 +494,7 @@ veri işleme adımları, algoritma seçim nedenleri ve karşılaşılan
 zorlukları içeren kapsamlı bir dokümantasyon hazırla. REBUILD branch'inden
 demo akışı + ekran görüntüleriyle FINAL_REPORT'u zenginleştir.
 
-### 👤 EMİRHAN GÜNAY
+### 👤 EMİRHAN GÜNAY — ✅ Tamamlandı
 
 #### 📌 Proje Final Raporu Yazımı
 Projenin genel özeti, kullanılan veri kümeleri, uygulanan algoritmalar
@@ -498,23 +502,84 @@ ve elde edilen sonuçları içeren kapsamlı bir final rapor hazırla. Rapor
 tüm teknik detayları içermeli, akademik dil ve kolay anlaşılırlığa sahip
 olmalı.
 
-### 👤 AYŞE ESLEM ÇEKİCİ
+### 👤 AYŞE ESLEM ÇEKİCİ — ✅ Tamamlandı
 
 #### 📌 Sunum Slaytları Üretimi
 Projenin temel hedeflerini, kullanılan yöntemleri ve elde edilen
 sonuçları özetleyen sunum slaytlarını hazırla. Görsel materyaller,
 mimari diyagram, demo screenshot ve kapanış sayfası ile destekle.
 
-### 👤 ECENUR ÜNER
+### 👤 ECENUR ÜNER — ✅ Tamamlandı
 
 #### 📌 Sunum Materyallerinin Görsel Tasarımı
 Sunum slaytlarının görsel tasarımı, ekran görüntüleri, mockup'lar ve
 infografikler. Filiz maskotu sunum boyunca tema unsuru olarak kullanılır.
 Demo videosu hazırlığı (opsiyonel).
 
-### 👤 MEHMET SAİT TAYŞİ
+### 👤 MEHMET SAİT TAYŞİ — ✅ Tamamlandı
 
 #### 📌 Sunum Hazırlık Notları & Q&A Senaryoları
 Sunum öncesi prova notları, jüriye karşı olası sorular ve cevapları,
 teknik derinlik soruları için backup slaytları. Demo prova scripti
 (`docs/demo_script.md`) güncelleme.
+
+---
+
+## 🟩 Fixroll / Cila turları — Sunum-Öncesi UX Cilası *(REBUILD merge sonrası)*
+
+📅 **31 Mayıs – 7 Haziran 2026** *(✅ kapandı — 7 Haz 2026)*
+🌿 **Branch akışı:** `fixroll_v7…v9b2` → `feature/welcome-screen` (#38) →
+`feature/ui-improvements` (#39) → `fix/a11y-skeleton-test` (#40) →
+`feature/nav-rol-gorunurluk` (#41) → `fix/nav-tutarlilik-ve-testler` (#42)
+
+> REBUILD `main`'e alındıktan sonra, çiftçi-odaklı ürünü sunum
+> kalitesine taşıyan kısa **fixroll / cila** turları. Backend davranışı
+> sabit kaldı; iş frontend modülarizasyonu, tema, rol görünürlüğü ve
+> navigasyon tutarlılığı üzerinde yoğunlaştı. Tüm turlar PR ile merge
+> edildi (#34–#42).
+
+### Frontend modülarizasyonu (fixroll v7–v9b2)
+
+- ✅ **main.js sayfa modüllerine bölündü** (`47be3c8`, PR #39) — eski
+  monolitik yapı `src/lib/` altında 11 modüle ayrıldı: `api`, `router`,
+  `map`, `charts`, `render`, `skeleton`, `utils`, `ui_helpers`, `session`,
+  `nav`, `filiz`. `main.js` ~264 satıra indi (davranış birebir korundu).
+- ✅ **Window-bridge kaldırıldı → tam `data-action` event delegation**
+  (`b50b051`, PR #35); chart render `lib/charts.js`'e (`551c527`, PR #36),
+  HTML render `lib/render.js`'e (`9b7316e`, PR #37) çıkarıldı.
+- ✅ **schemas.py domain paketine bölündü** (`605705d`) — geri-uyumlu.
+
+### Welcome ekranı + tema (light/dark mavi-yeşil)
+
+- ✅ **Hoşgeldin (welcome) ekranı + gün-gece temalı giriş akışı**
+  (`9db2456`, PR #38). Giriş/kayıt formundan rol ipucu kaldırıldı (`778de01`).
+- ✅ **Platform light/dark teması welcome ekranıyla uyumlu** (`99f6e20`);
+  light modu welcome'daki açık **mavi-yeşil** tona çekildi (`0de1fa8`).
+- ✅ **Tema-duyarlı grafikler** — canvas içi yazı/ızgara renkleri temaya
+  göre (`b4ccbf7`); tema toggle'ında grafikler yeniden renklenir, dark
+  modda yazılar okunur hâle getirildi (`d8aed62`). localStorage persist.
+
+### Rol bazlı görünürlük + navigasyon tutarlılığı (PR #41, #42)
+
+- ✅ **Rol bazlı sidebar görünürlüğü** (`6d3b5b9`, PR #41) — rollere göre
+  menü öğeleri gizlenir/gösterilir; "Hesabım" sidebar'dan kaldırılıp
+  header user-badge altına taşındı.
+- ✅ **Navigasyon tutarlılığı** (`4fc1eaa`, PR #42) — refresh aynı sayfada
+  kalır, sayfa geçişlerinde içerik tepeden açılır.
+- ✅ **`openFieldDetail` `navigate` ile tutarlı** (`07d4c9c`, PR #42) —
+  tarla detayına geçiş tek `navigate` yoluyla; rol-span gating'inden
+  hariç tutuldu (tüm roller kendi tarlasının detayını açabilir).
+
+### a11y testi modüler yapıya uyarlandı
+
+- ✅ **a11y skeleton-import testi** modüler yapıya güncellendi
+  (`dd169f0`, PR #40); CSS fixture 8-modül split'e uyarlandı (`66baaf0`).
+
+### Doğrulama (Cycle 9 kapanış metrikleri)
+
+| Kontrol | Sonuç |
+|:--|:-:|
+| Backend pytest | **586 / 586 passed** ✅ (+64 Schemathesis lokalde skip) |
+| Frontend vitest | **74 / 74 passed** ✅ (nav/tema/rol kapsamı +15, `cd56d17`) |
+| ruff + bandit | clean ✅ |
+| Sürüm | `1.0.0` etiketlendi ✅ |

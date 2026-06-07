@@ -20,12 +20,11 @@ make run                # ya da: uvicorn app.main:app --reload
 
 ## 2. Kimlik Doğrulama
 
-İki paralel mekanizma çalışır:
+**Tüm API endpoint'leri** (GET dahil) `Authorization: Bearer <token>` header'ı ister. Token, `/api/auth/login` akışından elde edilir. Uygulama bcrypt parola hash + HS256 imzalı JWT kullanır.
 
-1. **`X-API-Key` header** — eski/admin yazma endpoint'leri (POST/DELETE/PATCH) için. Okuma (GET) auth gerektirmez.
-2. **`Authorization: Bearer <token>` header** — `/api/auth/*` ile elde edilen kullanıcı token'ı için. Uygulama bcrypt parola hash + HS256 imzalı JWT kullanır.
+> **Tek istisna — legacy `X-API-Key`:** Yalnız `/api/model-performance` altındaki 2 route eski `X-API-Key` header'ını kabul eder. Bunun dışındaki hiçbir endpoint X-API-Key ile çalışmaz; her zaman Bearer JWT kullanın.
 
-| Ortam | API Key |
+| Ortam | API Key (yalnız `/api/model-performance` legacy) |
 |:------|:--------|
 | Development (varsayılan) | `dev-api-key` |
 | Production | `.env` dosyasındaki `API_KEY` (`ENVIRONMENT=production` iken default değer reddedilir) |
@@ -50,24 +49,27 @@ TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"farmer@example.com","password":"s3cret123"}' | jq -r .access_token)
 
-# Korumalı endpoint
+# Korumalı endpoint (her endpoint Bearer ister)
 curl http://localhost:8000/api/auth/me -H "Authorization: Bearer $TOKEN"
 ```
+
+> **Demo hesaplar:** Seed verisindeki 6 demo hesabın hepsinin parolası `123456`'dır. Örn. login için herhangi bir demo email + `123456` kullanın.
 
 > **Not:** Logout sırasında token in-memory blacklist'e eklenir; production'da bu blacklist Redis veya DB'ye taşınmalı.
 
 ### Swagger UI üzerinden auth
 
 1. `http://localhost:8000/docs`
-2. Sağ üstteki **🔒 Authorize** butonuna tıkla
-3. Value: `dev-api-key` yaz, **Authorize** → **Close**
-4. Artık 🔒 simgeli endpoint'leri test edebilirsin
+2. Önce `POST /api/auth/login` ile token al (demo email + `123456`)
+3. Sağ üstteki **🔒 Authorize** butonuna tıkla
+4. `bearerAuth` alanına token'ı yapıştır, **Authorize** → **Close**
+5. Artık 🔒 simgeli endpoint'leri test edebilirsin
 
 ### curl üzerinden
 
 ```bash
 curl -X POST http://localhost:8000/api/sensors/ \
-  -H "X-API-Key: dev-api-key" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"field_id": 1, "sensor_type": "soil_moisture", "serial_number": "S-001"}'
 ```
@@ -99,6 +101,7 @@ Tam liste ve her endpoint'in detaylı parametreleri Swagger'da.
 
 ```bash
 curl -X POST http://localhost:8000/api/irrigation/predict \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "soil_moisture": 30,
@@ -123,6 +126,7 @@ curl -X POST http://localhost:8000/api/irrigation/predict \
 
 ```bash
 curl -X POST http://localhost:8000/api/fertilizer/recommend \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "crop_type": "tomato",
@@ -139,19 +143,22 @@ curl -X POST http://localhost:8000/api/fertilizer/recommend \
 ### 4.3 Sensör okumalarını listele
 
 ```bash
-curl http://localhost:8000/api/sensors/1/readings?limit=10
+curl "http://localhost:8000/api/sensors/1/readings?limit=10" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 4.4 Analitik özet (son 30 gün)
 
 ```bash
-curl "http://localhost:8000/api/analytics/summary?days=30" | jq .counts
+curl "http://localhost:8000/api/analytics/summary?days=30" \
+  -H "Authorization: Bearer $TOKEN" | jq .counts
 ```
 
 ### 4.5 PDF rapor indir
 
 ```bash
-curl "http://localhost:8000/api/analytics/export?format=pdf&days=30" -o rapor.pdf
+curl "http://localhost:8000/api/analytics/export?format=pdf&days=30" \
+  -H "Authorization: Bearer $TOKEN" -o rapor.pdf
 ```
 
 ### 4.6 İki periyot karşılaştır
@@ -159,14 +166,15 @@ curl "http://localhost:8000/api/analytics/export?format=pdf&days=30" -o rapor.pd
 ```bash
 curl "http://localhost:8000/api/analytics/compare?\
 start_date_1=2026-04-01&end_date_1=2026-04-15&\
-start_date_2=2026-04-16&end_date_2=2026-04-30"
+start_date_2=2026-04-16&end_date_2=2026-04-30" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 4.7 Yeni sistem uyarısı oluştur (auth)
 
 ```bash
 curl -X POST http://localhost:8000/api/alerts/ \
-  -H "X-API-Key: dev-api-key" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "farm_id": 1,
@@ -179,7 +187,8 @@ curl -X POST http://localhost:8000/api/alerts/ \
 ### 4.8 Derin sağlık kontrolü
 
 ```bash
-curl http://localhost:8000/api/health/deep | jq
+curl http://localhost:8000/api/health/deep \
+  -H "Authorization: Bearer $TOKEN" | jq
 ```
 
 DB, scheduler ve ML model bileşenlerinin durumunu döner.
@@ -190,8 +199,8 @@ DB, scheduler ve ML model bileşenlerinin durumunu döner.
 
 | Kod | Anlam | Çözüm |
 |:---:|:------|:------|
-| 401 | API Key eksik | `X-API-Key` header'ı ekle |
-| 403 | Geçersiz API Key | Doğru key gönder |
+| 401 | Bearer token eksik veya geçersiz | `/api/auth/login` ile token al, `Authorization: Bearer <token>` header'ı ekle |
+| 403 | Yetki yetersiz (rol/erişim) | Hesabın rolünü/erişimini doğrula |
 | 404 | Kayıt bulunamadı | ID'yi doğrula |
 | 422 | Validation hatası | Body/query parametrelerini kontrol et |
 | 429 | Rate limit aşıldı | Birkaç saniye bekle |
@@ -200,7 +209,7 @@ DB, scheduler ve ML model bileşenlerinin durumunu döner.
 Standart hata response'u:
 ```json
 {
-  "detail": "API anahtari eksik. 'X-API-Key' header'i gerekli."
+  "detail": "Not authenticated"
 }
 ```
 

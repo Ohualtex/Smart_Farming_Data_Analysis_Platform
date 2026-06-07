@@ -3,6 +3,8 @@
 **Görev:** Proje Amacı, Kapsamı ve Veri Kaynakları Analizi
 **Tarih:** 08.03.2026
 
+> ⚠️ **Tarihsel plan dökümanı** — Cycle 1-2 planlamasıdır; nihai sistemle farklılıklar içerebilir. Güncel durum için README ve docs/FINAL_REPORT.md'ye bakın.
+
 ---
 
 ## 1. Proje Vizyonu ve Stratejik Amaclar
