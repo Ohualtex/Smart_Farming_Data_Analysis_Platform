@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="SFDAP - Akıllı Tarım Veri Analizi Platformu Dashboard">
     <title>SFDAP — Akıllı Tarım Dashboard</title>
+    <!-- Tema ilk-boya senkronu: temayı CSS boyamadan ÖNCE uygula ki welcome'da
+         gün/gece geçiş animasyonu ilk yüklemede oynamasın (durum değişmediği için
+         transition tetiklenmez → gündüz/gece statik gelir). Toggle yine animasyonlu. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('sfdap-theme');
+          if (!t) {
+            // İlk açılış: saat 06:00–20:00 arası GÜNDÜZ, 20:00–06:00 arası GECE.
+            var h = new Date().getHours();
+            t = (h >= 6 && h < 20) ? 'light' : 'dark';
+            localStorage.setItem('sfdap-theme', t); // sabitle → refresh değiştirmez
+          }
+          if (t === 'light') document.documentElement.dataset.theme = 'light';
+        } catch (e) {}
+      })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <!-- Leaflet — Türkiye haritası (Cycle 9 prep). CSS önce, JS body sonunda
          (main.js'den önce yüklenir; window.L global olarak erişilebilir). -->
@@ -33,7 +50,7 @@
      Site açılışında ilk karşılayan ekran. Sağ üstte tema + "Giriş Yap".
      Alt-ortada toprağa gömülü Filiz; tıklayınca topraktan fırlar.
      `_applyAuthGate(null)` bunu gösterir; "Giriş Yap" → #landing. -->
-<div id="welcome" class="welcome">
+<div id="welcome" class="welcome welcome-intro">
     <!-- 🌤️ Gökyüzü: light=bulutlar (gündüz), dark=yıldızlar (gece). Tema geçişinde
          bulutlar yanlara dağılır; yıldızların bir kısmı yukarıdan iner, bir kısmı yerinde belirir. -->
     <div class="welcome-sky" aria-hidden="true">

@@ -69,6 +69,15 @@ setNavigate(navigate);
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function init() {
+    // Welcome ilk-giriş: .welcome-intro from-state'leri ilk-boyada uygulanır;
+    // ardından kaldırılır → elemanlar doğal duruma TRANSITION ile "girer" (toggle
+    // ile aynı transition → animation-fill kilidi yok). RAF: görünür sekmede ~2
+    // frame, akıcı. setTimeout: gizli/arka-plan sekmede RAF duraklar → fallback
+    // ile state takılmaz (timer throttled da olsa firelanır).
+    const _dropIntro = () => document.getElementById('welcome')?.classList.remove('welcome-intro');
+    requestAnimationFrame(() => requestAnimationFrame(_dropIntro));
+    setTimeout(_dropIntro, 450);
+
     // API modülüne callback'leri bağla (circular dep önlemek için)
     initApiCallbacks({
         showToast,
@@ -223,10 +232,14 @@ function initTheme() {
     const btns = Array.from(document.querySelectorAll('.js-theme-toggle'));
     if (!btns.length) return;
 
-    // İlk tema: localStorage > sistem tercihi > dark default
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
-    const initial = stored || (prefersLight ? 'light' : 'dark');
+    // İlk tema: localStorage > saat-bazlı (06–20 gündüz, aksi gece). head'deki
+    // inline script ile aynı mantık; ilk açılışta sabitlenir (refresh değiştirmez).
+    let initial = localStorage.getItem(STORAGE_KEY);
+    if (!initial) {
+        const h = new Date().getHours();
+        initial = (h >= 6 && h < 20) ? 'light' : 'dark';
+        localStorage.setItem(STORAGE_KEY, initial);
+    }
     applyTheme(initial);
 
     btns.forEach(btn => btn.addEventListener('click', () => {
