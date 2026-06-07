@@ -249,8 +249,14 @@ export function openFieldDetail(fieldId) {
     document.getElementById('pageTitle').textContent = pageTitles['field-detail'][0];
     document.getElementById('pageSubtitle').textContent = pageTitles['field-detail'][1];
     if (location.hash !== `#field/${fieldId}`) location.hash = `#field/${fieldId}`;
+    // navigate() ile tutarlı: sayfa tepeden açılsın, odak kaydırmasın, mobil sidebar kapansın.
+    window.scrollTo(0, 0);
     const main = document.getElementById('main-content');
-    if (main) main.focus({ preventScroll: false });
+    if (main) main.focus({ preventScroll: true });
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.remove('open');
+    const hamburger = document.querySelector('.hamburger');
+    if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
     loadFieldDetail(fieldId);
 }
 
