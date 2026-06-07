@@ -248,7 +248,13 @@ function initTheme() {
     }
     applyTheme(initial);
 
+    let _cycleTimer = null;
     btns.forEach(btn => btn.addEventListener('click', () => {
+        // welcome sıralı gün-gece döngüsü: yönlü transition-delay'leri AKTİF et
+        // (yalnız kullanıcı toggle'ında; initial applyTheme'de değil → entrance temiz).
+        root.classList.add('welcome-cycle');
+        clearTimeout(_cycleTimer);
+        _cycleTimer = setTimeout(() => root.classList.remove('welcome-cycle'), 2300);
         const current = root.dataset.theme || 'dark';
         const next = current === 'light' ? 'dark' : 'light';
         applyTheme(next);

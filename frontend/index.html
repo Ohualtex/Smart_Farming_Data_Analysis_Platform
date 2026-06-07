@@ -51,6 +51,11 @@
      Alt-ortada toprağa gömülü Filiz; tıklayınca topraktan fırlar.
      `_applyAuthGate(null)` bunu gösterir; "Giriş Yap" → #landing. -->
 <div id="welcome" class="welcome welcome-intro">
+    <!-- 🎨 Gökyüzü renk katmanları: base=gündüz; günbatımı + gece overlay'leri
+         opacity ile crossfade. Toggle'da (.welcome-cycle) yönlü transition-delay
+         ile sıralı: gündüz→günbatımı (güneş batarken)→gece (ay çıkarken). Tersinir. -->
+    <div class="welcome-sky-sunset" aria-hidden="true"></div>
+    <div class="welcome-sky-night" aria-hidden="true"></div>
     <!-- 🌤️ Gökyüzü: light=bulutlar (gündüz), dark=yıldızlar (gece). Tema geçişinde
          bulutlar yanlara dağılır; yıldızların bir kısmı yukarıdan iner, bir kısmı yerinde belirir. -->
     <div class="welcome-sky" aria-hidden="true">

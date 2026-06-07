@@ -16,9 +16,35 @@
 .welcome {
     position: fixed; inset: 0; z-index: 1000;
     display: flex; flex-direction: column; overflow: hidden;
-    /* dashboard body ile ORTAK arka plan (--page-bg) — tema tutarlılığı */
-    background: var(--page-bg);
+    /* base = GÜNDÜZ gökyüzü; gece/günbatımı overlay katmanlarıyla crossfade edilir */
+    background: linear-gradient(180deg, #8ec8ea 0%, #c4e6f3 44%, #ecf7ef 100%);
 }
+
+/* ─── GÖKYÜZÜ RENK KATMANLARI — gündüz→günbatımı→gece (smooth + sıralı) ──────
+   base (.welcome) = gündüz. sunset + night overlay'leri opacity ile crossfade;
+   night, sunset'in ÜSTÜNDE (DOM sırası). Sıralama .welcome-cycle (toggle) altında
+   yönlü transition-delay ile (aşağıda). z-index 0 → bulut/yıldız/güneş/ay arkasında. */
+.welcome-sky-sunset, .welcome-sky-night {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    transition: opacity 1.1s ease;
+}
+.welcome-sky-sunset { background: linear-gradient(180deg, #3a4a7a 0%, #8a5a8e 20%, #d9745f 48%, #f0954e 72%, #ffd49e 100%); }
+.welcome-sky-night  { background: linear-gradient(180deg, #0a1730 0%, #13294c 55%, #1d3a55 100%); }
+/* GECE (default): iki overlay de görünür (night, sunset'i örter) → gece */
+.welcome-sky-sunset, .welcome-sky-night { opacity: 1; }
+/* GÜNDÜZ: ikisi de saydam → base gündüz görünür */
+[data-theme="light"] .welcome-sky-sunset,
+[data-theme="light"] .welcome-sky-night { opacity: 0; }
+
+/* ─── SIRALI GÜN-GECE DÖNGÜSÜ — yalnız toggle (.welcome-cycle, root'ta; JS ekler) ─
+   Aşama 1 (0–1.1s): güneş bat + bulut dağıl + gökyüzü→günbatımı.
+   Aşama 2 (1.1–2.2s): ay çık + yıldız belir + günbatımı→gece. Tersinir.
+   transition-delay END duruma göre okunur: geceye giderken aşama-2 öğeleri 1.1s
+   gecikir; gündüze giderken tam tersi. Entrance (.welcome-cycle yok) etkilenmez. */
+.welcome-cycle .welcome-sun,  .welcome-cycle .wcloud, .welcome-cycle .welcome-sky-sunset { transition-delay: 0s; }
+.welcome-cycle .welcome-moon, .welcome-cycle .wstar,  .welcome-cycle .welcome-sky-night  { transition-delay: 1.1s; }
+[data-theme="light"].welcome-cycle .welcome-sun,  [data-theme="light"].welcome-cycle .wcloud, [data-theme="light"].welcome-cycle .welcome-sky-sunset { transition-delay: 1.1s; }
+[data-theme="light"].welcome-cycle .welcome-moon, [data-theme="light"].welcome-cycle .wstar,  [data-theme="light"].welcome-cycle .welcome-sky-night  { transition-delay: 0s; }
 
 /* ─── ÜST BAR (SFDAP üst-orta) ─────────────────────── */
 .welcome-topbar {
@@ -40,7 +66,7 @@
     z-index: 2;  /* toprağın (z-index 3) ALTINDA → batışta soil arkasında kalır */
     /* opacity: yalnız ilk-giriş "parlayarak/opaklaşarak" için (toggle'da opacity
        sabit 1; gizlenme soil occlusion ile). transform: toggle batış/doğuş. */
-    transition: transform 1.15s cubic-bezier(.5,0,.4,1), opacity .9s ease, filter .3s ease;
+    transition: transform 1.1s cubic-bezier(.5,0,.4,1), opacity .9s ease, filter .3s ease;
 }
 .welcome-sun svg, .welcome-moon svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .welcome-sun  { top: 2px; left: 2px; width: 150px; height: 150px; filter: drop-shadow(0 0 16px rgba(252,211,77,.55)); }
@@ -62,18 +88,13 @@
 /* ─── GÖKYÜZÜ: bulutlar (gündüz) + yıldızlar (gece) ─── */
 .welcome-sky { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
 
-/* LIGHT: welcome (landing) canlı gündüz gökyüzünü kullanır — dashboard'ın
-   yumuşak --page-bg tonundan ayrı, bold dursun (dark'ta ortak --page-bg). */
-[data-theme="light"] .welcome {
-    background: linear-gradient(180deg, #8ec8ea 0%, #c4e6f3 44%, #ecf7ef 100%);
-}
 
 /* Bulutlar (açık gri/beyaz, saydam) — gündüzde görünür, geceye geçişte yanlara dağılır.
    --fromx/--sc: giriş animasyonu (welcomeCloudIn) için yön + ölçek. */
 .wcloud {
     position: absolute; width: 130px; height: 40px; border-radius: 40px;
     background: rgba(255,255,255,.92); opacity: 0;
-    transition: transform 1.2s cubic-bezier(.4,0,.2,1), opacity 1s ease;
+    transition: transform 1.1s cubic-bezier(.4,0,.2,1), opacity 1s ease;
 }
 .wcloud::before, .wcloud::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
 .wcloud::before { width: 58px; height: 58px; top: -26px; left: 20px; }
