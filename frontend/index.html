@@ -51,6 +51,9 @@
      Alt-ortada toprağa gömülü Filiz; tıklayınca topraktan fırlar.
      `_applyAuthGate(null)` bunu gösterir; "Giriş Yap" → #landing. -->
 <div id="welcome" class="welcome welcome-intro">
+  <!-- 📌 Sabit (sticky) sahne: scroll boyunca ekranda kalır; .welcome-underground
+       kayarken toprak+Filiz yükselir (scroll-linked, Faz 1b). -->
+  <div class="welcome-pin">
     <!-- 🎨 Gökyüzü renk katmanları: base=gündüz; günbatımı + gece overlay'leri
          opacity ile crossfade. Toggle'da (.welcome-cycle) yönlü transition-delay
          ile sıralı: gündüz→günbatımı (güneş batarken)→gece (ay çıkarken). Tersinir. -->
@@ -138,6 +141,7 @@
         <span class="welcome-dirt" style="--dx:66px;--dy:-40px;--delay:.07s"></span>
 
         <!-- FİLİZ — toprağa gömülü, tıklayınca fırlar -->
+        <div class="welcome-filiz-rise"><!-- scroll yükselişinde Filiz'i yörüngede taşır (normal boyut; soil scale'inden bağımsız) -->
         <button class="welcome-filiz" id="welcomeFiliz" data-action="filizInteract"
                 aria-label="Filiz'i topraktan çıkar" title="Tıkla — Filiz topraktan fırlasın!">
             <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
@@ -235,6 +239,7 @@
                 </g>
             </svg>
         </button>
+        </div><!-- /.welcome-filiz-rise -->
 
         <!-- TOPRAK (tam genişlik; ortada hafif höyük, filiz'in önünde) -->
         <div class="welcome-soil" aria-hidden="true">
@@ -261,6 +266,9 @@
             </svg>
         </div>
     </div>
+  </div><!-- /.welcome-pin -->
+  <!-- 🌱 Toprak-altı: scroll mesafesi + Faz 2'de tanıtım kartları buraya gelecek -->
+  <div class="welcome-underground" aria-hidden="true"></div>
 </div>
 
 <!-- ═══ ÖN PANEL (LANDING / AUTH GATE) ═══════════════════════════

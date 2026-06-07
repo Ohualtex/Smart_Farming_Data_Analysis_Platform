@@ -224,6 +224,23 @@ async function init() {
     // Filiz maskotu
     initFiliz();
     initWelcomeFilizEyes();   // welcome filiz göz takibi (fareyi takip)
+    // Welcome scrollytelling: kamera toprağa dalış doğal scroll ile (pin relative).
+    // --rise (0=yüzey, 1=ilk ekran kaydırıldı) → yay-eğim süsü için (sonra eklenecek).
+    (() => {
+        const welcome = document.getElementById("welcome");
+        const pin = document.querySelector(".welcome-pin");
+        if (!welcome || !pin) return;
+        let ticking = false;
+        const update = () => {
+            const rise = Math.min(welcome.scrollTop / Math.max(welcome.clientHeight, 1), 1);
+            pin.style.setProperty("--rise", rise.toFixed(4));
+            ticking = false;
+        };
+        welcome.addEventListener("scroll", () => {
+            if (!ticking) { requestAnimationFrame(update); ticking = true; }
+        }, { passive: true });
+        update();
+    })();
 
     // Tema (light/dark)
     initTheme();

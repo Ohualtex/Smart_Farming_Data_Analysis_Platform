@@ -15,10 +15,40 @@
 
 .welcome {
     position: fixed; inset: 0; z-index: 1000;
-    display: flex; flex-direction: column; overflow: hidden;
+    display: flex; flex-direction: column;
+    overflow-y: auto; overflow-x: hidden;   /* scrollytelling: dahili dikey scroll */
+    scrollbar-width: none;                    /* scrollbar gizle (temiz tanıtım) */
     /* base = GÜNDÜZ gökyüzü; gece/günbatımı overlay katmanlarıyla crossfade edilir */
     background: linear-gradient(180deg, #8ec8ea 0%, #c4e6f3 44%, #ecf7ef 100%);
 }
+.welcome::-webkit-scrollbar { display: none; }
+
+/* 📌 Yüzey sahnesi (gökyüzü+toprak yüzeyi) — 100vh. Kamera dalışında doğal scroll'la
+   yukarı kayıp ÇIKAR (sticky DEĞİL). relative: absolute çocuklar (güneş/ay/gökyüzü/
+   toprak/filiz) buna göre konumlanır + pin'le birlikte kayar. */
+.welcome-pin {
+    position: relative;
+    height: 100vh; flex-shrink: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+/* 🌱 Toprak-altı (toprak içi) — kamera buraya dalar. Sabit-ölçek kahverengi gradient
+   (derinleştikçe koyulaşır); Faz 2/3 içeriği (kartlar, kök/köstebek/solucan) buraya. */
+.welcome-underground {
+    flex-shrink: 0;
+    height: 200vh;
+    position: relative; z-index: 4;   /* soil(3)+filiz(2) üstünde → bindirme seam'i + Filiz sızmasını örter */
+    margin-top: -8px;   /* pin altıyla hafif bindirme → sub-pixel boşluk/sızma kapanır (dikişsiz) */
+    /* üst = soil SVG dibi (#4e3119) → dikişsiz geçiş; aşağı koyulaşır (derinlik) */
+    background: linear-gradient(180deg, #4e3119 0%, #3a2614 45%, #281a0d 100%);
+}
+
+/* ─── SCROLLYTELLING: kamera toprağa DALIŞ ───────────────────────────────────
+   Mekanik (büyütme YOK, sabit ölçek): pin (gökyüzü+yüzey) doğal scroll'da yukarı
+   kayıp çıkar; altındaki .welcome-underground (kahverengi toprak içi) ekranı
+   doldurur → yeraltına dalarız. Filiz yüzeyle birlikte yukarı çıkıp kaybolur.
+   (Yay-eğim süsü ayrı adımda eklenecek; .welcome-filiz-rise şimdilik passthrough
+   → iç Filiz z-index'i (2, soil arkasında) geçerli → tıkla-çık arkadan belirir.) */
 
 /* ─── GÖKYÜZÜ RENK KATMANLARI — gündüz→günbatımı→gece (smooth + sıralı) ──────
    base (.welcome) = gündüz. sunset + night overlay'leri opacity ile crossfade;
