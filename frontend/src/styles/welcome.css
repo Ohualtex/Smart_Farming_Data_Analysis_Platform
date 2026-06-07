@@ -10,9 +10,8 @@
 .welcome {
     position: fixed; inset: 0; z-index: 1000;
     display: flex; flex-direction: column; overflow: hidden;
-    background:
-        radial-gradient(1100px 520px at 50% -8%, var(--primary-glow), transparent),
-        linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
+    /* dashboard body ile ORTAK arka plan (--page-bg) — tema tutarlılığı */
+    background: var(--page-bg);
 }
 
 /* ─── ÜST BAR (SFDAP üst-orta) ─────────────────────── */
@@ -49,7 +48,8 @@
 /* ─── GÖKYÜZÜ: bulutlar (gündüz) + yıldızlar (gece) ─── */
 .welcome-sky { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
 
-/* LIGHT arka plan = gündüz gökyüzü (mavi → açık) */
+/* LIGHT: welcome (landing) canlı gündüz gökyüzünü kullanır — dashboard'ın
+   yumuşak --page-bg tonundan ayrı, bold dursun (dark'ta ortak --page-bg). */
 [data-theme="light"] .welcome {
     background: linear-gradient(180deg, #8ec8ea 0%, #c4e6f3 44%, #ecf7ef 100%);
 }
