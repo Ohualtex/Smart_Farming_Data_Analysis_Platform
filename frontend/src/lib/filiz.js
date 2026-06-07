@@ -10,7 +10,7 @@
 import { api } from "./api.js";
 import { getCurrentUser, getApiOnline } from "./session.js";
 
-/** Filiz'i topraktan yavaşça çıkar; 3 sn sonra geri gömül. (welcome ekranı)
+/** Filiz'i topraktan yavaşça çıkar; 5 sn sonra geri gömül. (welcome ekranı)
  *  Konuşma yok — sadece çık/gir animasyonu. Tekrar tıklanırsa süre yenilenir. */
 let _filizPopTimer = null;
 export function popFiliz() {
@@ -21,7 +21,28 @@ export function popFiliz() {
     _filizPopTimer = setTimeout(() => {
         stage.classList.remove('popped');
         _filizPopTimer = null;
-    }, 3000);
+    }, 5000);
+}
+
+/** Welcome filiz göz takibi: pupil grupları (#welcomeFilizPupilL/R) imleci
+ *  hafifçe takip eder. Welcome ekranına özel; dashboard mascot'tan bağımsız. */
+export function initWelcomeFilizEyes() {
+    const filiz = document.getElementById('welcomeFiliz');
+    const pupilL = document.getElementById('welcomeFilizPupilL');
+    const pupilR = document.getElementById('welcomeFilizPupilR');
+    if (!filiz || !pupilL || !pupilR) return;
+    document.addEventListener('mousemove', (e) => {
+        const rect = filiz.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height * 0.5;   // göz hizası ~ SVG ortası
+        const dx = e.clientX - cx, dy = e.clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        const max = 2.6;   // SVG koordinatlarında pupil hareket aralığı
+        const ux = (dx / Math.max(dist, 1)) * Math.min(dist / 160, 1) * max;
+        const uy = (dy / Math.max(dist, 1)) * Math.min(dist / 160, 1) * max;
+        pupilL.style.transform = `translate(${ux}px, ${uy}px)`;
+        pupilR.style.transform = `translate(${ux}px, ${uy}px)`;
+    });
 }
 
 /* ─── 🌱 FİLİZ MASKOTU ─────────────────────────────────────── */

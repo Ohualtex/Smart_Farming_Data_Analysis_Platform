@@ -39,7 +39,7 @@ import {
     doLogin, doRegister, doChangePassword, doLogout,
     loadUsers, createUser, changeUserRole, resetUserPassword, deleteUser,
 } from "./lib/pages/account.js";
-import { popFiliz, initFiliz } from "./lib/filiz.js";
+import { popFiliz, initFiliz, initWelcomeFilizEyes } from "./lib/filiz.js";
 
 let refreshInterval = null;
 
@@ -218,6 +218,7 @@ async function init() {
 
     // Filiz maskotu
     initFiliz();
+    initWelcomeFilizEyes();   // welcome filiz göz takibi (fareyi takip)
 
     // Tema (light/dark)
     initTheme();

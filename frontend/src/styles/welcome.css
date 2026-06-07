@@ -161,20 +161,24 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
 
 /* Filiz — toprağa gömülü; soil'in ARKASINDA (z-index düşük) */
 .welcome-filiz {
-    position: absolute; left: 50%; bottom: 26px;
-    width: 280px; height: 327px; z-index: 2;
+    position: absolute; left: 50%; bottom: 44px;
+    width: 248px; height: 290px; z-index: 2;   /* biraz küçültüldü; soil (z-index 3) ARKASINDA */
     background: none; border: none; padding: 0; cursor: pointer;
-    transform: translateX(-50%) translateY(35%);   /* gömülü: yalnız sap + yaprak görünür */
-    transition: transform 1.3s cubic-bezier(.22,1,.36,1), filter .3s ease;  /* yavaşça */
+    transform: translateX(-50%) translateY(38%);   /* gömülü: yalnız sap + yaprak görünür */
+    transition: transform 1.4s cubic-bezier(.34,1.2,.4,1), filter .3s ease;  /* yavaşça, hafif yaylanma */
     filter: drop-shadow(0 12px 18px rgba(16,185,129,.28));
 }
+/* Göz takibi: pupil grubu fareye doğru yumuşak kayar (filiz.js mousemove) */
+.welcome-filiz .wf-pupil { transition: transform .12s ease-out; }
 .welcome-filiz svg { width: 100%; height: 100%; overflow: visible; display: block; }
 .welcome-filiz:hover { filter: drop-shadow(0 14px 24px rgba(16,185,129,.5)); }
 .welcome-filiz:focus-visible { outline: none; }
 .welcome-filiz:focus-visible svg { filter: drop-shadow(0 0 3px var(--primary)); }
 .welcome-stage.popped .welcome-filiz {
-    transform: translateX(-50%) translateY(-20%);   /* yavaşça çıktı: gövde + kollar höyük üstünde */
-    z-index: 4;
+    /* z-index DEĞİŞMEZ (2 = soil'in arkasında) → "perde önüne geçme" değil, topraktan
+       ÇIKMA hissi: soil (z-index 3) alt gövdeyi örter, üst (yüz + gövde) höyüğün
+       üstünde belirir; alt gövde toprakta gömülü kalır (groundhog gibi). */
+    transform: translateX(-50%) translateY(-15%);
 }
 
 /* Filiz canlandırmaları (filiz.css'teki global keyframe'leri kullanır) */
