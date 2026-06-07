@@ -318,9 +318,8 @@
             <a class="nav-item" href="#users" data-action="navigate" data-arg="users" data-role="admin" style="display:none;">
                 <span class="icon" aria-hidden="true">👥</span> Kullanıcılar
             </a>
-            <a class="nav-item" href="#auth" data-action="navigate" data-arg="auth">
-                <span class="icon" aria-hidden="true">👤</span> Hesabım
-            </a>
+            <!-- "Hesabım" sidebar'dan kaldırıldı: sağ üstteki kullanıcı çipine
+                 tıklayınca zaten Hesabım (#auth) açılıyor (tüm roller için). -->
             <!-- API Rehberi sidebar'dan çıkarıldı, header'a `</>` ikonu olarak taşındı.
                  Çiftçi-dostu UI için: çiftçi sekmeleri ile geliştirici aracını ayır. -->
         </nav>
@@ -360,7 +359,7 @@
                 </div>
                 <!-- Kullanıcı rozeti — login sonrası refreshAuthState() doldurur.
                      REBUILD Faz 2 / Adım 7: rol-aware badge. Tıklayınca Hesabım. -->
-                <a class="user-badge" id="userBadge" href="#auth" style="display:none;"
+                <a class="user-badge" id="userBadge" href="#auth" data-action="navigate" data-arg="auth" style="display:none;"
                    aria-label="Hesap özeti — tıkla Hesabım sayfasına git"
                    title="Hesabım">
                     <span class="user-badge-role" id="userBadgeRole" data-role="farmer">çiftçi</span>
@@ -369,6 +368,7 @@
                           aria-label="Sahip olunan çiftlik sayısı" title="Çiftlikler">🚜&nbsp;0</span>
                 </a>
                 <a class="dev-link" href="/docs" target="_blank" rel="noopener"
+                   data-role="admin,developer" style="display:none;"
                    aria-label="API Rehberi (Geliştiriciler için)"
                    title="API Rehberi · Geliştiriciler için (Swagger /docs)">&lt;/&gt;</a>
                 <button class="theme-toggle js-theme-toggle" id="themeToggle" aria-label="Tema değiştir" title="Tema değiştir">
