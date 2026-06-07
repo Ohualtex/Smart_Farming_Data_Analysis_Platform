@@ -20,6 +20,14 @@ export const analyticsColors = {
     pink: '#ec4899', lime: '#84cc16',
 };
 
+// Tema-duyarlı grafik renkleri — canvas içi yazı/ızgara (chart OLUŞTURULURKEN okunur,
+// sayfa değişiminde yeniden render edilince temaya uyar). Light: koyu yazı + açık ızgara.
+const _isLight = () => document.documentElement.dataset.theme === 'light';
+// Light: koyu yazı / açık ızgara. Dark: AÇIK yazı (okunur) / koyu ızgara.
+export const chartTick = () => (_isLight() ? '#314257' : '#aeb9c9');     // eksen etiketleri
+export const chartLegend = () => (_isLight() ? '#1e293b' : '#dbe2ec');   // legend / başlık
+export const chartGrid = () => (_isLight() ? 'rgba(20,80,140,.14)' : 'rgba(148,163,184,.16)'); // ızgara
+
 export function renderMoistureChart(data) {
     const sorted = [...data].reverse();
     const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
@@ -28,8 +36,8 @@ export function renderMoistureChart(data) {
     charts.moisture = new Chart(document.getElementById('moistureChart'), {
         type: 'line', data: { labels, datasets: [{ label: 'Nem %', data: values, borderColor: '#3b82f6',
             backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .4, pointRadius: 2 }] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
-            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+        options: { responsive: true, plugins: { legend: { labels: { color: chartLegend() } } },
+            scales: { x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }, y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } } } }
     });
 }
 
@@ -42,10 +50,10 @@ export function renderTempHumChart(data) {
             { label: 'Sıcaklık °C', data: sorted.map(d => d.temperature_c), borderColor: '#f59e0b', tension: .4, pointRadius: 2, yAxisID: 'y' },
             { label: 'Nem %', data: sorted.map(d => d.humidity_percent), borderColor: '#3b82f6', tension: .4, pointRadius: 2, yAxisID: 'y1' },
         ] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
+        options: { responsive: true, plugins: { legend: { labels: { color: chartLegend() } } },
             scales: {
-                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
-                y: { position: 'left', ticks: { color: '#f59e0b' }, grid: { color: '#1f2937' } },
+                x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } },
+                y: { position: 'left', ticks: { color: '#f59e0b' }, grid: { color: chartGrid() } },
                 y1: { position: 'right', ticks: { color: '#3b82f6' }, grid: { display: false } },
             } }
     });
@@ -58,8 +66,8 @@ export function renderPrecipChart(data) {
     charts.precip = new Chart(document.getElementById('precipChart'), {
         type: 'bar', data: { labels, datasets: [{ label: 'Yağış mm', data: sorted.map(d => d.precipitation_mm),
             backgroundColor: 'rgba(6,182,212,.5)', borderColor: '#06b6d4', borderWidth: 1 }] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
-            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+        options: { responsive: true, plugins: { legend: { labels: { color: chartLegend() } } },
+            scales: { x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }, y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } } } }
     });
 }
 
@@ -75,7 +83,7 @@ export function renderSensorTypeChart(dist) {
         },
         options: {
             responsive: true, cutout: '60%',
-            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 16, font: { size: 12 } } } }
+            plugins: { legend: { position: 'bottom', labels: { color: chartLegend(), padding: 16, font: { size: 12 } } } }
         }
     });
 }
@@ -112,11 +120,11 @@ export function renderFarmTempChart(comparison) {
         },
         options: {
             responsive: true, indexAxis: 'y',
-            plugins: { legend: { labels: { color: '#9ca3af' } },
-                title: { display: true, text: 'Bölge Bazlı Sıcaklık Karşılaştırması', color: '#9ca3af', font: { size: 13 } } },
+            plugins: { legend: { labels: { color: chartLegend() } },
+                title: { display: true, text: 'Bölge Bazlı Sıcaklık Karşılaştırması', color: chartLegend(), font: { size: 13 } } },
             scales: {
-                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' }, title: { display: true, text: '°C', color: '#6b7280' } },
-                y: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { color: '#1f2937' } }
+                x: { ticks: { color: chartTick() }, grid: { color: chartGrid() }, title: { display: true, text: '°C', color: chartTick() } },
+                y: { ticks: { color: chartLegend(), font: { size: 11 } }, grid: { color: chartGrid() } }
             }
         }
     });
@@ -139,8 +147,8 @@ export function renderIrrigationStatusChart(dist) {
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 16, font: { size: 12 } } } },
-            scales: { r: { ticks: { color: '#6b7280', backdropColor: 'transparent' }, grid: { color: '#1f293766' } } }
+            plugins: { legend: { position: 'bottom', labels: { color: chartLegend(), padding: 16, font: { size: 12 } } } },
+            scales: { r: { ticks: { color: chartTick(), backdropColor: 'transparent' }, grid: { color: chartGrid() } } }
         }
     });
 }
@@ -160,8 +168,8 @@ export function renderNpkRadarChart(profiles) {
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', padding: 16 } } },
-            scales: { r: { ticks: { color: '#6b7280', backdropColor: 'transparent' }, grid: { color: '#1f293766' }, pointLabels: { color: '#9ca3af', font: { size: 11 } } } }
+            plugins: { legend: { position: 'bottom', labels: { color: chartLegend(), padding: 16 } } },
+            scales: { r: { ticks: { color: chartTick(), backdropColor: 'transparent' }, grid: { color: chartGrid() }, pointLabels: { color: chartLegend(), font: { size: 11 } } } }
         }
     });
 }
@@ -205,11 +213,11 @@ export function renderDailyTrendChart(trends) {
         data: { labels, datasets },
         options: {
             responsive: true,
-            plugins: { legend: { labels: { color: '#9ca3af', font: { size: 11 } } },
-                title: { display: true, text: 'Bölge Bazlı Günlük Sıcaklık Trendi', color: '#9ca3af', font: { size: 13 } } },
+            plugins: { legend: { labels: { color: chartLegend(), font: { size: 11 } } },
+                title: { display: true, text: 'Bölge Bazlı Günlük Sıcaklık Trendi', color: chartLegend(), font: { size: 13 } } },
             scales: {
-                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
-                y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' }, title: { display: true, text: '°C', color: '#6b7280' } }
+                x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } },
+                y: { ticks: { color: chartTick() }, grid: { color: chartGrid() }, title: { display: true, text: '°C', color: chartTick() } }
             }
         }
     });
@@ -230,10 +238,10 @@ export function renderSensorStatsChart(stats) {
         },
         options: {
             responsive: true,
-            plugins: { legend: { labels: { color: '#9ca3af' } } },
+            plugins: { legend: { labels: { color: chartLegend() } } },
             scales: {
-                x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
-                y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }
+                x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } },
+                y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }
             }
         }
     });

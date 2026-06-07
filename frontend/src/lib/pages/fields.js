@@ -9,7 +9,7 @@
 import { _fmtNumber, _escAttr, showToast } from "../utils.js";
 import { apiAuth, getAuthToken, API_BASE } from "../api.js";
 import { _skeletonBlock, _setBusy } from "../skeleton.js";
-import { charts } from "../charts.js";
+import { charts, chartTick, chartLegend, chartGrid } from "../charts.js";
 import { renderFieldDetail } from "../render.js";
 import { pageTitles } from "../router.js";
 import { navigate } from "../nav.js";
@@ -281,8 +281,8 @@ async function loadFieldReadingsChart(fieldId) {
     charts.fieldReadings = new Chart(canvas, {
         type: 'line',
         data: { labels, datasets: [{ label: 'Nem %', data: values, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .4, pointRadius: 2 }] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
-            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+        options: { responsive: true, plugins: { legend: { labels: { color: chartLegend() } } },
+            scales: { x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }, y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } } } }
     });
 }
 

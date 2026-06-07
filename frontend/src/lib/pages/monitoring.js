@@ -10,7 +10,8 @@ import { _escAttr, showToast } from "../utils.js";
 import { api, apiAuth, getAuthToken, API_BASE, _authHeaders } from "../api.js";
 import { _skeletonCards, _skeletonRows, _skeletonBlock, _setBusy } from "../skeleton.js";
 import { charts, renderSensorTypeChart, renderFarmTempChart, renderIrrigationStatusChart,
-         renderNpkRadarChart, renderDailyTrendChart, renderSensorStatsChart } from "../charts.js";
+         renderNpkRadarChart, renderDailyTrendChart, renderSensorStatsChart,
+         chartTick, chartLegend, chartGrid } from "../charts.js";
 import { loadMap as _loadMapImpl } from "../map.js";
 import { renderPlantResult } from "../render.js";
 import { getCurrentFieldId, loadFieldDetail } from "./fields.js";
@@ -73,8 +74,8 @@ export async function loadSensorDetail(sensorId) {
         type: 'line', data: { labels: sorted.map(r => new Date(r.reading_timestamp).toLocaleDateString('tr')),
             datasets: [{ label: 'Nem %', data: sorted.map(r => r.moisture_percent), borderColor: '#10b981',
                 backgroundColor: 'rgba(16,185,129,.1)', fill: true, tension: .4 }] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
-            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+        options: { responsive: true, plugins: { legend: { labels: { color: chartLegend() } } },
+            scales: { x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }, y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } } } }
     });
     document.getElementById('sensorInfoBox').innerHTML = `<h3>ℹ️ Sensör #${sensorId}</h3>
         <p style="margin:12px 0;color:var(--text-muted)">Toplam ${readings.length} okuma</p>
@@ -105,16 +106,16 @@ export async function loadWeather() {
     charts.weatherTemp = new Chart(document.getElementById('weatherTempChart'), {
         type: 'line', data: { labels, datasets: [{ label: 'Sıcaklık °C', data: sorted.map(d => d.temperature_c),
             borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.1)', fill: true, tension: .4, pointRadius: 2 }] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
-            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+        options: { responsive: true, plugins: { legend: { labels: { color: chartLegend() } } },
+            scales: { x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }, y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } } } }
     });
     // Wind chart
     if (charts.weatherWind) charts.weatherWind.destroy();
     charts.weatherWind = new Chart(document.getElementById('weatherWindChart'), {
         type: 'bar', data: { labels, datasets: [{ label: 'Rüzgar km/h', data: sorted.map(d => d.wind_speed_kmh || 0),
             backgroundColor: 'rgba(139,92,246,.4)', borderColor: '#8b5cf6', borderWidth: 1 }] },
-        options: { responsive: true, plugins: { legend: { labels: { color: '#9ca3af' } } },
-            scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }, y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } } } }
+        options: { responsive: true, plugins: { legend: { labels: { color: chartLegend() } } },
+            scales: { x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }, y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } } } }
     });
 }
 
