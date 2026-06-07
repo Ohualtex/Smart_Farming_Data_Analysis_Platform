@@ -13,7 +13,7 @@
 
 ```bash
 cd Smart_Farming_Data_Analysis_Platform
-# Taze çiftçi-odaklı demo seed (5 kullanıcı, 3 çiftlik, 6 tarla)
+# Taze çiftçi-odaklı demo seed (6 kullanıcı, 3 çiftlik, 6 tarla)
 rm -f sfdap_dev.db && python database/seed_data.py
 make run                 # uvicorn → http://localhost:8000
 ```
@@ -24,9 +24,14 @@ Tarayıcıda aç: **http://localhost:8000/dashboard/** (+ opsiyonel `/docs` Swag
 
 | Rol | E-posta | Şifre |
 |:--|:--|:--|
-| 🧑‍🌾 Çiftçi | `ahmet@demo.test` | `DemoCiftci2026` |
-| 🛡️ Admin | `admin@demo.test` | `DemoAdmin2026` |
-| 🏛️ Gözetmen | `overseer@demo.test` | `DemoGozetmen2026` |
+| 🧑‍🌾 Çiftçi *(ana persona)* | `ahmet@demo.test` | `123456` |
+| 🧑‍🌾 Çiftçi | `ayse@demo.test` | `123456` |
+| 🧑‍🌾 Çiftçi | `mehmet@demo.test` | `123456` |
+| 🛠️ Geliştirici | `developer@demo.test` | `123456` |
+| 🏛️ Gözetmen | `overseer@demo.test` | `123456` |
+| 🛡️ Admin | `admin@demo.test` | `123456` |
+
+> Tüm demo hesaplarının şifresi `123456` (seed_data.py `DEMO_PASSWORD`).
 
 ---
 
@@ -39,7 +44,7 @@ Tarayıcıda aç: **http://localhost:8000/dashboard/** (+ opsiyonel `/docs` Swag
 
 **Göster:** `/dashboard/` açılır → full-screen **ön panel** (giriş ekranı) karşılar.
 - "Hesabın yok mu? Kayıt ol" linki → kayıt formu (gizli, isteğe bağlı)
-- `ahmet@demo.test` / `DemoCiftci2026` ile **giriş yap**
+- `ahmet@demo.test` / `123456` ile **giriş yap**
 
 > *"Giriş yapınca header'da yeşil 'çiftçi' rozeti + sahip olduğu çiftlik sayısı."*
 
@@ -133,11 +138,11 @@ Tarayıcıda aç: **http://localhost:8000/dashboard/** (+ opsiyonel `/docs` Swag
 
 **Terminal:**
 ```bash
-make test            # 622 backend test
-cd frontend && npm test   # 32 frontend (Vitest)
+make test            # 586 backend test
+cd frontend && npm test   # 74 frontend (Vitest)
 ```
 
-> *"622 backend + 32 frontend test, ruff lint+format temiz, bandit medium+ 0 issue.
+> *"586 backend + 74 frontend test, ruff lint+format temiz, bandit medium+ 0 issue.
 > 4 GitHub Actions workflow (lint+test+migrations+fuzz / security / a11y).
 > Pre-commit hook'larıyla her commit denetimden geçiyor."*
 

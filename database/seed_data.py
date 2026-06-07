@@ -6,7 +6,7 @@ Bunun yerine birkaç **demo çiftçi** + **admin/gözetmen** hesabıyla, onboard
 ve sunum demosu için yeterli küçük bir veri seti üretir.
 
 Üretilen:
-- 5 kullanıcı: admin, gözetmen (overseer) + 3 çiftçi (ahmet/ayşe/mehmet)
+- 6 kullanıcı: admin, gözetmen (overseer), geliştirici (developer) + 3 çiftçi (ahmet/ayşe/mehmet)
 - 3 çiftlik (farklı bölgeler) · 6 tarla
 - Tarla başına 1 sensör + ~15 diurnal toprak nemi okuması
 - Çiftlik başına hava durumu kayıtları

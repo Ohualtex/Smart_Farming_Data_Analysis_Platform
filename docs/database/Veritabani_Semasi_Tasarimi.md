@@ -50,7 +50,7 @@ Detay: soil_mineral_results NPK (Azot-Fosfor-Potasyum) + 9 mikro besin elementin
 4. Hava Durumu Verileri
 Tablo	Açıklama	Önemli Kolonlar
 weather_stations	Meteoroloji istasyonları	id, farm_id (FK), station_name, lat, lng, data_source (API/yerel)
-weather_data	Anlık/saatlik hava verisi	id, station_id (FK), recorded_at, temperature_c, humidity_percent, precipitation_mm, wind_speed_kmh, wind_direction, solar_radiation_w_m2, uv_index, atmospheric_pressure_hpa, evapotranspiration_mm
+weather_data	Anlık/saatlik hava verisi	id, farm_id (FK), recorded_at, temperature_c, humidity_percent, precipitation_mm, wind_speed_kmh, solar_radiation, uv_index
 weather_forecasts	Hava tahmini (7 gün)	id, station_id (FK), forecast_date, temp_min_c, temp_max_c, precipitation_probability, precipitation_expected_mm
 5. Bitki Sağlığı & Hastalık Tespiti
 Tablo	Açıklama	Önemli Kolonlar

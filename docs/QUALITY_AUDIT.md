@@ -10,7 +10,7 @@ Bu doküman, repo'nun mevcut kalite durumunu fotoğraflar ve hâlâ açık olan 
 
 | Boyut | Değer | Hedef | Durum |
 |:--|:--:|:--:|:--:|
-| **Test sayısı** | **425** (350 → 365 → 372 → 400 → 425) | — | ✅ |
+| **Test sayısı** | **586 backend** pytest (+64 schemathesis fuzz, lokalde skip) · **74 frontend** Vitest | — | ✅ |
 | **Coverage** | **%95.04** | %95+ | ✅ Hedef geçildi (pagination test paketiyle) |
 | **Ruff (genişletilmiş kural seti)** | 0 hata | 0 | ✅ |
 | **Bandit (medium+ severity)** | 0 issue | 0 | ✅ |
@@ -19,10 +19,10 @@ Bu doküman, repo'nun mevcut kalite durumunu fotoğraflar ve hâlâ açık olan 
 | **axe-core CI** | WCAG 2.0 + 2.1 A/AA, weekly cron | 0 critical violation | ⏳ İlk run sonrası kalan warning'lar değerlendirilir |
 | **CI/CD pipeline** | 3 workflow (ci + security + a11y) | — | ✅ |
 | **CI job sayısı** | 4 (lint + test + migrations + fuzz) + 2 security + 1 a11y | — | ✅ |
-| **Endpoint sayısı** | 66 (16 router) | — | ✅ |
+| **Endpoint sayısı** | 67 (16 router) | — | ✅ |
 | **ORM tablo sayısı** | 15 (initial 14 + aggregate) | — | ✅ |
 | **Alembic migration zinciri** | 4 revision (initial + aggregate + RBAC + FK index) | — | ✅ |
-| **Frontend mimarisi** | modüler ESM: markup-only `index.html` + `src/main.js` + 8 lib + 10 CSS modülü | — | ✅ a11y + skeleton + welcome |
+| **Frontend mimarisi** | modüler ESM: markup-only `index.html` + `src/main.js` (264 satır) + 11 lib + 10 CSS modülü | — | ✅ a11y + skeleton + welcome |
 | **Vite + axe-core CLI** | `frontend/package.json` scaffolded | — | ✅ |
 | **Dış bağımlılık güncelliği** | 7 minor outdated | major-stable | 🟡 |
 
@@ -184,20 +184,21 @@ Temel paketler tamamlandıktan sonra ele alınabilecek iyileştirmeler:
 ## 📈 Repo Büyüme Trendi
 
 ```
-Başlangıç  →  Üretim Çekirdeği  →  Cila & QA (mevcut)
+Başlangıç  →  Üretim Çekirdeği  →  REBUILD + Cila (mevcut, v1.0.0)
 ─────────────────────────────────────────────────────────────────
-Test         246    →  350               →  425     (+179 / +73%)
-Coverage     %86    →  %95.04            →  %95.04  (+9.0 pp, hedef ✅)
-LOC (app/)  ~3,300  →  ~4,803            →  ~5,400  (+~64%)
-Endpoint     41     →  43                →  43      (+2 pagination)
+Test         246    →  425               →  586 backend + 74 Vitest  (+ RBAC/CRUD/bildirim)
+Coverage     %86    →  %95.04            →  %95+    (eşik %80)
+LOC (app/)  ~3,300  →  ~4,803            →  ~5,800  (+ RBAC/dashboard/fields router)
+Endpoint     41     →  43                →  67      (+ dashboard/fields/onboarding + CRUD + RBAC)
 ORM tablo    14     →  15                →  15      (+1 aggregate)
-Migration    0      →  2                 →  2       (initial + aggregate)
+Migration    0      →  2                 →  4       (+ RBAC CHECK, + FK index)
+Rol          —      →  —                 →  4       (farmer/developer/overseer/admin)
 CI workflow  1      →  2                 →  3       (+ security, + a11y)
 CI job       2      →  3 + 2 sec         →  4 + 2 sec + 1 a11y  (fuzz + axe job)
 Pre-commit   2 hook →  3 hook            →  3 hook  (+ bandit)
 Ruff kural   8      →  17                →  17      (DTZ/ERA/PT/RET/C4/PIE/PERF/TRY/S)
-Frontend     2,200  →  2,972             →  ~3,100  (+ a11y/skeleton, Vite scaffold)
-Fuzz test    0      →  0                 →  25      (Schemathesis GET endpoint coverage)
+Frontend  2,972 tek →  ESM split         →  main.js 264 + 11 lib + 10 CSS modülü
+Fuzz test    0      →  25                →  64      (auth-aware GET/POST/PATCH/DELETE)
 A11y test    0      →  0                 →  28      (skip-link, landmarks, scope, aria-busy)
 ```
 

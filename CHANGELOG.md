@@ -22,6 +22,12 @@ tamamlandı. Ardından `main` üzerinde cila turları (fixroll), hoşgeldin
 senkronu yapıldı. **1.0.0**, Cycle 9 akademik teslim sürümüdür
 (`pyproject.toml` ile hizalı).
 
+**Final metrikler (1.0.0):** 16 router · 67 endpoint · 15 ORM tablo ·
+4 Alembic migration · 4 rol · 6 demo hesap · 17 bitki türü ·
+**586 backend pytest passed** (+64 schemathesis fuzz lokalde skip) ·
+**74 frontend Vitest** · coverage %95 (eşik %80) · ruff+format temiz ·
+bandit medium+ 0.
+
 ---
 
 ### REBUILD Faz 2-6 + 81-il temizliği (19-22 May 2026, ✅)

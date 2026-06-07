@@ -9,7 +9,7 @@
 [![A11y](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml/badge.svg)](https://github.com/Ohualtex/Smart_Farming_Data_Analysis_Platform/actions/workflows/a11y.yml)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue)
 ![Coverage 95%](https://img.shields.io/badge/Coverage-95%25-brightgreen)
-![Tests](https://img.shields.io/badge/Tests-650%20backend%20%2B%2059%20frontend-success)
+![Tests](https://img.shields.io/badge/Tests-586%20backend%20%2B%2074%20frontend-success)
 ![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-blue)
 ![License MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -29,6 +29,7 @@
 - [Test ve Kalite](#-test-ve-kalite)
 - [Geliştirme](#-geliştirme)
 - [Production Deploy](#-production-deploy)
+- [Bilinen Sınırlamalar](#-bilinen-sınırlamalar)
 - [Proje Durumu](#-proje-durumu)
 - [Anahtar Dokümanlar](#-anahtar-dokümanlar)
 - [Ekip & Lisans](#-ekip)
@@ -137,7 +138,7 @@ Sistem dört kullanıcı türünü destekler — her rol kendi dashboard görün
             └─ APScheduler (her gece hava fetch · haftalık sensör arşivleme)
 ```
 
-**Ölçek:** 16 router · **66 endpoint** · 15 ORM tablo · 4 Alembic migration · çiftçi-odaklı demo seed (birkaç çiftçi · çoklu çiftlik/tarla · 17 bitki türü).
+**Ölçek:** 16 router · **67 endpoint** · 15 ORM tablo · 4 Alembic migration · 4 rol (farmer/developer/overseer/admin) · 6 demo hesap · çiftçi-odaklı demo seed (çoklu çiftlik/tarla · 17 bitki türü).
 
 > **Frontend notu:** Üretimde Vite bundle servis edilmez — FastAPI `frontend/` kökünü `/dashboard` altına mount eder, tarayıcı ham ES modüllerini (`src/main.js` + `src/lib/*`) ve Chart.js/Leaflet'i CDN'den yükler. Vite yalnızca yerel geliştirme (`:5173` proxy) ve test/build aracıdır.
 
@@ -151,7 +152,7 @@ Sistem dört kullanıcı türünü destekler — her rol kendi dashboard görün
 app/
 ├── main.py              # FastAPI app: middleware + router include + static mount
 ├── config.py            # pydantic-settings; production fail-fast guard'lar
-├── routers/             # 16 router · 66 endpoint (farms, fields, sensors, irrigation, …)
+├── routers/             # 16 router · 67 endpoint (farms, fields, sensors, irrigation, …)
 ├── services/            # iş mantığı (weather, fertilizer, sensor_archiver, report, mqtt, …)
 ├── ml/                  # irrigation_model (RandomForest) · plant_disease_model · eval
 ├── models/models.py     # 15 SQLAlchemy ORM tablosu
@@ -160,8 +161,8 @@ app/
 └── tasks/scheduler.py   # APScheduler cron işleri
 frontend/
 ├── index.html           # markup (inline style/script yok)
-├── src/main.js          # SPA giriş noktası
-├── src/lib/*.js         # 8 modül (api, router, map, charts, render, skeleton, utils, ui_helpers)
+├── src/main.js          # SPA giriş noktası (264 satır — modüllere bölündü)
+├── src/lib/*.js         # 11 modül (api, router, map, charts, render, skeleton, utils, ui_helpers, session, nav, filiz)
 └── src/styles/*.css     # 10 modül (variables → … → welcome → filiz → theme)
 alembic/versions/        # 4 migration (initial → aggregate → RBAC → FK index)
 database/                # seed_data.py · turkey_data.py · sfdap_schema.sql (DDL dump)
@@ -199,8 +200,8 @@ Hatalar tutarlı **SFDAPError zarfı** ile döner: `{error_code, message, detail
 
 | Kategori | Değer | Komut |
 |:--|:--|:--|
-| Backend test | **650** (586 + 64 Schemathesis fuzz) | `make test` |
-| Frontend test | **59** (Vitest + jsdom) | `cd frontend && npm test` |
+| Backend test | **586** pytest passed (+64 Schemathesis fuzz, lokalde skip edilebilir) | `make test` |
+| Frontend test | **74** (Vitest + jsdom) | `cd frontend && npm test` |
 | Coverage | **%95** (CI eşiği %80) | `make test` |
 | Lint + format | Ruff temiz (17 kural grubu) | `make lint && make format` |
 | Source security | bandit (medium+) → 0 issue | `make audit` |
@@ -254,10 +255,25 @@ docker compose exec api alembic upgrade head            # Migration uygula
 
 ---
 
+## ⚠️ Bilinen Sınırlamalar
+
+Akademik kapsamlı bir teslim olduğu için bazı yetenekler bilinçli olarak basitleştirilmiş veya kapsam dışı bırakılmıştır:
+
+- **Bitki hastalığı modeli demo seviyesinde:** ONNX CNN çalıştırma yolu hazırdır, ancak depo ile eğitilmiş bir model dosyası gelmez. Model bulunmazsa tespit, Pillow tabanlı HSV renk-analizi **sezgisel (heuristic)** moduna düşer — üretim doğruluğu garanti edilmez.
+- **Sulama modeli sentetik/demo veriyle eğitilmiştir:** `RandomForestRegressor` (n_estimators=100, max_depth=10) gerçek tarla geçmişiyle yeniden eğitilmeden saha kararı için kullanılmamalıdır.
+- **Pazar/fiyat entegrasyonu yok:** Ürün fiyatı, hal/borsa verisi veya ekonomik karar desteği kapsam dışıdır.
+- **Tek-makine deploy:** docker compose tek host içindir; yatay ölçekleme, yük dengeleme veya yönetilen veritabanı (managed DB) yapılandırması içermez.
+- **Hava durumu API key opsiyonel:** OpenWeatherMap key tanımlı değilse sistem demo/sentetik hava verisiyle çalışır.
+- **Demo hesaplar yalnız yerel kullanım içindir:** Tüm seed hesaplarının şifresi ortaktır (`123456`) ve production'da kullanılmamalıdır.
+- **Gerçek IoT donanımı dahil değildir:** Sensör akışı `paho-mqtt` ile desteklenir, ancak depo sentetik/seed okumalarla gelir; fiziksel cihaz entegrasyonu kullanıcıya bırakılmıştır.
+
+---
+
 ## 📋 Proje Durumu
 
-- **Sürüm:** 1.0.0 (Cycle 9 — akademik teslim)
-- **Branch akışı:** `rebuild` sprint'i `main`'e merge edildi; güncel polish çalışması feature branch'lerde (örn. `feature/welcome-screen`) yürür ve PR ile `main`'e alınır.
+- **Sürüm:** 1.0.0 (Cycle 9 kapandı — 7 Haziran 2026, akademik teslim)
+- **Son eklenenler:** Frontend tema (light/dark mavi-yeşil), rol-duyarlı görünürlük ve tema-duyarlı grafikler (PR #39–42 merged).
+- **Branch akışı:** `rebuild` sprint'i `main`'e merge edildi; polish çalışmaları feature branch'lerde yürür ve PR ile `main`'e alınır.
 - **Yol haritası & geçmiş:** [`docs/REBUILD_ROADMAP.md`](docs/REBUILD_ROADMAP.md) · cycle bazlı görev tablosu [`projeakisi.md`](projeakisi.md)
 
 ---
