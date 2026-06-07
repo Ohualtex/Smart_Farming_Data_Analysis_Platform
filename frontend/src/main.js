@@ -39,7 +39,7 @@ import {
     doLogin, doRegister, doChangePassword, doLogout,
     loadUsers, createUser, changeUserRole, resetUserPassword, deleteUser,
 } from "./lib/pages/account.js";
-import { popFiliz, initFiliz, initWelcomeFilizEyes } from "./lib/filiz.js";
+import { popFiliz, initFiliz, initWelcomeFilizEyes, welcomeFilizGreeting } from "./lib/filiz.js";
 
 let refreshInterval = null;
 
@@ -219,6 +219,7 @@ async function init() {
     // Filiz maskotu
     initFiliz();
     initWelcomeFilizEyes();   // welcome filiz göz takibi (fareyi takip)
+    setTimeout(welcomeFilizGreeting, 2400);   // ilk açılış: çık + sağ el selam (entrance sonrası)
 
     // Tema (light/dark)
     initTheme();

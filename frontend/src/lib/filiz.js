@@ -24,6 +24,21 @@ export function popFiliz() {
     }, 5000);
 }
 
+/** İlk çıkış selamı: Filiz topraktan çıkar (popFiliz) + çıkış tamamlanınca SAĞ
+ *  eliyle bir kez "merhaba" sallar (.greeting), ardından normal re-bury (5sn).
+ *  Welcome görünür değilse (login olmuş) hiçbir şey yapmaz. */
+export function welcomeFilizGreeting() {
+    const welcome = document.getElementById('welcome');
+    const stage = document.getElementById('welcomeStage');
+    if (!welcome || !stage) return;
+    if (getComputedStyle(welcome).display === 'none') return;   // login → selam yok
+    popFiliz();   // topraktan çık + 5sn sonra geri gömül
+    setTimeout(() => {
+        stage.classList.add('greeting');                         // çıkış bitince sağ el selam
+        setTimeout(() => stage.classList.remove('greeting'), 1900);
+    }, 1400);     // emerge transition (~1.4s) sonrası
+}
+
 /** Welcome filiz göz takibi: pupil grupları (#welcomeFilizPupilL/R) imleci
  *  hafifçe takip eder. Welcome ekranına özel; dashboard mascot'tan bağımsız. */
 export function initWelcomeFilizEyes() {

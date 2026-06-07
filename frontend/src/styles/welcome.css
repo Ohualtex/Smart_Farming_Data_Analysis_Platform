@@ -186,8 +186,27 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
 .welcome-filiz .filiz-leaf-r { transform-origin: 60px 26px; transform-box: fill-box; animation: leafSwayR 3.5s ease-in-out infinite; }
 .welcome-filiz .eye-open   { animation: blinkOpen 5s infinite ease-in-out; }
 .welcome-filiz .eye-closed { opacity: 0; animation: blinkClosed 5s infinite ease-in-out; }  /* FIX: kapalı göz default gizli, sadece kırpışta görünür */
-.welcome-filiz:hover .filiz-arm-r { transform-origin: 102px 92px; transform-box: fill-box; animation: waveArm .6s ease-in-out 2; }
-.welcome-filiz:hover .filiz-arm-l { transform-origin: 18px 92px; transform-box: fill-box; animation: waveArm .6s ease-in-out 2 reverse; }
+.welcome-filiz:hover .filiz-arm-r { transform-origin: 102px 92px; transform-box: view-box; animation: waveArm 1.15s ease-in-out 1; }
+.welcome-filiz:hover .filiz-arm-l { transform-origin: 18px 92px; transform-box: view-box; animation: waveArmL 1.15s ease-in-out 1; }
+
+/* İlk çıkış selamı: Filiz topraktan çıkınca SAĞ eliyle bir kez "merhaba" sallar
+   (hover wave'den farklı; yalnız sağ kol, daha yüksek + vücuttan ayrık).
+   main.js açılışta .greeting class'ını ekler (çıkış tamamlanınca). */
+.welcome-stage.greeting .filiz-arm-r {
+    transform-origin: 102px 92px; transform-box: view-box;
+    animation: greetWave 1.8s ease-in-out 1;
+}
+/* Eli başın sağ-üstüne KALDIR (translateY) + sağ-sol YAY çizerek salla
+   (translateX salınımı + hafif rotate) → klasik "merhaba" yay hareketi. */
+@keyframes greetWave {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    20%  { transform: translate(-4px, -54px) rotate(-12deg); }   /* eli başın sağ-üstüne kaldır */
+    37%  { transform: translate(-16px, -54px) rotate(16deg); }   /* sola yay */
+    54%  { transform: translate(0px, -54px) rotate(-16deg); }    /* sağa yay */
+    71%  { transform: translate(-14px, -54px) rotate(14deg); }   /* sola yay */
+    88%  { transform: translate(-2px, -54px) rotate(-10deg); }   /* sağa yay */
+    100% { transform: translate(0, 0) rotate(0deg); }            /* indir */
+}
 
 /* ─── TOPRAK (tam genişlik) — sun/moon'u (z-index 2) örter (z-index 3) ── */
 .welcome-soil {
