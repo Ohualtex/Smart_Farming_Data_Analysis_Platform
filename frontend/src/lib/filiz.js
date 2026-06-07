@@ -10,33 +10,54 @@
 import { api } from "./api.js";
 import { getCurrentUser, getApiOnline } from "./session.js";
 
-/** Filiz'i topraktan yavaşça çıkar; 5 sn sonra geri gömül. (welcome ekranı)
- *  Konuşma yok — sadece çık/gir animasyonu. Tekrar tıklanırsa süre yenilenir. */
+/** Filiz'i topraktan çıkar. Akış: elleriyle toprağa tutunup ÇIKAR (.emerging) →
+ *  çıkıştan SONRA İLK animasyon SAĞ el selamı (.greeting) → ~5sn'de geri gömül.
+ *  Selam tıklamaya bağlı DEĞİL; her çıkışta (otomatik/tık) otomatik oynar. */
 let _filizPopTimer = null;
+let _filizGreetTimer = null;
+let _filizLoveTimer = null;
+
+function _scheduleRebury(stage, delay) {
+    if (_filizPopTimer) clearTimeout(_filizPopTimer);
+    _filizPopTimer = setTimeout(() => {
+        stage.classList.remove('popped', 'emerging', 'greeting', 'loving');
+        _filizPopTimer = null;
+    }, delay);
+}
+
 export function popFiliz() {
     const stage = document.getElementById('welcomeStage');
     if (!stage) return;
-    stage.classList.add('popped');
-    if (_filizPopTimer) clearTimeout(_filizPopTimer);
-    _filizPopTimer = setTimeout(() => {
-        stage.classList.remove('popped');
-        _filizPopTimer = null;
-    }, 5000);
+    stage.classList.remove('greeting', 'loving', 'emerging');
+    void stage.offsetWidth;                        // reflow → greetWave her çıkışta baştan oynar
+    // gövde yükselir (transform transition) + greetWave (CSS'te 1.4s delay → yükselişi bekler).
+    // Ayrı timer YOK: .greeting bir kez eklenir → 1.4s'de class-mutation kaynaklı restart olmaz.
+    stage.classList.add('popped', 'greeting');
+    if (_filizGreetTimer) clearTimeout(_filizGreetTimer);
+    _filizGreetTimer = setTimeout(() => stage.classList.remove('greeting'), 3400);  // delay(1.4)+dur(1.8)+pay
+    _scheduleRebury(stage, 6500);   // çık(1.4)+selam(1.9) + etkileşim için kalma payı
 }
 
-/** İlk çıkış selamı: Filiz topraktan çıkar (popFiliz) + çıkış tamamlanınca SAĞ
- *  eliyle bir kez "merhaba" sallar (.greeting), ardından normal re-bury (5sn).
- *  Welcome görünür değilse (login olmuş) hiçbir şey yapmaz. */
+/** Welcome filiz TIKLAMA: GÖMÜLÜYSE çık+selam (emerge); ÇIKMIŞSA love —
+ *  küçük kol salınımı + göz kırp + kalp (seviliyormuş gibi). Çıkmak için
+ *  tıklamak love sayılmaz (gömülüyken tık = sadece çıkış+selam). */
+export function filizInteract() {
+    const stage = document.getElementById('welcomeStage');
+    if (!stage) return;
+    if (!stage.classList.contains('popped')) { popFiliz(); return; }   // gömülü → çık+selam
+    stage.classList.remove('loving');
+    void stage.offsetWidth;            // reflow → animasyon yeniden tetiklenir
+    stage.classList.add('loving');     // çıkmış → love (salınım + göz kırp + kalp)
+    if (_filizLoveTimer) clearTimeout(_filizLoveTimer);
+    _filizLoveTimer = setTimeout(() => stage.classList.remove('loving'), 1800);  // tüm kalp/kol animasyonu bitene dek
+    _scheduleRebury(stage, 5000);      // etkileşim oldu → kalma süresini tazele
+}
+
+/** İlk açılışta otomatik çıkış+selam (welcome görünürse). Tıklama gerektirmez. */
 export function welcomeFilizGreeting() {
     const welcome = document.getElementById('welcome');
-    const stage = document.getElementById('welcomeStage');
-    if (!welcome || !stage) return;
-    if (getComputedStyle(welcome).display === 'none') return;   // login → selam yok
-    popFiliz();   // topraktan çık + 5sn sonra geri gömül
-    setTimeout(() => {
-        stage.classList.add('greeting');                         // çıkış bitince sağ el selam
-        setTimeout(() => stage.classList.remove('greeting'), 1900);
-    }, 1400);     // emerge transition (~1.4s) sonrası
+    if (!welcome || getComputedStyle(welcome).display === 'none') return;   // login → yok
+    popFiliz();   // çık + ilk animasyon el salla
 }
 
 /** Welcome filiz göz takibi: pupil grupları (#welcomeFilizPupilL/R) imleci

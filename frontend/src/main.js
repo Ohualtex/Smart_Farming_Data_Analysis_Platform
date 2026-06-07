@@ -39,7 +39,7 @@ import {
     doLogin, doRegister, doChangePassword, doLogout,
     loadUsers, createUser, changeUserRole, resetUserPassword, deleteUser,
 } from "./lib/pages/account.js";
-import { popFiliz, initFiliz, initWelcomeFilizEyes, welcomeFilizGreeting } from "./lib/filiz.js";
+import { popFiliz, filizInteract, initFiliz, initWelcomeFilizEyes, welcomeFilizGreeting } from "./lib/filiz.js";
 
 let refreshInterval = null;
 
@@ -78,6 +78,10 @@ async function init() {
     requestAnimationFrame(() => requestAnimationFrame(_dropIntro));
     setTimeout(_dropIntro, 450);
 
+    // İlk açılış selamı: entrance bittikten sonra Filiz otomatik çıkar + selam verir
+    // (welcome görünürse). init başında schedule edilir → await'lerden bağımsız.
+    setTimeout(welcomeFilizGreeting, 2600);
+
     // API modülüne callback'leri bağla (circular dep önlemek için)
     initApiCallbacks({
         showToast,
@@ -98,6 +102,7 @@ async function init() {
         goToLogin:          () => goToLogin(),
         goToWelcome:        () => goToWelcome(),
         popFiliz:           () => popFiliz(),
+        filizInteract:      () => filizInteract(),
         doLogin:            () => doLogin(),
         doRegister:         () => doRegister(),
         doLogout:           () => doLogout(),
@@ -219,7 +224,6 @@ async function init() {
     // Filiz maskotu
     initFiliz();
     initWelcomeFilizEyes();   // welcome filiz göz takibi (fareyi takip)
-    setTimeout(welcomeFilizGreeting, 2400);   // ilk açılış: çık + sağ el selam (entrance sonrası)
 
     // Tema (light/dark)
     initTheme();

@@ -186,27 +186,47 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
 .welcome-filiz .filiz-leaf-r { transform-origin: 60px 26px; transform-box: fill-box; animation: leafSwayR 3.5s ease-in-out infinite; }
 .welcome-filiz .eye-open   { animation: blinkOpen 5s infinite ease-in-out; }
 .welcome-filiz .eye-closed { opacity: 0; animation: blinkClosed 5s infinite ease-in-out; }  /* FIX: kapalı göz default gizli, sadece kırpışta görünür */
-.welcome-filiz:hover .filiz-arm-r { transform-origin: 102px 92px; transform-box: view-box; animation: waveArm 1.15s ease-in-out 1; }
-.welcome-filiz:hover .filiz-arm-l { transform-origin: 18px 92px; transform-box: view-box; animation: waveArmL 1.15s ease-in-out 1; }
+/* TIKLAMA (love): Filiz ÇIKMIŞKEN tıklanınca — küçük kol salınımı + göz kırp +
+   kafasının üstünde kalpler (seviliyormuş gibi). filiz.js .loving ekler.
+   (hover wave kaldırıldı: çıkıştan sonra selamı eziyordu + tık olmalıydı.) */
+.welcome-stage.loving .filiz-arm-r { transform-origin: 102px 92px; transform-box: view-box; animation: waveArm 1.15s ease-in-out 1; }
+.welcome-stage.loving .filiz-arm-l { transform-origin: 18px 92px; transform-box: view-box; animation: waveArmL 1.15s ease-in-out 1; }
+.welcome-stage.loving .welcome-filiz .eye-open   { animation: loveBlinkOpen 1s ease 1; }
+.welcome-stage.loving .welcome-filiz .eye-closed { animation: loveBlinkClosed 1s ease 1; }
+@keyframes loveBlinkOpen   { 0%, 100% { opacity: 1; } 22%, 42% { opacity: 0; } }
+@keyframes loveBlinkClosed { 0%, 100% { opacity: 0; } 22%, 42% { opacity: 1; } }
+/* Kalpler (kafa üstü) — heartFloat* keyframe'leri filiz.css'te global */
+.welcome-filiz .filiz-hearts { opacity: 0; }
+.welcome-stage.loving .filiz-hearts { opacity: 1; }
+.welcome-stage.loving .heart-big   { transform-box: fill-box; transform-origin: center; animation: heartFloatBig 1.4s ease-out both; }
+.welcome-stage.loving .heart-left  { transform-box: fill-box; transform-origin: center; animation: heartFloatLeft 1.4s ease-out .15s both; }
+.welcome-stage.loving .heart-right { transform-box: fill-box; transform-origin: center; animation: heartFloatRight 1.4s ease-out .3s both; }
 
 /* İlk çıkış selamı: Filiz topraktan çıkınca SAĞ eliyle bir kez "merhaba" sallar
    (hover wave'den farklı; yalnız sağ kol, daha yüksek + vücuttan ayrık).
    main.js açılışta .greeting class'ını ekler (çıkış tamamlanınca). */
 .welcome-stage.greeting .filiz-arm-r {
     transform-origin: 102px 92px; transform-box: view-box;
-    animation: greetWave 1.8s ease-in-out 1;
+    /* delay 1.4s: gövde yükselişini bekle. both: gecikme boyunca 0% (resting) tutar,
+       bitince 100% (resting) tutar → başta/sonda snap yok, tek temiz oynayış. */
+    animation: greetWave 1.8s ease-in-out 1.4s both;
 }
 /* Eli başın sağ-üstüne KALDIR (translateY) + sağ-sol YAY çizerek salla
    (translateX salınımı + hafif rotate) → klasik "merhaba" yay hareketi. */
 @keyframes greetWave {
     0%   { transform: translate(0, 0) rotate(0deg); }
-    20%  { transform: translate(-4px, -54px) rotate(-12deg); }   /* eli başın sağ-üstüne kaldır */
-    37%  { transform: translate(-16px, -54px) rotate(16deg); }   /* sola yay */
-    54%  { transform: translate(0px, -54px) rotate(-16deg); }    /* sağa yay */
-    71%  { transform: translate(-14px, -54px) rotate(14deg); }   /* sola yay */
-    88%  { transform: translate(-2px, -54px) rotate(-10deg); }   /* sağa yay */
+    20%  { transform: translate(7px, -54px) rotate(-12deg); }    /* eli başın sağ-üstüne kaldır (sağa kaydırılmış) */
+    37%  { transform: translate(-5px, -54px) rotate(16deg); }    /* sola yay */
+    54%  { transform: translate(11px, -54px) rotate(-16deg); }   /* sağa yay */
+    71%  { transform: translate(-3px, -54px) rotate(14deg); }    /* sola yay */
+    88%  { transform: translate(9px, -54px) rotate(-10deg); }    /* sağa yay */
     100% { transform: translate(0, 0) rotate(0deg); }            /* indir */
 }
+
+/* ÇIKIŞ: yalnız gövde yükselir (transform transition). Kol AÇMA YOK — kollar
+   toplu kalır; çıkış tamamlanınca yalnız SAĞ el kalkıp selam verir (greetWave).
+   (Eski emerge kol-açma kaldırıldı: selamdan önce eli kısmen kaldırıp interrupt
+   yaratıyordu — el "başa sarıp" tekrar kalkıyordu.) */
 
 /* ─── TOPRAK (tam genişlik) — sun/moon'u (z-index 2) örter (z-index 3) ── */
 .welcome-soil {
