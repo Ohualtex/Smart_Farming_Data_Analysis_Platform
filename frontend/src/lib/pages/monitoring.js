@@ -9,6 +9,7 @@
 import { _escAttr, showToast } from "../utils.js";
 import { api, apiAuth, getAuthToken, API_BASE, _authHeaders } from "../api.js";
 import { _skeletonCards, _skeletonRows, _skeletonBlock, _setBusy } from "../skeleton.js";
+import { irrigationStatusLabel, diagnosisLabel, severityLabel } from "../labels.js";
 import { charts, renderSensorTypeChart, renderFarmTempChart, renderIrrigationStatusChart,
          renderNpkRadarChart, renderDailyTrendChart, renderSensorStatsChart,
          chartTick, chartLegend, chartGrid } from "../charts.js";
@@ -59,7 +60,7 @@ export async function loadSensors(page = 1) {
     document.getElementById('sensorsTable').innerHTML = sensors.map(s => `
         <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${s.sensor_type}) detayını aç"
             style="cursor:pointer" data-action="loadSensorDetail" data-id="${s.id}">
-            <td>${s.id}</td><td>${s.sensor_type}</td><td>${s.serial_number}</td>
+            <td>${s.id}</td><td>${s.sensor_type}</td><td>${_escAttr(s.serial_number)}</td>
             <td><span class="badge active">${s.status}</span></td>
         </tr>
     `).join('');
@@ -91,11 +92,11 @@ export async function loadWeather() {
     const sorted = [...data].reverse();
     // Cards
     if (data.length) {
-        const temps = data.map(d => d.temperature_c).filter(Boolean);
+        const temps = data.map(d => d.temperature_c).filter(t => t != null);
         document.getElementById('weatherCards').innerHTML = `
             <div class="card"><div class="card-icon" aria-hidden="true">🌡️</div><div class="card-value">${data[0].temperature_c?.toFixed(1) || '—'}°C</div><div class="card-label">Güncel Sıcaklık</div></div>
             <div class="card"><div class="card-icon" aria-hidden="true">💧</div><div class="card-value">%${data[0].humidity_percent?.toFixed(1) || '—'}</div><div class="card-label">Güncel Nem</div></div>
-            <div class="card"><div class="card-icon" aria-hidden="true">📊</div><div class="card-value">${Math.min(...temps).toFixed(1)}—${Math.max(...temps).toFixed(1)}°C</div><div class="card-label">Sıcaklık Aralığı</div></div>
+            <div class="card"><div class="card-icon" aria-hidden="true">📊</div><div class="card-value">${temps.length ? Math.min(...temps).toFixed(1) + '—' + Math.max(...temps).toFixed(1) : '—'}°C</div><div class="card-label">Sıcaklık Aralığı</div></div>
             <div class="card"><div class="card-icon" aria-hidden="true">🌧️</div><div class="card-value">${data.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1)}mm</div><div class="card-label">Toplam Yağış</div></div>
         `;
     }
@@ -155,7 +156,7 @@ export async function loadIrrigation(page = 1) {
         <tr>
             <td>Tarla #${s.field_id}</td><td>${new Date(s.scheduled_date).toLocaleDateString('tr')}</td>
             <td>${s.duration_min || '—'} dk</td><td>${s.water_amount_liters?.toFixed(0) || '—'}</td>
-            <td><span class="badge ${s.status}">${s.status}</span></td>
+            <td><span class="badge ${s.status}">${irrigationStatusLabel(s.status)}</span></td>
         </tr>
     `).join('');
     _setBusy('irrigationTable', false);
@@ -216,14 +217,15 @@ export async function predictIrrigation() {
 export async function approveIrrigation() {
     const sel = document.getElementById('irrApproveField');
     if (!sel || !sel.value) { showToast('Lütfen bir tarla seç', 'warning'); return; }
+    if (_lastIrrigationRec == null) { showToast('Önce sulama önerisi hesapla', 'warning'); return; }
     const body = {
         field_id: parseInt(sel.value, 10),
         scheduled_date: new Date().toISOString(),
-        water_amount_liters: _lastIrrigationRec ?? 0,
+        water_amount_liters: _lastIrrigationRec,
     };
     const res = await apiAuth('/api/irrigation/schedules', { method: 'POST', body: JSON.stringify(body) });
     if (res) {
-        showToast('Sulama programa eklendi ✅ (durum: pending)', 'success');
+        showToast(`Sulama programa eklendi ✅ (durum: ${irrigationStatusLabel('pending')})`, 'success');
         irrigationTotal = 0;  // sayacı tazele
         loadIrrigation(1);
     }
@@ -235,7 +237,7 @@ export async function updateIrrigationStatus(scheduleId, status) {
         method: 'PATCH', body: JSON.stringify({ status }),
     });
     if (res) {
-        showToast(`Sulama durumu: ${status}`, 'success');
+        showToast(`Sulama durumu: ${irrigationStatusLabel(status)}`, 'success');
         const currentFieldId = getCurrentFieldId();
         if (currentFieldId) loadFieldDetail(currentFieldId);
     }
@@ -271,9 +273,9 @@ export async function recommendFertilizer() {
             <div class="result-card">
                 <h4>🌱 ${r.crop_name_tr} — Gübreleme Önerisi</h4>
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0;">
-                    <div><div style="font-size:.8rem;color:var(--text-muted)">Azot (N)</div><div style="font-size:1.3rem;font-weight:700;color:#10b981">${r.nitrogen_needed_kg} kg</div></div>
-                    <div><div style="font-size:.8rem;color:var(--text-muted)">Fosfor (P)</div><div style="font-size:1.3rem;font-weight:700;color:#3b82f6">${r.phosphorus_needed_kg} kg</div></div>
-                    <div><div style="font-size:.8rem;color:var(--text-muted)">Potasyum (K)</div><div style="font-size:1.3rem;font-weight:700;color:#f59e0b">${r.potassium_needed_kg} kg</div></div>
+                    <div><div style="font-size:.8rem;color:var(--text-muted)">Azot (N)</div><div style="font-size:1.3rem;font-weight:700;color:#10b981">${r.nitrogen_needed_kg ?? '—'} kg</div></div>
+                    <div><div style="font-size:.8rem;color:var(--text-muted)">Fosfor (P)</div><div style="font-size:1.3rem;font-weight:700;color:#3b82f6">${r.phosphorus_needed_kg ?? '—'} kg</div></div>
+                    <div><div style="font-size:.8rem;color:var(--text-muted)">Potasyum (K)</div><div style="font-size:1.3rem;font-weight:700;color:#f59e0b">${r.potassium_needed_kg ?? '—'} kg</div></div>
                 </div>
                 <p style="color:var(--text-muted);font-size:.85rem;">${r.recommendation}</p>
             </div>`;
@@ -299,6 +301,9 @@ export async function fertilizerSchedule() {
                 <tbody>${schedule.map(s => `<tr><td>${s.phase}</td><td>${s.target_date}</td><td>${s.fertilizer_type}</td><td>${s.amount_kg_per_hectare}</td><td style="color:var(--text-muted);font-size:.8rem;">${s.notes}</td></tr>`).join('')}</tbody></table>
             </div>`;
         showToast('Gübreleme takvimi oluşturuldu', 'success');
+    } else {
+        document.getElementById('scheduleResult').innerHTML = '<p class="empty-state">Gübreleme takvimi oluşturulamadı.</p>';
+        showToast('Gübreleme takvimi alınamadı', 'error');
     }
 }
 
@@ -368,9 +373,9 @@ export async function loadPlants() {
         html += `<tr>
             <td style="padding:8px;border-bottom:1px solid var(--border);">${date}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);">#${r.field_id}</td>
-            <td style="padding:8px;border-bottom:1px solid var(--border);">${r.diagnosis || '—'}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${diagnosisLabel(r.diagnosis)}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);">${conf}</td>
-            <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${sev}</span></td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${severityLabel(sev)}</span></td>
         </tr>`;
     }
     html += '</tbody></table>';
@@ -391,6 +396,7 @@ export async function analyzePlantImage() {
         return;
     }
     const btn = document.getElementById('plantsAnalyzeBtn');
+    if (btn.disabled) return;  // çift-submit guard
     btn.disabled = true;
     btn.textContent = '⏳ Analiz ediliyor...';
     const fd = new FormData();

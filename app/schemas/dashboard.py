@@ -22,6 +22,13 @@ class DashboardSoilMoisture(BaseModel):
     status: str = "no_data"  # 'dry' | 'optimal' | 'wet' | 'no_data'
 
 
+class DashboardMoisturePoint(BaseModel):
+    """Saatlik ortalama toprak nemi — dashboard 'Toprak Nemi Trendi' grafiği için."""
+
+    hour: UtcDateTime
+    moisture_percent: float
+
+
 class DashboardLastIrrigation(BaseModel):
     """En son planlanan/gerçekleşen sulama kaydı."""
 
@@ -69,6 +76,7 @@ class DashboardSummaryResponse(BaseModel):
     field_count: int
     sensor_count: int
     soil_moisture_today: DashboardSoilMoisture
+    soil_moisture_trend: list[DashboardMoisturePoint] = Field(default_factory=list)
     last_irrigation: DashboardLastIrrigation
     open_alerts: DashboardOpenAlerts
     last_disease: DashboardLastDisease

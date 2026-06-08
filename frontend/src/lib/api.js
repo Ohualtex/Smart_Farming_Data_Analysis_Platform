@@ -104,6 +104,7 @@ export async function apiAuth(endpoint, options = {}) {
         return await res.json();
     } catch (e) {
         console.warn(`API Auth Error: ${endpoint}`, e);
+        if (e instanceof TypeError) _showToast?.('Sunucuya ulaşılamadı', 'error');
         return null;
     }
 }

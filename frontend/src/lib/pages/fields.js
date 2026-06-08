@@ -9,6 +9,7 @@
 import { _fmtNumber, _escAttr, showToast } from "../utils.js";
 import { apiAuth, getAuthToken, API_BASE } from "../api.js";
 import { _skeletonBlock, _setBusy } from "../skeleton.js";
+import { diagnosisLabel, severityLabel } from "../labels.js";
 import { charts, chartTick, chartLegend, chartGrid } from "../charts.js";
 import { renderFieldDetail } from "../render.js";
 import { pageTitles } from "../router.js";
@@ -141,7 +142,7 @@ export async function submitNewFarm() {
         area_hectares: parseFloat(document.getElementById('nfArea').value) || null,
     };
     const res = await apiAuth('/api/farms/', { method: 'POST', body: JSON.stringify(body) });
-    if (res) { showToast('Çiftlik eklendi ✅', 'success'); loadFields(); }
+    if (res) { ['nfName', 'nfCity', 'nfRegion', 'nfArea'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); showToast('Çiftlik eklendi ✅', 'success'); loadFields(); }
 }
 
 export async function submitNewField() {
@@ -155,7 +156,7 @@ export async function submitNewField() {
         area_hectares: parseFloat(document.getElementById('ndArea').value) || null,
     };
     const res = await apiAuth('/api/fields', { method: 'POST', body: JSON.stringify(body) });
-    if (res) { showToast('Tarla eklendi ✅', 'success'); loadFields(); }
+    if (res) { ['ndName', 'ndSoil', 'ndArea'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); showToast('Tarla eklendi ✅', 'success'); loadFields(); }
 }
 
 export async function editFarm(farmId, currentName) {
@@ -211,6 +212,7 @@ export async function submitNewSensor(fieldId) {
     };
     const res = await apiAuth('/api/sensors/', { method: 'POST', body: JSON.stringify(body) });
     if (res) {
+        ['nsSerial', 'nsDepth'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         showToast('Sensör eklendi ✅', 'success');
         if (currentFieldId) loadFieldDetail(currentFieldId);
     }
@@ -321,11 +323,11 @@ export async function analyzeFieldLeaf() {
         }
         const data = await resp.json();
         const sev = data.severity || 'none';
-        const sevColor = sev === 'severe' ? '#ef4444' : sev === 'moderate' ? '#f97316' : sev === 'mild' ? '#eab308' : '#22c55e';
+        const sevColor = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f97316' : sev === 'low' ? '#eab308' : '#22c55e';
         const box = document.getElementById('fieldLeafResult');
         box.innerHTML = `<div style="border-left:4px solid ${sevColor};padding-left:12px;">
-            <h4 style="margin:0 0 6px;">🧪 ${_escAttr(data.diagnosis)}</h4>
-            <p style="margin:2px 0;">Güven: <strong>%${_fmtNumber(data.confidence_score * 100, 0)}</strong> · Şiddet: <strong style="color:${sevColor};">${_escAttr(sev)}</strong></p>
+            <h4 style="margin:0 0 6px;">🧪 ${_escAttr(diagnosisLabel(data.diagnosis))}</h4>
+            <p style="margin:2px 0;">Güven: <strong>${data.confidence_score != null ? '%' + _fmtNumber(data.confidence_score * 100, 0) : '—'}</strong> · Şiddet: <strong style="color:${sevColor};">${_escAttr(severityLabel(sev))}</strong></p>
         </div>`;
         box.style.display = 'block';
         showToast('Analiz tamamlandı ✅', 'success');

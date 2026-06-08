@@ -51,12 +51,12 @@ export function rethemeCharts() {
 }
 
 export function renderMoistureChart(data) {
-    const sorted = [...data].reverse();
-    const labels = sorted.map(d => new Date(d.recorded_at).toLocaleDateString('tr'));
-    const values = sorted.map(d => d.humidity_percent);
+    const points = Array.isArray(data) ? data : [];
+    const labels = points.map(d => new Date(d.hour).toLocaleString('tr', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
+    const values = points.map(d => d.moisture_percent);
     if (charts.moisture) charts.moisture.destroy();
     charts.moisture = new Chart(document.getElementById('moistureChart'), {
-        type: 'line', data: { labels, datasets: [{ label: 'Nem %', data: values, borderColor: '#3b82f6',
+        type: 'line', data: { labels, datasets: [{ label: 'Toprak Nemi %', data: values, borderColor: '#3b82f6',
             backgroundColor: 'rgba(59,130,246,.1)', fill: true, tension: .4, pointRadius: 2 }] },
         options: { responsive: true, plugins: { legend: { labels: { color: chartLegend() } } },
             scales: { x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }, y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } } } }
@@ -246,7 +246,7 @@ export function renderDailyTrendChart(trends) {
 }
 
 export function renderSensorStatsChart(stats) {
-    if (!stats || !stats.moisture.avg) return;
+    if (!stats || !stats.moisture || !stats.soil_temperature || stats.moisture.avg == null) return;
     if (charts.sensorStats) charts.sensorStats.destroy();
     charts.sensorStats = new Chart(document.getElementById('sensorStatsChart'), {
         type: 'bar',

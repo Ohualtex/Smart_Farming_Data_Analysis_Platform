@@ -1,4 +1,4 @@
-.PHONY: help install run test fuzz lint format audit a11y ci migrate schema-dump backup restore docker-up docker-down clean
+.PHONY: help install run demo-readings test fuzz lint format audit a11y ci migrate schema-dump backup restore docker-up docker-down clean
 
 help: ## Show this help
 	@egrep -h '\s##\s' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -9,6 +9,9 @@ install: ## Install python dependencies
 
 run: ## Run the FastAPI application locally
 	uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+demo-readings: ## Demo öncesi: sensörlere son 48h taze toprak nemi okuması (DB sıfırlamadan)
+	PYTHONPATH=. python scripts/seed_demo_readings.py
 
 test: ## Run the test suite with coverage (Schemathesis fuzz hariç — `make fuzz`)
 	SKIP_SCHEMATHESIS=1 pytest tests/ --cov=app --cov-report=term-missing

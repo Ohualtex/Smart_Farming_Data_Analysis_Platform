@@ -7,8 +7,9 @@
    ============================================================ */
 
 import { _escAttr, showToast } from "../utils.js";
-import { api, apiAuth, API_BASE } from "../api.js";
+import { api, apiAuth } from "../api.js";
 import { _skeletonCards, _skeletonBlock, _setBusy } from "../skeleton.js";
+import { severityLabel, alertTypeLabel } from "../labels.js";
 
 // ─── ALERTS ───────────────────────────────────────────────────
 export async function loadAlerts() {
@@ -57,9 +58,9 @@ export async function loadAlerts() {
             : `<button class="btn-secondary" style="padding:4px 10px;" data-action="resolveAlert" data-id="${a.id}" aria-label="Uyarıyı çözüldü olarak işaretle">Çöz</button>`;
         html += `<tr>
             <td style="padding:8px;border-bottom:1px solid var(--border);font-size:.85rem;">${date}</td>
-            <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${a.severity}</span></td>
-            <td style="padding:8px;border-bottom:1px solid var(--border);">${a.alert_type}</td>
-            <td style="padding:8px;border-bottom:1px solid var(--border);">${a.message}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${severityLabel(a.severity)}</span></td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${alertTypeLabel(a.alert_type)}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${_escAttr(a.message)}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);">${status}</td>
         </tr>`;
     }
@@ -69,20 +70,10 @@ export async function loadAlerts() {
 }
 
 export async function resolveAlert(id) {
-    try {
-        const resp = await fetch(`${API_BASE}/api/alerts/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': 'dev-api-key' },
-            body: JSON.stringify({ is_resolved: true }),
-        });
-        if (resp.ok) {
-            showToast('Uyarı çözüldü olarak işaretlendi', 'success');
-            loadAlerts();
-        } else {
-            showToast(`Hata ${resp.status}`, 'error');
-        }
-    } catch (e) {
-        showToast('Sunucuya ulaşılamadı', 'error');
+    const res = await apiAuth(`/api/alerts/${id}`, { method: 'PATCH', body: JSON.stringify({ is_resolved: true }) });
+    if (res) {
+        showToast('Uyarı çözüldü olarak işaretlendi', 'success');
+        loadAlerts();
     }
 }
 
@@ -115,7 +106,7 @@ export async function refreshBell() {
                 <div class="notif-item severity-${_escAttr(a.severity)}">
                     <div class="notif-item-msg">${_escAttr(a.message)}</div>
                     <div class="notif-item-foot">
-                        <span class="notif-item-sev">${_escAttr(a.severity)}</span>
+                        <span class="notif-item-sev">${_escAttr(severityLabel(a.severity))}</span>
                         <button class="btn-mini" data-action="resolveFromBell" data-id="${a.id}">Çöz</button>
                     </div>
                 </div>`).join('');

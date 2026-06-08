@@ -24,13 +24,14 @@ export function _fmtNumber(v, decimals = 1) {
 }
 
 export function _escAttr(s) {
-    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/<>/g, '&lt;').replace(/>/g, '&gt;');
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ─── Toast Notifications ──────────────────────────────────────
 
 export function showToast(message, type = 'info', duration = 3500) {
     const container = document.getElementById('toastContainer');
+    if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
@@ -56,10 +57,11 @@ export function showToast(message, type = 'info', duration = 3500) {
 export function updateStatus(online) {
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
-    dot.className = `status-dot ${online ? 'online' : 'offline'}`;
-    text.textContent = online ? 'Sistem Aktif' : 'Bağlantı Yok';
+    if (dot) dot.className = `status-dot ${online ? 'online' : 'offline'}`;
+    if (text) text.textContent = online ? 'Sistem Aktif' : 'Bağlantı Yok';
 }
 
 export function updateClock() {
-    document.getElementById('clockDisplay').textContent = new Date().toLocaleTimeString('tr');
+    const clockEl = document.getElementById('clockDisplay');
+    if (clockEl) clockEl.textContent = new Date().toLocaleTimeString('tr');
 }
