@@ -51,8 +51,9 @@
      Alt-ortada toprağa gömülü Filiz; tıklayınca topraktan fırlar.
      `_applyAuthGate(null)` bunu gösterir; "Giriş Yap" → #landing. -->
 <div id="welcome" class="welcome welcome-intro">
-  <!-- 📌 Sabit (sticky) sahne: scroll boyunca ekranda kalır; .welcome-underground
-       kayarken toprak+Filiz yükselir (scroll-linked, Faz 1b). -->
+  <!-- 📌 act1 (sticky sahne): kaydırdıkça toprak DÜZ yukarı çıkıp ekranı doldurur;
+       tamamen toprak olunca pin serbest kalır → .welcome-underground derinliğine inilir. -->
+  <div class="welcome-act1">
   <div class="welcome-pin">
     <!-- 🎨 Gökyüzü renk katmanları: base=gündüz; günbatımı + gece overlay'leri
          opacity ile crossfade. Toggle'da (.welcome-cycle) yönlü transition-delay
@@ -129,6 +130,10 @@
         <h1 class="welcome-title">Toprağın <span>dijital</span> nabzı</h1>
         <button class="btn-primary welcome-login-btn" data-action="goToLogin">Giriş Yap</button>
     </div>
+
+    <!-- Kahverengi dolgu gövdesi: höyüğün ARKASINDA (rest'te gizli), gökyüzünün ÖNÜNDE;
+         scroll'da höyük+Filiz ile düz yukarı çıkıp ekranı boşluksuz #4e3119 ile doldurur -->
+    <div class="welcome-soil-fill" aria-hidden="true"></div>
 
     <div class="welcome-stage" id="welcomeStage">
         <!-- Toprak parçacıkları (pop'ta fırlar) -->
@@ -267,6 +272,7 @@
         </div>
     </div>
   </div><!-- /.welcome-pin -->
+  </div><!-- /.welcome-act1 -->
   <!-- 🌱 Toprak-altı: scroll mesafesi + Faz 2'de tanıtım kartları buraya gelecek -->
   <div class="welcome-underground" aria-hidden="true"></div>
 </div>

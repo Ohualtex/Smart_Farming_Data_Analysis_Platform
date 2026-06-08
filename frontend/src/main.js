@@ -224,15 +224,19 @@ async function init() {
     // Filiz maskotu
     initFiliz();
     initWelcomeFilizEyes();   // welcome filiz göz takibi (fareyi takip)
-    // Welcome scrollytelling: kamera toprağa dalış doğal scroll ile (pin relative).
-    // --rise (0=yüzey, 1=ilk ekran kaydırıldı) → yay-eğim süsü için (sonra eklenecek).
+    // Welcome scrollytelling: sticky pin dolum fazı. --rise = act1 içindeki dolum
+    // ilerlemesi (0=yüzey, 1=ekran %100 toprak, pin tam o anda serbest). CSS toprak
+    // grubunu (soil/fill/filiz-rise) düz yukarı kaydırır + başlık/logo'yu soldurur.
     (() => {
         const welcome = document.getElementById("welcome");
         const pin = document.querySelector(".welcome-pin");
-        if (!welcome || !pin) return;
+        const act1 = document.querySelector(".welcome-act1");
+        if (!welcome || !pin || !act1) return;
         let ticking = false;
         const update = () => {
-            const rise = Math.min(welcome.scrollTop / Math.max(welcome.clientHeight, 1), 1);
+            // sticky yol = act1 yüksekliği − 1 ekran (pin'in takılı kaldığı mesafe)
+            const travel = Math.max(act1.offsetHeight - welcome.clientHeight, 1);
+            const rise = Math.min(Math.max(welcome.scrollTop / travel, 0), 1);   // [0,1] (iOS rubber-band clamp)
             pin.style.setProperty("--rise", rise.toFixed(4));
             ticking = false;
         };

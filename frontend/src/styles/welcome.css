@@ -23,14 +23,17 @@
 }
 .welcome::-webkit-scrollbar { display: none; }
 
-/* 📌 Yüzey sahnesi (gökyüzü+toprak yüzeyi) — 100vh. Kamera dalışında doğal scroll'la
-   yukarı kayıp ÇIKAR (sticky DEĞİL). relative: absolute çocuklar (güneş/ay/gökyüzü/
-   toprak/filiz) buna göre konumlanır + pin'le birlikte kayar. */
+/* 📌 act1: sticky pin'in dolum-fazı boyunca TAKILI kalması için yüksek sarmal.
+   pin 100vh + act1 200vh → pin tam 100vh scroll boyunca takılı (dolum fazı), sonra serbest. */
+.welcome-act1 { position: relative; height: 200vh; flex-shrink: 0; }
+/* 📌 Yüzey sahnesi — STICKY: dolum fazında ekranda TAKILI kalır (slider tutulur);
+   --rise ile toprak grubu düz yukarı çıkıp ekranı doldurur. --rise: JS yazana dek 0 (calc taban). */
 .welcome-pin {
-    position: relative;
-    height: 100vh; flex-shrink: 0;
+    position: sticky; top: 0;
+    height: 100vh;
     display: flex; flex-direction: column;
     overflow: hidden;
+    --rise: 0;
 }
 /* 🌱 Toprak-altı (toprak içi) — kamera buraya dalar. Sabit-ölçek kahverengi gradient
    (derinleştikçe koyulaşır); Faz 2/3 içeriği (kartlar, kök/köstebek/solucan) buraya. */
@@ -43,12 +46,40 @@
     background: linear-gradient(180deg, #4e3119 0%, #3a2614 45%, #281a0d 100%);
 }
 
-/* ─── SCROLLYTELLING: kamera toprağa DALIŞ ───────────────────────────────────
-   Mekanik (büyütme YOK, sabit ölçek): pin (gökyüzü+yüzey) doğal scroll'da yukarı
-   kayıp çıkar; altındaki .welcome-underground (kahverengi toprak içi) ekranı
-   doldurur → yeraltına dalarız. Filiz yüzeyle birlikte yukarı çıkıp kaybolur.
-   (Yay-eğim süsü ayrı adımda eklenecek; .welcome-filiz-rise şimdilik passthrough
-   → iç Filiz z-index'i (2, soil arkasında) geçerli → tıkla-çık arkadan belirir.) */
+/* ─── SCROLLYTELLING: toprak DÜZ yukarı çıkıp ekranı doldurur (sticky pin) ─────
+   --rise (0=yüzey, 1=ekran %100 toprak) JS ile .welcome-pin'e yazılır; toprak grubu
+   (höyük + dolgu + Filiz) DÜZ yukarı kayar (döndürme/ölçek YOK). rise 1'de ekran
+   tümüyle #4e3119 + pin serbest → .welcome-underground'a dikişsiz inilir.
+   --rise pin'de; soil/fill/filiz-rise/topbar/hero MİRAS alır (JS sadece --rise yazar). */
+
+/* Toprak grubu DÜZ yukarı (aynı --rise; ölçek sabit, döndürme yok) */
+.welcome-soil, .welcome-soil-fill, .welcome-filiz-rise {
+    transform: translateY(calc(var(--rise, 0) * -100vh));
+    will-change: transform;
+}
+/* Kahverengi dolgu gövdesi: höyüğün ARKASINDA (DOM'da stage'den önce, z3) → rest'te
+   höyük üstte boyanır, dolgu gizli; gökyüzünün (z0–2) ÖNÜNDE → yükselince örter.
+   rise 1: üst kenar -110px (viewport üstü), alt kenar +2px → BOŞLUKSUZ tam dolum.
+   #4e3119 = soil SVG dibi = underground üstü → dikişsiz. */
+.welcome-soil-fill {
+    position: absolute; left: 0; right: 0;
+    top: calc(100% - 110px);            /* üst ≈ höyük yüzey çizgisi (215px kutu) */
+    height: calc(110px + 100vh + 2px);  /* +100vh+2px → rise 1'de ekranı boşluksuz kapar */
+    background: #4e3119;
+    z-index: 3; pointer-events: none;
+}
+/* Başlık + logo: toprak üstlerine binmeden ÖNCE solup kaybolur (havada asılı kalmasın) */
+.welcome-topbar, .welcome-hero {
+    opacity: calc(1 - var(--rise, 0) * 1.6);          /* rise ≈ .625'te 0 */
+    transform: translateY(calc(var(--rise, 0) * -40px));
+    transition: none;                                  /* scroll-linked, animasyon değil */
+}
+@media (max-width: 560px) {   /* mobilde höyük 165px → dolgu anchor'ı yükselir (yine tam dolum) */
+    .welcome-soil-fill { top: calc(100% - 85px); height: calc(85px + 100vh + 2px); }
+}
+@media (prefers-reduced-motion: reduce) {   /* yükseliş = navigasyonun kendisi, kalır; sadece hint kapat */
+    .welcome-soil, .welcome-soil-fill, .welcome-filiz-rise { will-change: auto; }
+}
 
 /* ─── GÖKYÜZÜ RENK KATMANLARI — gündüz→günbatımı→gece (smooth + sıralı) ──────
    base (.welcome) = gündüz. sunset + night overlay'leri opacity ile crossfade;
@@ -169,8 +200,10 @@
     display: flex; flex-direction: column; align-items: center;
     text-align: center; padding: 8px 24px 0; max-width: 760px; margin: 0 auto; z-index: 5;
     pointer-events: none;  /* dar ekranda güneş/ay üstüne taşmasın; buton tekrar açılır */
-    /* Madde 2: aşağıdan kayarak geliş — biraz daha uzun + biraz daha mesafe + gecikme */
-    animation: welcomeFadeUp 1.25s cubic-bezier(.22,1,.36,1) .35s both;
+    /* Madde 2: aşağıdan kayarak geliş — biraz daha uzun + biraz daha mesafe + gecikme.
+       backwards (both DEĞİL): bitince to-state'i TUTMAZ → scroll-fade calc'ı (opacity/
+       transform var(--rise)) devralır; aksi halde both, fade'i ezerdi. */
+    animation: welcomeFadeUp 1.25s cubic-bezier(.22,1,.36,1) .35s backwards;
 }
 .welcome-title { font-size: clamp(1.9rem, 5.4vw, 3.2rem); font-weight: 800; line-height: 1.1; margin: 0; letter-spacing: -.6px; color: var(--text); }
 .welcome-title span {
