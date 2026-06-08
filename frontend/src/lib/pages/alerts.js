@@ -7,7 +7,7 @@
    ============================================================ */
 
 import { _escAttr, showToast } from "../utils.js";
-import { api, apiAuth, API_BASE } from "../api.js";
+import { api, apiAuth } from "../api.js";
 import { _skeletonCards, _skeletonBlock, _setBusy } from "../skeleton.js";
 import { severityLabel, alertTypeLabel } from "../labels.js";
 

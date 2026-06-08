@@ -52,7 +52,7 @@ export function rethemeCharts() {
 
 export function renderMoistureChart(data) {
     const points = Array.isArray(data) ? data : [];
-    const labels = points.map(d => new Date(d.hour).toLocaleTimeString('tr', { hour: '2-digit', minute: '2-digit' }));
+    const labels = points.map(d => new Date(d.hour).toLocaleString('tr', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
     const values = points.map(d => d.moisture_percent);
     if (charts.moisture) charts.moisture.destroy();
     charts.moisture = new Chart(document.getElementById('moistureChart'), {

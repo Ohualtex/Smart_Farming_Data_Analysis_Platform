@@ -225,7 +225,7 @@ export async function approveIrrigation() {
     };
     const res = await apiAuth('/api/irrigation/schedules', { method: 'POST', body: JSON.stringify(body) });
     if (res) {
-        showToast('Sulama programa eklendi ✅ (durum: pending)', 'success');
+        showToast(`Sulama programa eklendi ✅ (durum: ${irrigationStatusLabel('pending')})`, 'success');
         irrigationTotal = 0;  // sayacı tazele
         loadIrrigation(1);
     }
@@ -237,7 +237,7 @@ export async function updateIrrigationStatus(scheduleId, status) {
         method: 'PATCH', body: JSON.stringify({ status }),
     });
     if (res) {
-        showToast(`Sulama durumu: ${status}`, 'success');
+        showToast(`Sulama durumu: ${irrigationStatusLabel(status)}`, 'success');
         const currentFieldId = getCurrentFieldId();
         if (currentFieldId) loadFieldDetail(currentFieldId);
     }

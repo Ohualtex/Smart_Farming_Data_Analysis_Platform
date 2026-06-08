@@ -147,6 +147,10 @@ export async function loadDashboard() {
     ]);
     setApiOnline(summary !== null);
     updateStatus(getApiOnline());
+    if (summary) {
+        const heroGreet = document.getElementById('heroGreetName');
+        if (heroGreet) heroGreet.textContent = summary.user_name || 'çiftçi';
+    }
 
     if (summary && summary.scope === 'user' && summary.farm_count === 0) {
         // Boş hesap — onboarding banner (REBUILD Faz 6)
@@ -163,8 +167,6 @@ export async function loadDashboard() {
         if (heroFarms) heroFarms.textContent = summary.farm_count;
         if (heroSensors) heroSensors.textContent = summary.sensor_count;
         if (heroReadings) heroReadings.textContent = (summary.soil_moisture_today || {}).reading_count || 0;
-        const heroGreet = document.getElementById('heroGreetName');
-        if (heroGreet) heroGreet.textContent = summary.user_name || 'çiftçi';
     } else {
         cards.innerHTML = `
             <div class="empty-state" style="grid-column: 1 / -1;">

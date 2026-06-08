@@ -8,6 +8,7 @@
  */
 
 import { _escAttr, _fmtDate, _fmtNumber, _STATUS_EMOJI, _STATUS_LABEL } from "./utils.js";
+import { irrigationStatusLabel, diagnosisLabel, severityLabel } from "./labels.js";
 
 export function renderFieldDetail(d) {
     const cropName = d.crop ? d.crop.name : 'Ekili bitki yok';
@@ -34,13 +35,13 @@ export function renderFieldDetail(d) {
             ? `<button class="btn-mini" data-action="updateIrrigationStatus" data-id="${i.id}" data-status="completed">✓ Tamamlandı</button>
                <button class="btn-mini btn-danger" data-action="updateIrrigationStatus" data-id="${i.id}" data-status="cancelled">✗ İptal</button>`
             : '—';
-        return `<tr><td>${_fmtDate(i.scheduled_date)}</td><td>${amt}</td><td>${i.duration_min ?? '—'} dk</td><td><span class="irr-status irr-${_escAttr(i.status)}">${_escAttr(i.status)}</span></td><td class="user-actions">${actions}</td></tr>`;
+        return `<tr><td>${_fmtDate(i.scheduled_date)}</td><td>${amt}</td><td>${i.duration_min ?? '—'} dk</td><td><span class="irr-status irr-${_escAttr(i.status)}">${_escAttr(irrigationStatusLabel(i.status))}</span></td><td class="user-actions">${actions}</td></tr>`;
     }).join('') || '<tr><td colspan="5" class="detail-empty">Sulama kaydı yok.</td></tr>';
 
     // Hastalık geçmişi
     const disRows = (d.disease_history || []).map(h => {
         const conf = h.confidence_score != null ? `%${_fmtNumber(h.confidence_score * 100, 0)}` : '—';
-        return `<tr><td>${_fmtDate(h.captured_at)}</td><td>${_escAttr(h.diagnosis || '—')}</td><td>${conf}</td><td>${_escAttr(h.severity || '—')}</td></tr>`;
+        return `<tr><td>${_fmtDate(h.captured_at)}</td><td>${_escAttr(diagnosisLabel(h.diagnosis))}</td><td>${conf}</td><td>${_escAttr(severityLabel(h.severity))}</td></tr>`;
     }).join('') || '<tr><td colspan="4" class="detail-empty">Hastalık analizi yok.</td></tr>';
 
     // Toprak analizi (en yeni)
@@ -53,7 +54,7 @@ export function renderFieldDetail(d) {
 
     // Açık uyarılar
     const alertRows = (d.open_alerts || []).map(a =>
-        `<div class="detail-alert severity-${_escAttr(a.severity)}"><strong>${_escAttr(a.severity)}</strong> · ${_escAttr(a.message)} <span class="detail-mini-sub">${_fmtDate(a.created_at)}</span></div>`
+        `<div class="detail-alert severity-${_escAttr(a.severity)}"><strong>${_escAttr(severityLabel(a.severity))}</strong> · ${_escAttr(a.message)} <span class="detail-mini-sub">${_fmtDate(a.created_at)}</span></div>`
     ).join('') || '<p class="detail-empty">Açık uyarı yok ✅</p>';
 
     return `
@@ -136,9 +137,9 @@ export function renderPlantResult(data) {
     const sevColor = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f59e0b' : sev === 'low' ? '#eab308' : '#22c55e';
     const conf = (data.confidence_score * 100).toFixed(1);
     let html = `<div class="form-box" style="border-left:4px solid ${sevColor};">
-        <h3 style="margin-top:0;">🧪 Sonuç: ${data.diagnosis}</h3>
+        <h3 style="margin-top:0;">🧪 Sonuç: ${_escAttr(diagnosisLabel(data.diagnosis))}</h3>
         <p><strong>Güven:</strong> %${conf}</p>
-        <p><strong>Şiddet:</strong> <span style="color:${sevColor};font-weight:600;">${sev}</span></p>
+        <p><strong>Şiddet:</strong> <span style="color:${sevColor};font-weight:600;">${_escAttr(severityLabel(sev))}</span></p>
         <p><strong>Model:</strong> ${data.model_version}</p>
         <details style="margin-top:12px;"><summary style="cursor:pointer;">Tüm sınıf skorları</summary>
         <ul style="margin-top:8px;">`;
