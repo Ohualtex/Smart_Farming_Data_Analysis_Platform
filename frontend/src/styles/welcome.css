@@ -25,7 +25,7 @@
 
 /* 📌 act1: sticky pin'in dolum-fazı boyunca TAKILI kalması için yüksek sarmal.
    pin 100vh + act1 200vh → pin tam 100vh scroll boyunca takılı (dolum fazı), sonra serbest. */
-.welcome-act1 { position: relative; height: 200vh; flex-shrink: 0; }
+.welcome-act1 { position: relative; height: 150vh; flex-shrink: 0; }   /* travel=50vh: hafif çekince dolar */
 /* 📌 Yüzey sahnesi — STICKY: dolum fazında ekranda TAKILI kalır (slider tutulur);
    --rise ile toprak grubu düz yukarı çıkıp ekranı doldurur. --rise: JS yazana dek 0 (calc taban). */
 .welcome-pin {
@@ -71,8 +71,8 @@
 }
 /* Başlık + logo: toprak üstlerine binmeden ÖNCE solup kaybolur (havada asılı kalmasın) */
 .welcome-topbar, .welcome-hero {
-    opacity: calc(1 - var(--rise, 0) * 1.6);          /* rise ≈ .625'te 0 */
-    transform: translateY(calc(var(--rise, 0) * -40px));
+    opacity: calc(1 - var(--rise, 0) * 2);            /* rise ≈ .5'te 0 → fill-intro (0.5→) ile çakışmaz */
+    transform: translateY(calc(var(--rise, 0) * -44px));
     transition: none;                                  /* scroll-linked, animasyon değil */
 }
 @media (max-width: 560px) {   /* mobilde höyük 165px → dolgu anchor'ı yükselir (yine tam dolum) */
@@ -363,14 +363,26 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
    ════════════════════════════════════════════════════════════════════════ */
 .welcome-underground { height: auto; }   /* sahneler kendi yüksekliğinde (her biri ~1 ekran) */
 
-/* Scroll-snap: dolum (act1) serbest kayar; toprak-altı SAHNELERİ yaklaşınca kameraya oturur */
+/* Scroll-snap: özellik sahneleri native proximity ile oturur. Dolum→başlık ise
+   JS YAYLI snap ile (main.js) — native yay yapamadığı için (#2). */
 .welcome { scroll-snap-type: y proximity; }
+
+/* Dolum ÖDÜLÜ intro: dolu toprağın üstünde --rise'a bağlı belirip oturur (#2).
+   --rise 0.5→0.88 arası fade + yüksel; 0.88+ oturmuş. pin'le yukarı kayıp gider. */
+.welcome-fill-intro {
+    position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 0 30px;
+    opacity: clamp(0, calc((var(--rise, 0) - 0.5) * 2.6), 1);
+    transform: translateY(clamp(0px, calc((0.88 - var(--rise, 0)) * 60px), 34px));
+}
+.welcome-fill-intro .wu-lead { max-width: 520px; }
 
 /* Tam-ekran sahne: kart + karşı açıklama; zigzag data-side ile yön değişir */
 .wu-scene {
-    min-height: 100vh; scroll-snap-align: center;
+    min-height: 80vh; scroll-snap-align: center;   /* daha kısa → daha az boşluk */
     display: flex; align-items: center; justify-content: center;
-    gap: clamp(26px, 5vw, 70px); padding: 9vh 30px;
+    gap: clamp(26px, 5vw, 70px); padding: 4vh 30px;
     max-width: 1080px; margin: 0 auto;
 }
 .wu-scene-center { flex-direction: column; text-align: center; }   /* intro + cta: tek öğe, ortalı */
@@ -423,7 +435,7 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
 /* Yaylı reveal: kart kendi tarafından, açıklama KARŞIDAN, intro/cta aşağıdan girer.
    Yön sınıfları (.from-l / .from-r / .from-b) main.js'te data-side'a göre eklenir.
    overshoot easing (1.56) = "yay/zıplama"; in-view = oturmuş. IO çıkışta sıfırlar (re-trigger). */
-.wu-reveal { opacity: 0; transition: opacity .5s ease, transform .75s cubic-bezier(.34, 1.56, .64, 1); }
+.wu-reveal { opacity: 0; transition: opacity .32s ease, transform .5s cubic-bezier(.3, 1.5, .5, 1); }   /* daha hızlı + punchy yay */
 .wu-reveal.from-l { transform: translateX(-72px); }
 .wu-reveal.from-r { transform: translateX(72px); }
 .wu-reveal.from-b { transform: translateY(48px); }
@@ -438,4 +450,46 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
     .wu-scene { flex-direction: column !important; gap: 26px; padding: 12vh 22px; text-align: center; max-width: 560px; }
     .wu-scene .wu-card { text-align: left; }
     .wu-reveal.from-l, .wu-reveal.from-r { transform: translateY(44px); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   FAZ 3 — TOPRAK-ALTI DEKOR: boş toprağı doldurur + üst/alt geçişi süsler
+   ════════════════════════════════════════════════════════════════════════ */
+.wu-decor { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.wu-scene { position: relative; z-index: 1; }   /* sahneler dekorun ÖNÜNDE */
+/* Doku: ince çakıl/kesek deseni (tüm toprak boyunca, çok hafif) */
+.wu-decor::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(34, 22, 11, .5) 1px, transparent 1.7px);
+    background-size: 84px 78px; opacity: .5;
+}
+.wu-decor > svg, .wu-decor > .wu-pebble { position: absolute; }
+
+/* Kökler (yüzeyden sarkar → geçişi organik yapar) */
+.wu-root { width: clamp(52px, 6vw, 84px); opacity: .68; }
+.wu-root path { animation: wuRootSway 7s ease-in-out infinite; transform-origin: top center; }
+
+/* Solucan */
+.wu-worm { width: clamp(94px, 11vw, 140px); opacity: .9; transform-origin: center; animation: wuWormWiggle 4.5s ease-in-out infinite; }
+
+/* Uyuyan köstebek */
+.wu-mole { width: clamp(94px, 11vw, 134px); opacity: .95; }
+.wu-zzz { fill: #cbb89f; font-size: 15px; font-weight: 800; animation: wuZzz 3s ease-in-out infinite; }
+
+/* Filizlenen tohum */
+.wu-seed { width: clamp(19px, 2vw, 27px); opacity: .92; transform-origin: bottom center; animation: wuRootSway 6s ease-in-out infinite; }
+
+/* Çakıl / tohum */
+.wu-pebble {
+    width: var(--s, 11px); height: calc(var(--s, 11px) * .82); border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, #6b482a, #3a2613 72%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .3), inset 0 1px 1px rgba(255, 255, 255, .12);
+    opacity: .8;
+}
+
+@keyframes wuRootSway { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(1.6deg); } }
+@keyframes wuWormWiggle { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-4px) rotate(-3.5deg); } }
+@keyframes wuZzz { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) {
+    .wu-root path, .wu-worm, .wu-zzz { animation: none; }
 }

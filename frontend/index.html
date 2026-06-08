@@ -271,20 +271,103 @@
             </svg>
         </div>
     </div>
+
+    <!-- Dolum ÖDÜLÜ (#2): toprak dolarken başlık, dolu kahverenginin üstünde belirip
+         oturur. opacity/transform --rise'a bağlı (scroll-linked); pin'le yukarı kayıp gider. -->
+    <div class="welcome-fill-intro" aria-hidden="true">
+      <span class="wu-eyebrow">SFDAP</span>
+      <h2 class="wu-title">Toprağın altında, <span>veriye dönüşen</span> tarım</h2>
+      <p class="wu-lead">Sensör, hava ve yapay zekâ; hepsi tek panelde. Aşağı in, keşfet.</p>
+    </div>
   </div><!-- /.welcome-pin -->
   </div><!-- /.welcome-act1 -->
   <!-- 🌱 Toprak-altı: tam-ekran "sahne"ler — kaydırınca snap'le oturur, kart yandan
        yaylı girer, karşısında açıklama (zigzag). Boş alanlara dekor (Faz 3). -->
   <div class="welcome-underground">
-    <!-- Intro sahnesi -->
-    <section class="wu-scene wu-scene-center">
-      <div class="wu-intro wu-reveal">
-        <span class="wu-eyebrow">SFDAP</span>
-        <h2 class="wu-title">Toprağın altında, <span>veriye dönüşen</span> tarım</h2>
-        <p class="wu-lead">Sensör, hava durumu ve yapay zekâ tahminlerini tek panelde
-          birleştiren çiftçi-odaklı akıllı tarım karar-destek platformu. Aşağı in, keşfet.</p>
-      </div>
-    </section>
+    <!-- 🪱 Dekor katmanı: boş toprağı doldurur + üst/alt geçişi süsler (sahnelerin arkasında) -->
+    <div class="wu-decor" aria-hidden="true">
+      <!-- Kökler (yüzeyden sarkar → geçişi süsler) -->
+      <svg class="wu-root" style="top:-2vh; left:14%;" viewBox="0 0 90 240" fill="none" stroke="#46301c" stroke-linecap="round">
+        <path d="M45,0 C42,45 50,70 46,110 C42,150 48,185 44,240" stroke-width="7"/>
+        <path d="M47,72 C60,82 66,80 78,96" stroke-width="4.5"/>
+        <path d="M45,128 C32,138 26,138 14,154" stroke-width="4.5"/>
+        <path d="M46,186 C56,196 60,196 70,212" stroke-width="3.5"/>
+      </svg>
+      <svg class="wu-root" style="top:-4vh; left:78%; transform:scaleX(-1);" viewBox="0 0 90 240" fill="none" stroke="#412c19" stroke-linecap="round">
+        <path d="M45,0 C48,40 40,66 45,104 C50,142 42,176 46,230" stroke-width="6"/>
+        <path d="M45,90 C32,100 26,98 16,114" stroke-width="4"/>
+        <path d="M46,150 C58,160 62,160 72,176" stroke-width="3.5"/>
+      </svg>
+      <svg class="wu-root" style="top:148vh; left:46%;" viewBox="0 0 90 200" fill="none" stroke="#412c19" stroke-linecap="round">
+        <path d="M45,0 C42,36 50,58 46,94 C42,130 48,160 44,200" stroke-width="6"/>
+        <path d="M46,70 C58,80 62,80 72,94" stroke-width="3.5"/>
+        <path d="M45,120 C33,130 28,130 18,144" stroke-width="3.5"/>
+      </svg>
+
+      <!-- 🪱 Solucan -->
+      <svg class="wu-worm" style="top:64vh; left:70%;" viewBox="0 0 150 70" fill="none">
+        <path d="M14,52 Q40,12 72,40 T134,32" stroke="#d98a8a" stroke-width="19" stroke-linecap="round"/>
+        <path d="M14,52 Q40,12 72,40 T134,32" stroke="#c5787a" stroke-width="19" stroke-linecap="round" stroke-dasharray="1.5 20" opacity=".5"/>
+        <circle cx="131" cy="36" r="6" fill="#e7a3a3"/>
+        <circle cx="133" cy="29" r="3.1" fill="#3a2414"/>
+        <path d="M127,39 q6,4 11,-1" stroke="#3a2414" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+
+      <!-- 🦫 Uyuyan köstebek -->
+      <svg class="wu-mole" style="top:232vh; left:16%;" viewBox="0 0 140 112" fill="none">
+        <ellipse cx="70" cy="100" rx="64" ry="15" fill="#34230f"/>
+        <ellipse cx="70" cy="62" rx="42" ry="34" fill="#7e6a5b"/>
+        <ellipse cx="70" cy="70" rx="27" ry="23" fill="#9a8472"/>
+        <ellipse cx="42" cy="76" rx="9" ry="7" fill="#9a8472"/>
+        <ellipse cx="98" cy="76" rx="9" ry="7" fill="#9a8472"/>
+        <ellipse cx="70" cy="46" rx="14" ry="11" fill="#8b7666"/>
+        <ellipse cx="70" cy="44" rx="5.5" ry="4.5" fill="#4a3a2e"/>
+        <path d="M52,49 q5,5 11,0" stroke="#4a3a2e" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M77,49 q5,5 11,0" stroke="#4a3a2e" stroke-width="2.4" stroke-linecap="round"/>
+        <text class="wu-zzz" x="98" y="36">z</text><text class="wu-zzz" x="111" y="24" font-size="11">z</text>
+      </svg>
+
+      <!-- Çakıl + tohum (boşlukları doldurur) -->
+      <span class="wu-pebble" style="top:30vh; left:30%; --s:13px;"></span>
+      <span class="wu-pebble" style="top:54vh; left:22%; --s:9px;"></span>
+      <span class="wu-pebble" style="top:88vh; left:64%; --s:16px;"></span>
+      <span class="wu-pebble" style="top:108vh; left:34%; --s:10px;"></span>
+      <span class="wu-pebble" style="top:132vh; left:80%; --s:12px;"></span>
+      <span class="wu-pebble" style="top:176vh; left:28%; --s:9px;"></span>
+      <span class="wu-pebble" style="top:198vh; left:60%; --s:15px;"></span>
+      <span class="wu-pebble" style="top:248vh; left:76%; --s:11px;"></span>
+      <span class="wu-pebble" style="top:286vh; left:38%; --s:13px;"></span>
+      <span class="wu-pebble" style="top:312vh; left:66%; --s:9px;"></span>
+      <span class="wu-pebble" style="top:42vh; left:52%; --s:8px;"></span>
+      <span class="wu-pebble" style="top:72vh; left:44%; --s:11px;"></span>
+      <span class="wu-pebble" style="top:120vh; left:50%; --s:8px;"></span>
+      <span class="wu-pebble" style="top:158vh; left:18%; --s:14px;"></span>
+      <span class="wu-pebble" style="top:210vh; left:42%; --s:9px;"></span>
+      <span class="wu-pebble" style="top:262vh; left:24%; --s:12px;"></span>
+      <span class="wu-pebble" style="top:298vh; left:84%; --s:8px;"></span>
+
+      <!-- Filizlenen tohumlar -->
+      <svg class="wu-seed" style="top:104vh; left:14%;" viewBox="0 0 30 42" fill="none">
+        <ellipse cx="15" cy="28" rx="8" ry="10" fill="#6b4a2a"/>
+        <path d="M15,19 Q15,9 21,5" stroke="#7cc36a" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M15,18 Q11,13 7,12" stroke="#4a3019" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <svg class="wu-seed" style="top:268vh; left:62%;" viewBox="0 0 30 42" fill="none">
+        <ellipse cx="15" cy="28" rx="8" ry="10" fill="#6b4a2a"/>
+        <path d="M15,19 Q15,9 9,5" stroke="#7cc36a" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M15,18 Q19,13 23,12" stroke="#4a3019" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+
+      <!-- Ek kökler (derinlerde) -->
+      <svg class="wu-root" style="top:78vh; left:90%; transform:scaleX(-1);" viewBox="0 0 90 180" fill="none" stroke="#3f2b18" stroke-linecap="round">
+        <path d="M45,0 C42,32 50,54 46,88 C42,122 48,150 44,180" stroke-width="5.5"/>
+        <path d="M46,64 C58,74 62,74 72,88" stroke-width="3.5"/>
+      </svg>
+      <svg class="wu-root" style="top:222vh; left:84%;" viewBox="0 0 90 190" fill="none" stroke="#412c19" stroke-linecap="round">
+        <path d="M45,0 C48,34 40,58 45,94 C50,130 42,160 46,190" stroke-width="5.5"/>
+        <path d="M45,80 C33,90 28,90 18,104" stroke-width="3.5"/>
+      </svg>
+    </div>
 
     <!-- Özellik sahneleri (zigzag: kart bir tarafta, açıklama karşıda) -->
     <section class="wu-scene" data-side="left">

@@ -266,6 +266,40 @@ async function init() {
         }, { root: welcome, threshold: 0.4 });
         reveals.forEach((el) => io.observe(el));
     })();
+    // Dolum YAYLI snap (#2): act1 içinde scroll DURUNCA, yeterince çekildiyse başlığa
+    // YAYLANARAK (overshoot) oturur; az çekildiyse yüzeye geri döner (tersinir).
+    // Native scroll-snap yay yapamadığı için JS. Özellik sahneleri native snap'te kalır.
+    (() => {
+        const welcome = document.getElementById("welcome");
+        const act1 = document.querySelector(".welcome-act1");
+        if (!welcome || !act1) return;
+        let timer = null, animating = false, cancelled = false;
+        // easeOutBack: hedefi biraz aşıp geri oturur = "yay/zıplama"
+        const easeOutBack = (p) => { const c1 = 1.7, c3 = c1 + 1; return 1 + c3 * (p - 1) ** 3 + c1 * (p - 1) ** 2; };
+        const springTo = (target) => {
+            animating = true; cancelled = false;
+            const start = welcome.scrollTop, dist = target - start, dur = 480, t0 = performance.now();
+            const step = (now) => {
+                if (cancelled) { animating = false; return; }
+                const p = Math.min((now - t0) / dur, 1);
+                welcome.scrollTop = start + dist * easeOutBack(p);
+                if (p < 1) requestAnimationFrame(step);
+                else { welcome.scrollTop = target; animating = false; }
+            };
+            requestAnimationFrame(step);
+        };
+        const settle = () => {
+            if (animating) return;
+            const travel = Math.max(act1.offsetHeight - welcome.clientHeight, 1);
+            const st = welcome.scrollTop;
+            if (st <= 2 || st >= travel) return;              // yüzeyde ya da dolum tamam → native/serbest
+            const target = (st / travel) < 0.22 ? 0 : travel; // tersinir: az çekince→yüzey, yeterli→başlık
+            if (Math.abs(st - target) > 3) springTo(target);
+        };
+        welcome.addEventListener("scroll", () => { clearTimeout(timer); timer = setTimeout(settle, 130); }, { passive: true });
+        welcome.addEventListener("wheel", () => { if (animating) cancelled = true; }, { passive: true });
+        welcome.addEventListener("touchstart", () => { if (animating) cancelled = true; }, { passive: true });
+    })();
 
     // Tema (light/dark)
     initTheme();
