@@ -60,7 +60,7 @@ export async function loadSensors(page = 1) {
     document.getElementById('sensorsTable').innerHTML = sensors.map(s => `
         <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${s.sensor_type}) detayını aç"
             style="cursor:pointer" data-action="loadSensorDetail" data-id="${s.id}">
-            <td>${s.id}</td><td>${s.sensor_type}</td><td>${s.serial_number}</td>
+            <td>${s.id}</td><td>${s.sensor_type}</td><td>${_escAttr(s.serial_number)}</td>
             <td><span class="badge active">${s.status}</span></td>
         </tr>
     `).join('');

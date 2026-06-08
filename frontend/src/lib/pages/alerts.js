@@ -60,7 +60,7 @@ export async function loadAlerts() {
             <td style="padding:8px;border-bottom:1px solid var(--border);font-size:.85rem;">${date}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${severityLabel(a.severity)}</span></td>
             <td style="padding:8px;border-bottom:1px solid var(--border);">${alertTypeLabel(a.alert_type)}</td>
-            <td style="padding:8px;border-bottom:1px solid var(--border);">${a.message}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${_escAttr(a.message)}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);">${status}</td>
         </tr>`;
     }

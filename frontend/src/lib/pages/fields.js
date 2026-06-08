@@ -142,7 +142,7 @@ export async function submitNewFarm() {
         area_hectares: parseFloat(document.getElementById('nfArea').value) || null,
     };
     const res = await apiAuth('/api/farms/', { method: 'POST', body: JSON.stringify(body) });
-    if (res) { showToast('Çiftlik eklendi ✅', 'success'); loadFields(); }
+    if (res) { ['nfName', 'nfCity', 'nfRegion', 'nfArea'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); showToast('Çiftlik eklendi ✅', 'success'); loadFields(); }
 }
 
 export async function submitNewField() {
@@ -156,7 +156,7 @@ export async function submitNewField() {
         area_hectares: parseFloat(document.getElementById('ndArea').value) || null,
     };
     const res = await apiAuth('/api/fields', { method: 'POST', body: JSON.stringify(body) });
-    if (res) { showToast('Tarla eklendi ✅', 'success'); loadFields(); }
+    if (res) { ['ndName', 'ndSoil', 'ndArea'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); showToast('Tarla eklendi ✅', 'success'); loadFields(); }
 }
 
 export async function editFarm(farmId, currentName) {
@@ -212,6 +212,7 @@ export async function submitNewSensor(fieldId) {
     };
     const res = await apiAuth('/api/sensors/', { method: 'POST', body: JSON.stringify(body) });
     if (res) {
+        ['nsSerial', 'nsDepth'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         showToast('Sensör eklendi ✅', 'success');
         if (currentFieldId) loadFieldDetail(currentFieldId);
     }
