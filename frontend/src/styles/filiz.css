@@ -33,9 +33,14 @@
 .filiz-mascot .filiz-leaf-r { transform-origin: 60px 26px; transform-box: fill-box; animation: leafSwayR 3.5s ease-in-out infinite; }
 
 /* ─── ARM WAVE (hover) ───────────────────────────── */
-@keyframes waveArm { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-25deg); } 75% { transform: rotate(15deg); } }
-.filiz-mascot:hover .filiz-arm-r { transform-origin: 102px 92px; transform-box: fill-box; animation: waveArm .6s ease-in-out 2; }
-.filiz-mascot:hover .filiz-arm-l { transform-origin: 18px 92px; transform-box: fill-box; animation: waveArm .6s ease-in-out 2 reverse; }
+/* Canlı, simetrik "el sallama": omuzdan (view-box pivot) yukarı kaldır + birkaç kez
+   salla + indir. Sağ kol negatif, sol kol ayna (pozitif). Pivot OMUZDA olduğundan
+   yüksek açıda bile savurmaz — gerçek el sallama gibi durur. */
+/* translateX: kolu vücuttan biraz dışa ayırır (gerçek el sallama hissi), abartmadan. */
+@keyframes waveArm  { 0% { transform: translateX(0) rotate(0deg); } 20% { transform: translateX(6px) rotate(-25deg); } 40% { transform: translateX(6px) rotate(-13deg); } 60% { transform: translateX(6px) rotate(-24deg); } 80% { transform: translateX(6px) rotate(-15deg); } 100% { transform: translateX(0) rotate(0deg); } }
+@keyframes waveArmL { 0% { transform: translateX(0) rotate(0deg); } 20% { transform: translateX(-6px) rotate(25deg); } 40% { transform: translateX(-6px) rotate(13deg); } 60% { transform: translateX(-6px) rotate(24deg); } 80% { transform: translateX(-6px) rotate(15deg); } 100% { transform: translateX(0) rotate(0deg); } }
+.filiz-mascot:hover .filiz-arm-r { transform-origin: 102px 92px; transform-box: view-box; animation: waveArm 1.15s ease-in-out 1; }
+.filiz-mascot:hover .filiz-arm-l { transform-origin: 18px 92px; transform-box: view-box; animation: waveArmL 1.15s ease-in-out 1; }
 
 /* ─── HAPPY STATE (^_^ + hearts) ─────────────────── */
 .filiz-mascot .eye-joyful { opacity: 0; }

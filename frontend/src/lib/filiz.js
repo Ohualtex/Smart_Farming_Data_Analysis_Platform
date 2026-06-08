@@ -10,18 +10,75 @@
 import { api } from "./api.js";
 import { getCurrentUser, getApiOnline } from "./session.js";
 
-/** Filiz'i topraktan yavaşça çıkar; 3 sn sonra geri gömül. (welcome ekranı)
- *  Konuşma yok — sadece çık/gir animasyonu. Tekrar tıklanırsa süre yenilenir. */
+/** Filiz'i topraktan çıkar. Akış: elleriyle toprağa tutunup ÇIKAR (.emerging) →
+ *  çıkıştan SONRA İLK animasyon SAĞ el selamı (.greeting) → ~5sn'de geri gömül.
+ *  Selam tıklamaya bağlı DEĞİL; her çıkışta (otomatik/tık) otomatik oynar. */
 let _filizPopTimer = null;
+let _filizGreetTimer = null;
+let _filizLoveTimer = null;
+
+function _scheduleRebury(stage, delay) {
+    if (_filizPopTimer) clearTimeout(_filizPopTimer);
+    _filizPopTimer = setTimeout(() => {
+        stage.classList.remove('popped', 'emerging', 'greeting', 'loving');
+        _filizPopTimer = null;
+    }, delay);
+}
+
 export function popFiliz() {
     const stage = document.getElementById('welcomeStage');
     if (!stage) return;
-    stage.classList.add('popped');
-    if (_filizPopTimer) clearTimeout(_filizPopTimer);
-    _filizPopTimer = setTimeout(() => {
-        stage.classList.remove('popped');
-        _filizPopTimer = null;
-    }, 3000);
+    stage.classList.remove('greeting', 'loving', 'emerging');
+    void stage.offsetWidth;                        // reflow → greetWave her çıkışta baştan oynar
+    // gövde yükselir (transform transition) + greetWave (CSS'te 1.4s delay → yükselişi bekler).
+    // Ayrı timer YOK: .greeting bir kez eklenir → 1.4s'de class-mutation kaynaklı restart olmaz.
+    stage.classList.add('popped', 'greeting');
+    if (_filizGreetTimer) clearTimeout(_filizGreetTimer);
+    _filizGreetTimer = setTimeout(() => stage.classList.remove('greeting'), 3400);  // delay(1.4)+dur(1.8)+pay
+    _scheduleRebury(stage, 6500);   // çık(1.4)+selam(1.9) + etkileşim için kalma payı
+}
+
+/** Welcome filiz TIKLAMA: GÖMÜLÜYSE çık+selam (emerge); ÇIKMIŞSA love —
+ *  küçük kol salınımı + göz kırp + kalp (seviliyormuş gibi). Çıkmak için
+ *  tıklamak love sayılmaz (gömülüyken tık = sadece çıkış+selam). */
+export function filizInteract() {
+    const stage = document.getElementById('welcomeStage');
+    if (!stage) return;
+    if (!stage.classList.contains('popped')) { popFiliz(); return; }   // gömülü → çık+selam
+    stage.classList.remove('loving');
+    void stage.offsetWidth;            // reflow → animasyon yeniden tetiklenir
+    stage.classList.add('loving');     // çıkmış → love (salınım + göz kırp + kalp)
+    if (_filizLoveTimer) clearTimeout(_filizLoveTimer);
+    _filizLoveTimer = setTimeout(() => stage.classList.remove('loving'), 1800);  // tüm kalp/kol animasyonu bitene dek
+    _scheduleRebury(stage, 5000);      // etkileşim oldu → kalma süresini tazele
+}
+
+/** İlk açılışta otomatik çıkış+selam (welcome görünürse). Tıklama gerektirmez. */
+export function welcomeFilizGreeting() {
+    const welcome = document.getElementById('welcome');
+    if (!welcome || getComputedStyle(welcome).display === 'none') return;   // login → yok
+    popFiliz();   // çık + ilk animasyon el salla
+}
+
+/** Welcome filiz göz takibi: pupil grupları (#welcomeFilizPupilL/R) imleci
+ *  hafifçe takip eder. Welcome ekranına özel; dashboard mascot'tan bağımsız. */
+export function initWelcomeFilizEyes() {
+    const filiz = document.getElementById('welcomeFiliz');
+    const pupilL = document.getElementById('welcomeFilizPupilL');
+    const pupilR = document.getElementById('welcomeFilizPupilR');
+    if (!filiz || !pupilL || !pupilR) return;
+    document.addEventListener('mousemove', (e) => {
+        const rect = filiz.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height * 0.5;   // göz hizası ~ SVG ortası
+        const dx = e.clientX - cx, dy = e.clientY - cy;
+        const dist = Math.hypot(dx, dy);
+        const max = 2.6;   // SVG koordinatlarında pupil hareket aralığı
+        const ux = (dx / Math.max(dist, 1)) * Math.min(dist / 160, 1) * max;
+        const uy = (dy / Math.max(dist, 1)) * Math.min(dist / 160, 1) * max;
+        pupilL.style.transform = `translate(${ux}px, ${uy}px)`;
+        pupilR.style.transform = `translate(${ux}px, ${uy}px)`;
+    });
 }
 
 /* ─── 🌱 FİLİZ MASKOTU ─────────────────────────────────────── */

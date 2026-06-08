@@ -39,7 +39,7 @@ import {
     doLogin, doRegister, doChangePassword, doLogout,
     loadUsers, createUser, changeUserRole, resetUserPassword, deleteUser,
 } from "./lib/pages/account.js";
-import { popFiliz, initFiliz } from "./lib/filiz.js";
+import { popFiliz, filizInteract, initFiliz, initWelcomeFilizEyes, welcomeFilizGreeting } from "./lib/filiz.js";
 
 let refreshInterval = null;
 
@@ -69,6 +69,19 @@ setNavigate(navigate);
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function init() {
+    // Welcome ilk-giriş: .welcome-intro from-state'leri ilk-boyada uygulanır;
+    // ardından kaldırılır → elemanlar doğal duruma TRANSITION ile "girer" (toggle
+    // ile aynı transition → animation-fill kilidi yok). RAF: görünür sekmede ~2
+    // frame, akıcı. setTimeout: gizli/arka-plan sekmede RAF duraklar → fallback
+    // ile state takılmaz (timer throttled da olsa firelanır).
+    const _dropIntro = () => document.getElementById('welcome')?.classList.remove('welcome-intro');
+    requestAnimationFrame(() => requestAnimationFrame(_dropIntro));
+    setTimeout(_dropIntro, 450);
+
+    // İlk açılış selamı: entrance bittikten sonra Filiz otomatik çıkar + selam verir
+    // (welcome görünürse). init başında schedule edilir → await'lerden bağımsız.
+    setTimeout(welcomeFilizGreeting, 2600);
+
     // API modülüne callback'leri bağla (circular dep önlemek için)
     initApiCallbacks({
         showToast,
@@ -89,6 +102,7 @@ async function init() {
         goToLogin:          () => goToLogin(),
         goToWelcome:        () => goToWelcome(),
         popFiliz:           () => popFiliz(),
+        filizInteract:      () => filizInteract(),
         doLogin:            () => doLogin(),
         doRegister:         () => doRegister(),
         doLogout:           () => doLogout(),
@@ -209,6 +223,129 @@ async function init() {
 
     // Filiz maskotu
     initFiliz();
+    initWelcomeFilizEyes();   // welcome filiz göz takibi (fareyi takip)
+    // Welcome scrollytelling: sticky pin dolum fazı. --rise = act1 içindeki dolum
+    // ilerlemesi (0=yüzey, 1=ekran %100 toprak, pin tam o anda serbest). CSS toprak
+    // grubunu (soil/fill/filiz-rise) düz yukarı kaydırır + başlık/logo'yu soldurur.
+    (() => {
+        const welcome = document.getElementById("welcome");
+        const pin = document.querySelector(".welcome-pin");
+        const act1 = document.querySelector(".welcome-act1");
+        if (!welcome || !pin || !act1) return;
+        let ticking = false;
+        const update = () => {
+            // sticky yol = act1 yüksekliği − 1 ekran (pin'in takılı kaldığı mesafe)
+            const travel = Math.max(act1.offsetHeight - welcome.clientHeight, 1);
+            const rise = Math.min(Math.max(welcome.scrollTop / travel, 0), 1);   // [0,1] (iOS rubber-band clamp)
+            pin.style.setProperty("--rise", rise.toFixed(4));
+            ticking = false;
+        };
+        welcome.addEventListener("scroll", () => {
+            if (!ticking) { requestAnimationFrame(update); ticking = true; }
+        }, { passive: true });
+        update();
+    })();
+    // Kart/açıklama giriş YÖNÜ (zigzag, data-side): kart kendi tarafından, açıklama karşıdan.
+    document.querySelectorAll(".wu-reveal").forEach((el) => {
+        const side = el.closest(".wu-scene")?.dataset.side;
+        if (!side) el.classList.add("from-b");
+        else if (el.classList.contains("wu-card")) el.classList.add(side === "left" ? "from-l" : "from-r");
+        else el.classList.add(side === "left" ? "from-r" : "from-l");   // açıklama: KARŞI taraf
+    });
+
+    // FULLPAGE navigasyon: HER kaydırma = 1 sayfa (yüzey → başlık → özellikler → CTA),
+    // smooth YAY ile kayar. Aktif sahnenin kartı/açıklaması girer; önceki "geldiği gibi" çıkar.
+    (() => {
+        const welcome = document.getElementById("welcome");
+        const act1 = document.querySelector(".welcome-act1");
+        if (!welcome || !act1) return;
+        const scenes = [...welcome.querySelectorAll(".wu-scene")];
+        let pages = [], page = 0, animating = false, locked = false, idleTimer = null, hardTimer = null;
+        const unlock = () => { locked = false; clearTimeout(hardTimer); };
+        const maybeUnlock = () => { if (!animating) unlock(); };   // tekerlek durunca + animasyon bitince açılır
+
+        const computePages = () => {
+            const ch = welcome.clientHeight, max = welcome.scrollHeight - ch;
+            const clamp = (v) => Math.max(0, Math.min(max, Math.round(v)));
+            const travel = Math.max(act1.offsetHeight - ch, 1);
+            const sceneTargets = scenes.map((s) => clamp(s.getBoundingClientRect().top + welcome.scrollTop + s.offsetHeight / 2 - ch / 2));
+            pages = [0, clamp(travel), ...sceneTargets];   // 0=yüzey, 1=başlık, 2..=özellikler/CTA
+        };
+        const updateReveals = () => {
+            scenes.forEach((s, i) => {
+                const active = page === i + 2;   // sayfa i+2 → sahne i aktif
+                s.querySelectorAll(".wu-reveal").forEach((el) => el.classList.toggle("in-view", active));
+            });
+        };
+        // Yan navigasyon noktaları — katmanlar arası HIZLI geçiş (toprağa inince görünür)
+        const dotsNav = document.createElement("nav");
+        dotsNav.className = "wu-dots"; dotsNav.setAttribute("aria-label", "Sayfa navigasyonu");
+        let dots = [];
+        const buildDots = () => {
+            dotsNav.innerHTML = "";
+            dots = pages.map((_, i) => {
+                const b = document.createElement("button");
+                b.type = "button"; b.className = "wu-dot"; b.setAttribute("aria-label", "Sayfa " + (i + 1));
+                b.addEventListener("click", () => navTo(i));
+                dotsNav.appendChild(b); return b;
+            });
+        };
+        const updateDots = () => {
+            dots.forEach((d, i) => d.classList.toggle("active", i === page));
+            dotsNav.classList.toggle("visible", page >= 1);   // yüzeyde gizli, toprakta görünür
+        };
+        welcome.appendChild(dotsNav);
+        const ease = (p) => 1 - Math.pow(1 - p, 3);   // easeOutCubic: yumuşak, TAŞMA YOK (sıçrama/jank yok)
+        const animateTo = (target) => {
+            animating = true;
+            const start = welcome.scrollTop, dist = target - start, dur = 520, t0 = performance.now();
+            const step = (now) => {
+                const p = Math.min((now - t0) / dur, 1);
+                welcome.scrollTop = start + dist * ease(p);
+                if (p < 1) requestAnimationFrame(step);
+                else { welcome.scrollTop = target; animating = false; clearTimeout(idleTimer); idleTimer = setTimeout(maybeUnlock, 70); }
+            };
+            requestAnimationFrame(step);
+        };
+        const navTo = (target) => {
+            if (locked) return;
+            target = Math.max(0, Math.min(pages.length - 1, target));
+            if (target === page) return;
+            locked = true;
+            clearTimeout(hardTimer); hardTimer = setTimeout(unlock, 900);   // GARANTİ açılış → sürekli kaydırma takılmaz
+            page = target;
+            updateReveals();        // aktif kart girer, öncekiler "geldiği gibi" çıkar (aynı anda)
+            updateDots();
+            animateTo(pages[page]);
+        };
+        const go = (dir) => navTo(page + dir);
+
+        computePages(); buildDots(); updateReveals(); updateDots();
+        window.addEventListener("resize", () => { computePages(); buildDots(); updateDots(); welcome.scrollTop = pages[page]; });
+        // TEK JEST = TEK SAHNE: nav sırasında + tekerlek durana dek kilitli (go locked'ı kontrol+set eder).
+        // HER wheel olayı idle sayacını erteler → tekerlek 90ms DURUNCA + animasyon bitince serbest kalır
+        // (maybeUnlock iki yoldan da çağrılır → asla takılı kalmaz).
+        welcome.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(maybeUnlock, 90);
+            go(e.deltaY > 0 ? 1 : -1);
+        }, { passive: false });
+        let touchY = null;
+        welcome.addEventListener("touchstart", (e) => { touchY = e.touches[0].clientY; }, { passive: true });
+        welcome.addEventListener("touchmove", (e) => { e.preventDefault(); }, { passive: false });
+        welcome.addEventListener("touchend", (e) => {
+            if (touchY === null) return;
+            const dy = touchY - e.changedTouches[0].clientY;
+            if (Math.abs(dy) > 42) go(dy > 0 ? 1 : -1);
+            touchY = null;
+        }, { passive: true });
+        window.addEventListener("keydown", (e) => {
+            if (!welcome.isConnected || getComputedStyle(welcome).display === "none") return;
+            if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); go(1); }
+            else if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); go(-1); }
+        });
+    })();
 
     // Tema (light/dark)
     initTheme();
@@ -223,13 +360,23 @@ function initTheme() {
     const btns = Array.from(document.querySelectorAll('.js-theme-toggle'));
     if (!btns.length) return;
 
-    // İlk tema: localStorage > sistem tercihi > dark default
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
-    const initial = stored || (prefersLight ? 'light' : 'dark');
+    // İlk tema: localStorage > saat-bazlı (06–20 gündüz, aksi gece). head'deki
+    // inline script ile aynı mantık; ilk açılışta sabitlenir (refresh değiştirmez).
+    let initial = localStorage.getItem(STORAGE_KEY);
+    if (!initial) {
+        const h = new Date().getHours();
+        initial = (h >= 6 && h < 20) ? 'light' : 'dark';
+        localStorage.setItem(STORAGE_KEY, initial);
+    }
     applyTheme(initial);
 
+    let _cycleTimer = null;
     btns.forEach(btn => btn.addEventListener('click', () => {
+        // welcome sıralı gün-gece döngüsü: yönlü transition-delay'leri AKTİF et
+        // (yalnız kullanıcı toggle'ında; initial applyTheme'de değil → entrance temiz).
+        root.classList.add('welcome-cycle');
+        clearTimeout(_cycleTimer);
+        _cycleTimer = setTimeout(() => root.classList.remove('welcome-cycle'), 2300);
         const current = root.dataset.theme || 'dark';
         const next = current === 'light' ? 'dark' : 'light';
         applyTheme(next);

@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="SFDAP - Akıllı Tarım Veri Analizi Platformu Dashboard">
     <title>SFDAP — Akıllı Tarım Dashboard</title>
+    <!-- Tema ilk-boya senkronu: temayı CSS boyamadan ÖNCE uygula ki welcome'da
+         gün/gece geçiş animasyonu ilk yüklemede oynamasın (durum değişmediği için
+         transition tetiklenmez → gündüz/gece statik gelir). Toggle yine animasyonlu. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('sfdap-theme');
+          if (!t) {
+            // İlk açılış: saat 06:00–20:00 arası GÜNDÜZ, 20:00–06:00 arası GECE.
+            var h = new Date().getHours();
+            t = (h >= 6 && h < 20) ? 'light' : 'dark';
+            localStorage.setItem('sfdap-theme', t); // sabitle → refresh değiştirmez
+          }
+          if (t === 'light') document.documentElement.dataset.theme = 'light';
+        } catch (e) {}
+      })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <!-- Leaflet — Türkiye haritası (Cycle 9 prep). CSS önce, JS body sonunda
          (main.js'den önce yüklenir; window.L global olarak erişilebilir). -->
@@ -33,7 +50,16 @@
      Site açılışında ilk karşılayan ekran. Sağ üstte tema + "Giriş Yap".
      Alt-ortada toprağa gömülü Filiz; tıklayınca topraktan fırlar.
      `_applyAuthGate(null)` bunu gösterir; "Giriş Yap" → #landing. -->
-<div id="welcome" class="welcome">
+<div id="welcome" class="welcome welcome-intro">
+  <!-- 📌 act1 (sticky sahne): kaydırdıkça toprak DÜZ yukarı çıkıp ekranı doldurur;
+       tamamen toprak olunca pin serbest kalır → .welcome-underground derinliğine inilir. -->
+  <div class="welcome-act1">
+  <div class="welcome-pin">
+    <!-- 🎨 Gökyüzü renk katmanları: base=gündüz; günbatımı + gece overlay'leri
+         opacity ile crossfade. Toggle'da (.welcome-cycle) yönlü transition-delay
+         ile sıralı: gündüz→günbatımı (güneş batarken)→gece (ay çıkarken). Tersinir. -->
+    <div class="welcome-sky-sunset" aria-hidden="true"></div>
+    <div class="welcome-sky-night" aria-hidden="true"></div>
     <!-- 🌤️ Gökyüzü: light=bulutlar (gündüz), dark=yıldızlar (gece). Tema geçişinde
          bulutlar yanlara dağılır; yıldızların bir kısmı yukarıdan iner, bir kısmı yerinde belirir. -->
     <div class="welcome-sky" aria-hidden="true">
@@ -105,6 +131,10 @@
         <button class="btn-primary welcome-login-btn" data-action="goToLogin">Giriş Yap</button>
     </div>
 
+    <!-- Kahverengi dolgu gövdesi: höyüğün ARKASINDA (rest'te gizli), gökyüzünün ÖNÜNDE;
+         scroll'da höyük+Filiz ile düz yukarı çıkıp ekranı boşluksuz #4e3119 ile doldurur -->
+    <div class="welcome-soil-fill" aria-hidden="true"></div>
+
     <div class="welcome-stage" id="welcomeStage">
         <!-- Toprak parçacıkları (pop'ta fırlar) -->
         <span class="welcome-dirt" style="--dx:-46px;--dy:-70px;--delay:0s"></span>
@@ -116,7 +146,8 @@
         <span class="welcome-dirt" style="--dx:66px;--dy:-40px;--delay:.07s"></span>
 
         <!-- FİLİZ — toprağa gömülü, tıklayınca fırlar -->
-        <button class="welcome-filiz" id="welcomeFiliz" data-action="popFiliz"
+        <div class="welcome-filiz-rise"><!-- scroll yükselişinde Filiz'i yörüngede taşır (normal boyut; soil scale'inden bağımsız) -->
+        <button class="welcome-filiz" id="welcomeFiliz" data-action="filizInteract"
                 aria-label="Filiz'i topraktan çıkar" title="Tıkla — Filiz topraktan fırlasın!">
             <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -147,13 +178,13 @@
                 <g class="filiz-leaf-l">
                     <path d="M 60 26 Q 40 6 24 22 Q 32 36 60 32 Z" fill="url(#wfLeaf)"/>
                     <path d="M 60 28 Q 45 22 30 26" stroke="#15803d" stroke-width="1" fill="none" opacity=".55"/>
-                    <ellipse cx="42" cy="20" rx="9" ry="3" fill="#fff" opacity=".22" transform="rotate(-25 42 20)"/>
+                    <ellipse cx="41" cy="18" rx="8" ry="2.4" fill="#fff" opacity=".3" transform="rotate(10 41 18)"/>
                 </g>
                 <!-- YAPRAK SAĞ -->
                 <g class="filiz-leaf-r">
                     <path d="M 60 26 Q 80 6 96 22 Q 88 36 60 32 Z" fill="url(#wfLeaf)"/>
                     <path d="M 60 28 Q 75 22 90 26" stroke="#15803d" stroke-width="1" fill="none" opacity=".55"/>
-                    <ellipse cx="78" cy="20" rx="9" ry="3" fill="#fff" opacity=".22" transform="rotate(25 78 20)"/>
+                    <ellipse cx="79" cy="18" rx="8" ry="2.4" fill="#fff" opacity=".3" transform="rotate(-10 79 18)"/>
                 </g>
                 <!-- GÖVDE -->
                 <ellipse cx="60" cy="78" rx="42" ry="44" fill="url(#wfBody)"/>
@@ -175,25 +206,45 @@
                 <!-- SOL GÖZ -->
                 <g class="filiz-eye">
                     <g class="eye-open">
-                        <ellipse cx="42" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
-                        <circle cx="44" cy="66" r="4" fill="#fff"/>
-                        <circle cx="40" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                        <g class="wf-pupil" id="welcomeFilizPupilL">
+                            <ellipse cx="42" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
+                            <circle cx="44" cy="66" r="4" fill="#fff"/>
+                            <circle cx="40" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                        </g>
                     </g>
                     <path class="eye-closed" d="M 32 70 Q 42 73 52 70" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round"/>
                 </g>
                 <!-- SAĞ GÖZ -->
                 <g class="filiz-eye">
                     <g class="eye-open">
-                        <ellipse cx="78" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
-                        <circle cx="80" cy="66" r="4" fill="#fff"/>
-                        <circle cx="76" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                        <g class="wf-pupil" id="welcomeFilizPupilR">
+                            <ellipse cx="78" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
+                            <circle cx="80" cy="66" r="4" fill="#fff"/>
+                            <circle cx="76" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                        </g>
                     </g>
                     <path class="eye-closed" d="M 68 70 Q 78 73 88 70" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round"/>
                 </g>
                 <!-- AĞIZ (gülümseme) -->
                 <path d="M 50 91 Q 60 99 70 91" fill="none" stroke="#0a1224" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <!-- KALPLER (tıklama/love animasyonu: kafanın üstünde uçar) -->
+                <g class="filiz-hearts" opacity="0">
+                    <g class="heart-big">
+                        <path d="M 60 -2 C 60 -10, 70 -14, 76 -6 C 82 -14, 92 -10, 92 -2 C 92 8, 76 22, 76 22 C 76 22, 60 8, 60 -2 Z" fill="#ef4444"/>
+                        <ellipse cx="68" cy="2" rx="4" ry="2.5" fill="#fff" opacity=".55"/>
+                    </g>
+                    <g class="heart-left">
+                        <path d="M 14 14 C 14 10, 19 8, 22 11 C 25 8, 30 10, 30 14 C 30 18, 22 26, 22 26 C 22 26, 14 18, 14 14 Z" fill="#fb7185"/>
+                        <ellipse cx="20" cy="14" rx="2" ry="1.2" fill="#fff" opacity=".55"/>
+                    </g>
+                    <g class="heart-right">
+                        <path d="M 96 22 C 96 19, 100 17, 102 19 C 104 17, 108 19, 108 22 C 108 25, 102 31, 102 31 C 102 31, 96 25, 96 22 Z" fill="#fda4af"/>
+                        <ellipse cx="100" cy="22" rx="1.5" ry="1" fill="#fff" opacity=".55"/>
+                    </g>
+                </g>
             </svg>
         </button>
+        </div><!-- /.welcome-filiz-rise -->
 
         <!-- TOPRAK (tam genişlik; ortada hafif höyük, filiz'in önünde) -->
         <div class="welcome-soil" aria-hidden="true">
@@ -220,6 +271,391 @@
             </svg>
         </div>
     </div>
+
+    <!-- Dolum ÖDÜLÜ (#2): toprak dolarken başlık, dolu kahverenginin üstünde belirip
+         oturur. opacity/transform --rise'a bağlı (scroll-linked); pin'le yukarı kayıp gider. -->
+    <div class="welcome-fill-intro" aria-hidden="true">
+      <span class="wu-eyebrow">SFDAP</span>
+      <h2 class="wu-title">Toprağın altında, <span>veriye dönüşen</span> tarım</h2>
+      <p class="wu-lead">Sensör, hava ve yapay zekâ; hepsi tek panelde. Aşağı in, keşfet.</p>
+    </div>
+  </div><!-- /.welcome-pin -->
+  </div><!-- /.welcome-act1 -->
+  <!-- 🌱 Toprak-altı: tam-ekran "sahne"ler — kaydırınca snap'le oturur, kart yandan
+       yaylı girer, karşısında açıklama (zigzag). Boş alanlara dekor (Faz 3). -->
+  <div class="welcome-underground">
+    <!-- 🪱 Dekor: boş toprağı doldurur, geçişi süsler, derinlikle taşlaşır (sahnelerin arkasında) -->
+    <div class="wu-decor" aria-hidden="true">
+      <!-- KÖKLER — 4 farklı tasarım, çeşitli boyut/dallanma -->
+      <!-- A: uzun ince, çok dallı (sol geçiş) -->
+      <svg class="wu-root" style="top:-3vh; left:12%; width:74px;" viewBox="0 0 80 250" fill="none" stroke="#48311d" stroke-linecap="round">
+        <path d="M40,0 C37,46 45,72 41,114 C37,156 44,190 39,250" stroke-width="6.5"/>
+        <path d="M42,70 C56,80 62,78 74,92" stroke-width="4"/>
+        <path d="M40,128 C27,138 21,138 9,152" stroke-width="4"/>
+        <path d="M41,182 C52,192 56,192 67,206" stroke-width="3.2"/>
+        <path d="M40,214 C31,222 28,224 20,236" stroke-width="2.6"/>
+      </svg>
+      <!-- B: kalın, bol dallı (sağ geçiş) -->
+      <svg class="wu-root" style="top:-5vh; left:80%; width:96px;" viewBox="0 0 100 220" fill="none" stroke="#412c19" stroke-linecap="round">
+        <path d="M52,0 C48,30 58,52 50,88 C42,124 54,152 48,210" stroke-width="9"/>
+        <path d="M51,52 C68,62 74,60 86,74 C92,82 94,82 98,92" stroke-width="5.5"/>
+        <path d="M49,104 C31,114 24,114 12,130" stroke-width="5.5"/>
+        <path d="M50,156 C61,166 65,166 76,182" stroke-width="4"/>
+      </svg>
+      <!-- C: kısa, çatallı Y (orta) -->
+      <svg class="wu-root" style="top:174vh; left:46%; width:88px;" viewBox="0 0 100 180" fill="none" stroke="#3f2a18" stroke-linecap="round">
+        <path d="M50,0 C48,26 52,40 50,58" stroke-width="7"/>
+        <path d="M50,56 C44,82 35,104 29,160" stroke-width="5.5"/>
+        <path d="M50,56 C57,84 66,106 73,166" stroke-width="5.5"/>
+        <path d="M40,108 C31,116 28,116 19,128" stroke-width="3"/>
+      </svg>
+      <!-- D: kısa tıknaz, kök-kılları (sağ, sığ) -->
+      <svg class="wu-root" style="top:86vh; left:91%; width:58px; transform:scaleX(-1);" viewBox="0 0 70 140" fill="none" stroke="#3c2917" stroke-linecap="round">
+        <path d="M35,0 C33,28 39,46 35,74 C31,102 37,118 34,140" stroke-width="6"/>
+        <path d="M36,58 C46,64 50,64 58,74" stroke-width="3.5"/>
+        <path d="M35,96 l5,16 M35,98 l-4,15 M35,100 l1,17" stroke-width="1.8"/>
+      </svg>
+      <!-- A2: ince, az dallı (derin sağ) -->
+      <svg class="wu-root" style="top:240vh; left:86%; width:62px;" viewBox="0 0 80 200" fill="none" stroke="#3a2716" stroke-linecap="round">
+        <path d="M40,0 C43,34 35,58 41,96 C47,134 38,164 43,200" stroke-width="5"/>
+        <path d="M41,84 C29,92 24,92 14,104" stroke-width="3.2"/>
+      </svg>
+
+      <!-- 🪱 Solucan (ağız düzeltildi) -->
+      <svg class="wu-worm" style="top:60vh; left:68%;" viewBox="0 0 152 72" fill="none">
+        <path d="M14,52 Q42,16 76,44 Q108,68 136,42" stroke="#d98a8a" stroke-width="18" stroke-linecap="round"/>
+        <path d="M14,52 Q42,16 76,44 Q108,68 136,42" stroke="#c5787a" stroke-width="18" stroke-linecap="round" stroke-dasharray="1.5 21" opacity=".4"/>
+        <circle cx="131" cy="47" r="3.6" fill="#edabab"/>
+        <circle cx="134" cy="38" r="2.7" fill="#3a2414"/>
+        <circle cx="135" cy="37.1" r=".85" fill="#fff"/>
+        <path d="M129.5,45 Q133.5,49.5 138,44.5" stroke="#3a2414" stroke-width="1.7" stroke-linecap="round"/>
+      </svg>
+
+      <!-- 🍄 Mantar -->
+      <svg class="wu-mushroom" style="top:115vh; left:80%;" viewBox="0 0 60 72" fill="none">
+        <path d="M26,36 h8 v24 a4,4 0 0 1 -8,0 Z" fill="#ece1cb"/>
+        <path d="M7,37 Q7,12 30,12 Q53,12 53,37 Q30,44 7,37 Z" fill="#c5493a"/>
+        <circle cx="19" cy="27" r="3" fill="#f2e9d6"/><circle cx="33" cy="21" r="2.4" fill="#f2e9d6"/><circle cx="43" cy="30" r="2.1" fill="#f2e9d6"/>
+      </svg>
+
+      <!-- 🐛 Kurtçuk (kıvrık larva) -->
+      <svg class="wu-grub" style="top:182vh; left:28%;" viewBox="0 0 54 50" fill="none">
+        <path d="M17,12 C5,17 7,36 20,40 C32,44 42,33 38,23" stroke="#e8ddc0" stroke-width="12" stroke-linecap="round"/>
+        <path d="M17,12 C5,17 7,36 20,40 C32,44 42,33 38,23" stroke="#d6c8a2" stroke-width="12" stroke-linecap="round" stroke-dasharray="1.5 7" opacity=".5"/>
+        <circle cx="36" cy="20" r="1.5" fill="#8a6a4a"/>
+      </svg>
+
+      <!-- 💧 Nem damlaları -->
+      <svg class="wu-drop" style="top:180vh; left:74%;" viewBox="0 0 20 28" fill="none">
+        <path d="M10,2 C10,2 3,13 3,18.5 a7,7 0 0 0 14,0 C17,13 10,2 10,2 Z" fill="#67b6d4" opacity=".68"/>
+        <ellipse cx="7.5" cy="17" rx="1.8" ry="2.6" fill="#c8ebf6" opacity=".7"/>
+      </svg>
+      <svg class="wu-drop" style="top:224vh; left:54%; width:14px;" viewBox="0 0 20 28" fill="none">
+        <path d="M10,2 C10,2 3,13 3,18.5 a7,7 0 0 0 14,0 C17,13 10,2 10,2 Z" fill="#67b6d4" opacity=".6"/>
+        <ellipse cx="7.5" cy="17" rx="1.8" ry="2.6" fill="#c8ebf6" opacity=".6"/>
+      </svg>
+
+      <!-- 🦫 Uyuyan köstebek -->
+      <svg class="wu-mole" style="top:216vh; left:14%;" viewBox="0 0 140 112" fill="none">
+        <ellipse cx="70" cy="100" rx="64" ry="15" fill="#33220f"/>
+        <ellipse cx="70" cy="62" rx="42" ry="34" fill="#7e6a5b"/>
+        <ellipse cx="70" cy="70" rx="27" ry="23" fill="#9a8472"/>
+        <ellipse cx="42" cy="76" rx="9" ry="7" fill="#9a8472"/>
+        <ellipse cx="98" cy="76" rx="9" ry="7" fill="#9a8472"/>
+        <ellipse cx="70" cy="46" rx="14" ry="11" fill="#8b7666"/>
+        <ellipse cx="70" cy="44" rx="5.5" ry="4.5" fill="#4a3a2e"/>
+        <path d="M52,49 q5,5 11,0" stroke="#4a3a2e" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M77,49 q5,5 11,0" stroke="#4a3a2e" stroke-width="2.4" stroke-linecap="round"/>
+        <text class="wu-zzz" x="98" y="36">z</text><text class="wu-zzz" x="111" y="24" font-size="11">z</text>
+      </svg>
+
+      <!-- Filizlenen tohumlar (sığ) -->
+      <svg class="wu-seed" style="top:108vh; left:14%;" viewBox="0 0 30 42" fill="none">
+        <ellipse cx="15" cy="28" rx="8" ry="10" fill="#6b4a2a"/>
+        <path d="M15,19 Q15,9 21,5" stroke="#7cc36a" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M15,18 Q11,13 7,12" stroke="#4a3019" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <svg class="wu-seed" style="top:196vh; left:66%;" viewBox="0 0 30 42" fill="none">
+        <ellipse cx="15" cy="28" rx="8" ry="10" fill="#6b4a2a"/>
+        <path d="M15,19 Q15,9 9,5" stroke="#7cc36a" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M15,18 Q19,13 23,12" stroke="#4a3019" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+
+      <!-- KAYALAR (derinlerde — taşlı yapı) -->
+      <svg class="wu-rock" style="top:336vh; left:24%; width:58px;" viewBox="0 0 64 46" fill="none">
+        <path d="M6,42 L2,22 L18,7 L42,5 L60,21 L55,42 Z" fill="#564636"/>
+        <path d="M18,7 L27,25 L2,22 Z" fill="#67543f" opacity=".55"/>
+        <path d="M42,5 L27,25 L60,21 Z" fill="#473829" opacity=".5"/>
+      </svg>
+      <svg class="wu-rock" style="top:398vh; left:72%; width:72px;" viewBox="0 0 64 46" fill="none">
+        <path d="M6,42 L2,22 L18,7 L42,5 L60,21 L55,42 Z" fill="#504133"/>
+        <path d="M18,7 L27,25 L2,22 Z" fill="#62503c" opacity=".55"/>
+        <path d="M42,5 L27,25 L60,21 Z" fill="#42342673" opacity=".5"/>
+      </svg>
+      <svg class="wu-rock" style="top:474vh; left:30%; width:64px;" viewBox="0 0 64 46" fill="none">
+        <path d="M6,42 L2,22 L18,7 L42,5 L60,21 L55,42 Z" fill="#4c3e31"/>
+        <path d="M18,7 L27,25 L2,22 Z" fill="#5e4d3a" opacity=".5"/>
+      </svg>
+      <svg class="wu-rock" style="top:506vh; left:64%; width:80px;" viewBox="0 0 64 46" fill="none">
+        <path d="M6,42 L2,22 L18,7 L42,5 L60,21 L55,42 Z" fill="#473a2e"/>
+        <path d="M18,7 L27,25 L2,22 Z" fill="#594936" opacity=".5"/>
+        <path d="M42,5 L27,25 L60,21 Z" fill="#3c3023" opacity=".5"/>
+      </svg>
+
+      <!-- ÇAKILLAR — sığ küçük → derin büyük (taşlaşma) -->
+      <span class="wu-pebble" style="top:30vh; left:30%; --s:11px;"></span>
+      <span class="wu-pebble" style="top:46vh; left:52%; --s:8px;"></span>
+      <span class="wu-pebble" style="top:74vh; left:42%; --s:10px;"></span>
+      <span class="wu-pebble" style="top:118vh; left:34%; --s:10px;"></span>
+      <span class="wu-pebble" style="top:142vh; left:22%; --s:13px;"></span>
+      <span class="wu-pebble" style="top:172vh; left:58%; --s:11px;"></span>
+      <span class="wu-pebble" style="top:212vh; left:38%; --s:13px;"></span>
+      <span class="wu-pebble" style="top:244vh; left:78%; --s:14px;"></span>
+      <span class="wu-pebble" style="top:288vh; left:50%; --s:16px;"></span>
+      <span class="wu-pebble" style="top:318vh; left:80%; --s:15px;"></span>
+      <span class="wu-pebble" style="top:382vh; left:62%; --s:19px;"></span>
+      <span class="wu-pebble" style="top:418vh; left:26%; --s:18px;"></span>
+      <span class="wu-pebble" style="top:468vh; left:78%; --s:22px;"></span>
+      <span class="wu-pebble" style="top:522vh; left:30%; --s:20px;"></span>
+      <span class="wu-pebble" style="top:528vh; left:50%; --s:24px;"></span>
+
+      <!-- Derin katman (son sahneler): kristaller + mineral pırıltıları + derin kök/kaya -->
+      <svg class="wu-crystal" style="top:430vh; left:70%;" viewBox="0 0 40 62" fill="none">
+        <path d="M20,2 L33,22 L27,58 L13,58 L7,22 Z" fill="#9d7bd8"/>
+        <path d="M20,2 L7,22 L13,58 Z" fill="#b59ae0" opacity=".7"/>
+        <path d="M20,2 L33,22 L27,58 Z" fill="#7d5cc0" opacity=".6"/>
+        <path d="M7,22 L33,22" stroke="#cbb8ee" stroke-width="1" opacity=".5"/>
+      </svg>
+      <svg class="wu-crystal" style="top:542vh; left:20%; width:30px;" viewBox="0 0 40 62" fill="none">
+        <path d="M20,2 L33,22 L27,58 L13,58 L7,22 Z" fill="#6bb39a"/>
+        <path d="M20,2 L7,22 L13,58 Z" fill="#86c9b1" opacity=".7"/>
+        <path d="M20,2 L33,22 L27,58 Z" fill="#4f9580" opacity=".6"/>
+      </svg>
+      <svg class="wu-root" style="top:404vh; left:9%; width:60px;" viewBox="0 0 80 200" fill="none" stroke="#372513" stroke-linecap="round">
+        <path d="M40,0 C37,40 45,66 40,104 C35,142 43,170 38,200" stroke-width="5.5"/>
+        <path d="M40,86 C52,96 56,96 66,110" stroke-width="3.5"/>
+        <path d="M39,140 C28,148 24,148 14,160" stroke-width="3"/>
+      </svg>
+      <svg class="wu-rock" style="top:478vh; left:82%; width:66px;" viewBox="0 0 64 46" fill="none">
+        <path d="M6,42 L2,22 L18,7 L42,5 L60,21 L55,42 Z" fill="#473a2e"/>
+        <path d="M18,7 L27,25 L2,22 Z" fill="#594936" opacity=".5"/>
+      </svg>
+      <span class="wu-mineral" style="top:424vh; left:40%; --c:#c9a3f0;"></span>
+      <span class="wu-mineral" style="top:462vh; left:58%; --c:#8fe388;"></span>
+      <span class="wu-mineral" style="top:512vh; left:46%; --c:#a3d9f0;"></span>
+      <span class="wu-mineral" style="top:556vh; left:72%; --c:#f0c98f;"></span>
+    </div>
+
+    <!-- Özellik sahneleri (zigzag: kart bir tarafta, açıklama karşıda) -->
+    <section class="wu-scene" data-side="left">
+      <article class="wu-card wu-reveal" style="--accent:#38bdf8">
+        <div class="wu-card-head">
+    <div class="wu-card-ic">💧</div>
+    <div class="wu-card-htx"><h3>Toprak Nemi &amp; Sensörler</h3><p>Nemi 7/24 ölç, susuzluğu erken yakala.</p></div>
+  </div>
+  <div class="wu-card-viz">
+    <svg class="nem-spark" viewBox="0 0 300 84" preserveAspectRatio="none" role="img" aria-label="Son 24 saatlik toprak nemi grafiği">
+      <!-- dolgu alanı (eşiğe kadar) -->
+      <path class="nem-area" d="M0,40 C18,36 30,30 48,31 C70,32 80,46 102,45 C124,44 134,30 156,31 C178,32 188,42 210,46 C228,49 238,58 258,63 C272,67 286,70 300,72 L300,84 L0,84 Z"/>
+      <!-- kuru eşik (dashed) -->
+      <line class="nem-thr" x1="0" y1="58" x2="300" y2="58"/>
+      <!-- nem çizgisi -->
+      <path class="nem-line" d="M0,40 C18,36 30,30 48,31 C70,32 80,46 102,45 C124,44 134,30 156,31 C178,32 188,42 210,46 C228,49 238,58 258,63 C272,67 286,70 300,72"/>
+      <!-- son okuma noktası (eşik altında) -->
+      <circle class="nem-dot" cx="300" cy="72" r="3.4"/>
+    </svg>
+    <div class="nem-read"><b>%22</b><span>nem</span></div>
+    <div class="nem-thr-tag">kuru eşik</div>
+  </div>
+  <div class="wu-card-foot">
+    <span class="wu-chip">🥵 Susuz</span>
+    <span class="wu-chip">son 24 sa</span>
+  </div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>Tarlana gömülü sensörler nemi sürekli okur; eşik altına düşünce panelinde
+          <strong>🥵 Susuz</strong> rozeti ve uyarı belirir. Su stresine büyümeden müdahale et.</p>
+      </div>
+    </section>
+
+    <section class="wu-scene" data-side="right">
+      <article class="wu-card wu-reveal" style="--accent:#2dd4bf">
+        <div class="wu-card-head">
+  <div class="wu-card-ic">🚿</div>
+  <div class="wu-card-htx"><h3>Akıllı Sulama</h3><p>Ne kadar su? Model söylesin.</p></div>
+</div>
+<div class="wu-card-viz">
+  <div class="sulama-read">
+    <div class="sulama-num">
+      <span class="sulama-amt">≈ 240</span><span class="sulama-unit">L</span>
+      <span class="sulama-cap">önerilen miktar</span>
+    </div>
+    <svg class="sulama-svg" viewBox="0 0 180 84" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Önerilen su miktarı: yaklaşık 240 litre">
+      <!-- droplet pips: 5 pips, ~3.1 dolu -->
+      <g class="sulama-pips" transform="translate(2,6)">
+        <path class="sp on"  d="M8 0 C12 6 15 9 15 13 a7 7 0 1 1 -14 0 C1 9 4 6 8 0 Z"/>
+        <path class="sp on"  d="M40 0 C44 6 47 9 47 13 a7 7 0 1 1 -14 0 C33 9 36 6 40 0 Z"/>
+        <path class="sp on"  d="M72 0 C76 6 79 9 79 13 a7 7 0 1 1 -14 0 C65 9 68 6 72 0 Z"/>
+        <path class="sp half" d="M104 0 C108 6 111 9 111 13 a7 7 0 1 1 -14 0 C97 9 100 6 104 0 Z"/>
+        <path class="sp off" d="M136 0 C140 6 143 9 143 13 a7 7 0 1 1 -14 0 C129 9 132 6 136 0 Z"/>
+      </g>
+      <!-- water-fill bar -->
+      <g transform="translate(2,40)">
+        <rect class="sulama-track" x="0" y="0" width="172" height="20" rx="10"/>
+        <clipPath id="sulama-clip"><rect x="0" y="0" width="172" height="20" rx="10"/></clipPath>
+        <g clip-path="url(#sulama-clip)">
+          <rect class="sulama-fill" x="0" y="0" width="107" height="20"/>
+          <path class="sulama-wave" d="M99 -2 q4 5 8 0 q4 -5 8 0 q4 5 8 0 l0 24 l-24 0 Z"/>
+        </g>
+        <rect class="sulama-frame" x="0.5" y="0.5" width="171" height="19" rx="9.5"/>
+      </g>
+      <!-- min / max ticks -->
+      <text class="sulama-tick" x="2" y="74">0 L</text>
+      <text class="sulama-tick sulama-tick-r" x="172" y="74">~380 L</text>
+    </svg>
+  </div>
+</div>
+<div class="wu-card-foot">
+  <span class="wu-chip">🌲 RandomForest</span>
+  <span class="wu-chip">⚡ tek tıkla programa</span>
+</div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>RandomForest modeli; nem, sıcaklık ve bitkiye göre <strong>litre cinsinden</strong> öneri
+          verir. “Onayla” dediğinde sulama programına düşer; tamamlandı/iptal ile takip edersin.</p>
+      </div>
+    </section>
+
+    <section class="wu-scene" data-side="left">
+      <article class="wu-card wu-reveal" style="--accent:#fb923c">
+        <div class="wu-card-head">
+    <div class="wu-card-ic">🦠</div>
+    <div class="wu-card-htx"><h3>Hastalık Tanısı</h3><p>Yapraktan teşhis, saniyeler içinde.</p></div>
+  </div>
+  <div class="wu-card-viz">
+    <svg viewBox="0 0 300 84" width="100%" height="84" role="img" aria-label="Yaprak teşhisi: leaf_rust, %84 güven" class="hastalik-viz">
+      <!-- sol: yaprak silüeti + lekeler -->
+      <g class="hastalik-leaf">
+        <path d="M44 12 C20 22 12 46 22 66 C44 70 66 58 70 34 C72 22 60 12 44 12 Z"
+              fill="color-mix(in srgb, var(--accent) 26%, transparent)"
+              stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M30 60 C40 46 52 34 64 24" fill="none"
+              stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>
+        <path d="M44 46 L34 50 M48 38 L58 36 M40 54 L48 58" fill="none"
+              stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round" opacity=".55"/>
+        <!-- hastalık lekeleri -->
+        <circle cx="34" cy="52" r="3.6" fill="var(--accent)" opacity=".95"/>
+        <circle cx="52" cy="34" r="2.8" fill="var(--accent)" opacity=".8"/>
+        <circle cx="44" cy="44" r="2.2" fill="var(--accent)" opacity=".7"/>
+      </g>
+      <!-- orta: etiket -->
+      <g class="hastalik-tag">
+        <text x="98" y="34" class="hastalik-lbl-muted">teşhis</text>
+        <text x="98" y="56" class="hastalik-lbl-main">leaf_rust</text>
+      </g>
+      <!-- sağ: güven halkası %84 -->
+      <g class="hastalik-ring" transform="translate(258 42)">
+        <circle r="26" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="6"/>
+        <circle r="26" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round"
+                stroke-dasharray="163.4" stroke-dashoffset="26.1"
+                transform="rotate(-90)" class="hastalik-arc"/>
+        <text x="0" y="2" class="hastalik-pct">%84</text>
+        <text x="0" y="16" class="hastalik-pct-sub">güven</text>
+      </g>
+    </svg>
+  </div>
+  <div class="wu-card-foot">
+    <span class="wu-chip">şiddet: orta</span>
+    <span class="wu-chip wu-chip-soft">yaprak fotoğrafı</span>
+  </div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>Yaprak fotoğrafını yükle; model hastalığı, <strong>güven skorunu</strong> ve şiddeti
+          döndürür. Sonuç tarla geçmişine işlenir — erken önlem şansı doğar.</p>
+      </div>
+    </section>
+
+    <section class="wu-scene" data-side="right">
+      <article class="wu-card wu-reveal" style="--accent:#4ade80">
+        <div class="wu-card-head">
+    <div class="wu-card-ic">🌱</div>
+    <div class="wu-card-htx"><h3>Gübre Önerisi</h3><p>Eksik besini kg cinsinden gör.</p></div>
+  </div>
+  <div class="wu-card-viz">
+    <svg class="gubre-npk" viewBox="0 0 300 84" preserveAspectRatio="none" role="img" aria-label="N-P-K besin önerisi grafiği">
+      <line class="gubre-base" x1="20" y1="62" x2="280" y2="62" />
+      <!-- N: 80 kg/ha -->
+      <rect class="gubre-track" x="58"  y="14" width="38" height="48" rx="6" />
+      <rect class="gubre-bar gubre-n" x="58"  y="20" width="38" height="42" rx="6" />
+      <text class="gubre-val" x="77"  y="14">80</text>
+      <text class="gubre-lab" x="77"  y="76">N</text>
+      <!-- P: 40 kg/ha -->
+      <rect class="gubre-track" x="131" y="14" width="38" height="48" rx="6" />
+      <rect class="gubre-bar gubre-p" x="131" y="41" width="38" height="21" rx="6" />
+      <text class="gubre-val" x="150" y="35">40</text>
+      <text class="gubre-lab" x="150" y="76">P</text>
+      <!-- K: 50 kg/ha -->
+      <rect class="gubre-track" x="204" y="14" width="38" height="48" rx="6" />
+      <rect class="gubre-bar gubre-k" x="204" y="36" width="38" height="26" rx="6" />
+      <text class="gubre-val" x="223" y="30">50</text>
+      <text class="gubre-lab" x="223" y="76">K</text>
+    </svg>
+  </div>
+  <div class="wu-card-foot">
+    <span class="wu-chip">🌾 17 bitki</span>
+    <span class="wu-chip">kg/ha</span>
+  </div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>Bitki, alan ve mevcut <strong>N-P-K</strong> değerlerini gir; eksikleri hesaplar +
+          Türkçe açıklamayla “neden bu kadar” der. 17 bitki türü desteklenir.</p>
+      </div>
+    </section>
+
+    <section class="wu-scene" data-side="left">
+      <article class="wu-card wu-reveal" style="--accent:#f472b6">
+        <div class="wu-card-head">
+    <div class="wu-card-ic">🔔</div>
+    <div class="wu-card-htx"><h3>Akıllı Bildirimler</h3><p>Önemli her şey tek çanda.</p></div>
+  </div>
+  <div class="wu-card-viz">
+    <ul class="bildirim-list">
+      <li class="bildirim-row">
+        <span class="bildirim-dot bildirim-dot--crit"></span>
+        <span class="bildirim-txt">Tarla A susuz</span>
+        <span class="bildirim-tag">kritik</span>
+      </li>
+      <li class="bildirim-row">
+        <span class="bildirim-dot bildirim-dot--warn"></span>
+        <span class="bildirim-txt">Yeni tanı: leaf_rust</span>
+        <span class="bildirim-tag">orta</span>
+      </li>
+      <li class="bildirim-row">
+        <span class="bildirim-dot bildirim-dot--ok"></span>
+        <span class="bildirim-txt">Sulama tamamlandı</span>
+        <span class="bildirim-tag">tamam</span>
+      </li>
+    </ul>
+  </div>
+  <div class="wu-card-foot">
+    <span class="wu-chip">dedup'lı</span>
+    <span class="wu-chip">3 yeni</span>
+  </div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>Düşük nem, açık uyarı, yeni hastalık — hepsi çanda toplanır. <strong>“Kontrol et”</strong>
+          tarlaları tarar, tekrar etmeyen (dedup) hatırlatmalar üretir.</p>
+      </div>
+    </section>
+
+    <!-- CTA sahnesi -->
+    <section class="wu-scene wu-scene-center">
+      <div class="wu-cta wu-reveal">
+        <h3 class="wu-cta-title">Tarlanı tahmin etmeyi bırak.</h3>
+        <button class="btn-primary welcome-login-btn" data-action="goToLogin">Hadi başlayalım</button>
+      </div>
+    </section>
+  </div>
 </div>
 
 <!-- ═══ ÖN PANEL (LANDING / AUTH GATE) ═══════════════════════════

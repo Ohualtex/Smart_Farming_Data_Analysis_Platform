@@ -5,29 +5,131 @@
    gömülü Filiz (yalnız sap + yaprak görünür); tıklayınca yavaşça çıkar,
    3 sn sonra geri gömülür. Sağ/sol üstte gün-gece (güneş/ay) toggle.
    Akış: #welcome → "Giriş Yap" → #landing (login) → .app
+
+   İLK GİRİŞ: tema head'deki inline script ile ilk-boyamadan ÖNCE ayarlanır
+   (saat 06–20 gündüz, 20–06 gece) → gün/gece geçişi değil, `.welcome-intro`
+   ile bir kez "giriş" animasyonları oynar (logo üstten, güneş/ay yerinde
+   parlayarak, bulutlar yandan, yıldızlar üstten). main.js ~1.8s sonra
+   `.welcome-intro` class'ını kaldırır → toggle bağımsız (transition) çalışır.
    ============================================================ */
 
 .welcome {
     position: fixed; inset: 0; z-index: 1000;
-    display: flex; flex-direction: column; overflow: hidden;
-    /* dashboard body ile ORTAK arka plan (--page-bg) — tema tutarlılığı */
-    background: var(--page-bg);
+    display: flex; flex-direction: column;
+    overflow-y: auto; overflow-x: hidden;   /* scrollytelling: dahili dikey scroll */
+    scrollbar-width: none;                    /* scrollbar gizle (temiz tanıtım) */
+    /* base = GÜNDÜZ gökyüzü; gece/günbatımı overlay katmanlarıyla crossfade edilir */
+    background: linear-gradient(180deg, #8ec8ea 0%, #c4e6f3 44%, #ecf7ef 100%);
 }
+.welcome::-webkit-scrollbar { display: none; }
+
+/* 📌 act1: sticky pin'in dolum-fazı boyunca TAKILI kalması için yüksek sarmal.
+   pin 100vh + act1 200vh → pin tam 100vh scroll boyunca takılı (dolum fazı), sonra serbest. */
+.welcome-act1 { position: relative; height: 150vh; flex-shrink: 0; }   /* travel=50vh: hafif çekince dolar */
+/* 📌 Yüzey sahnesi — STICKY: dolum fazında ekranda TAKILI kalır (slider tutulur);
+   --rise ile toprak grubu düz yukarı çıkıp ekranı doldurur. --rise: JS yazana dek 0 (calc taban). */
+.welcome-pin {
+    position: sticky; top: 0;
+    height: 100vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    --rise: 0;
+}
+/* 🌱 Toprak-altı (toprak içi) — kamera buraya dalar. Sabit-ölçek kahverengi gradient
+   (derinleştikçe koyulaşır); Faz 2/3 içeriği (kartlar, kök/köstebek/solucan) buraya. */
+.welcome-underground {
+    flex-shrink: 0;
+    height: 200vh;
+    position: relative; z-index: 4;   /* soil(3)+filiz(2) üstünde → bindirme seam'i + Filiz sızmasını örter */
+    margin-top: -8px;   /* pin altıyla hafif bindirme → sub-pixel boşluk/sızma kapanır (dikişsiz) */
+    /* üst = soil SVG dibi (#4e3119) → dikişsiz; KADEMELİ ve nazik koyulaşır (sert bant yok),
+       dip hafif cooler/grayer (taşımsı derin toprak hissi). */
+    background: linear-gradient(180deg,
+        #4e3119 0%, #4a2f1a 16%, #432b18 34%, #3a2616 54%, #2f2114 74%, #261c14 100%);
+}
+
+/* ─── SCROLLYTELLING: toprak DÜZ yukarı çıkıp ekranı doldurur (sticky pin) ─────
+   --rise (0=yüzey, 1=ekran %100 toprak) JS ile .welcome-pin'e yazılır; toprak grubu
+   (höyük + dolgu + Filiz) DÜZ yukarı kayar (döndürme/ölçek YOK). rise 1'de ekran
+   tümüyle #4e3119 + pin serbest → .welcome-underground'a dikişsiz inilir.
+   --rise pin'de; soil/fill/filiz-rise/topbar/hero MİRAS alır (JS sadece --rise yazar). */
+
+/* Toprak grubu DÜZ yukarı (aynı --rise; ölçek sabit, döndürme yok) */
+.welcome-soil, .welcome-soil-fill, .welcome-filiz-rise {
+    transform: translateY(calc(var(--rise, 0) * -100vh));
+    will-change: transform;
+}
+/* Kahverengi dolgu gövdesi: höyüğün ARKASINDA (DOM'da stage'den önce, z3) → rest'te
+   höyük üstte boyanır, dolgu gizli; gökyüzünün (z0–2) ÖNÜNDE → yükselince örter.
+   rise 1: üst kenar -110px (viewport üstü), alt kenar +2px → BOŞLUKSUZ tam dolum.
+   #4e3119 = soil SVG dibi = underground üstü → dikişsiz. */
+.welcome-soil-fill {
+    position: absolute; left: 0; right: 0;
+    top: calc(100% - 110px);            /* üst ≈ höyük yüzey çizgisi (215px kutu) */
+    height: calc(110px + 100vh + 2px);  /* +100vh+2px → rise 1'de ekranı boşluksuz kapar */
+    background: #4e3119;
+    z-index: 3; pointer-events: none;
+}
+/* Başlık + logo: toprak üstlerine binmeden ÖNCE solup kaybolur (havada asılı kalmasın) */
+.welcome-topbar, .welcome-hero {
+    opacity: calc(1 - var(--rise, 0) * 2);            /* rise ≈ .5'te 0 → fill-intro (0.5→) ile çakışmaz */
+    transform: translateY(calc(var(--rise, 0) * -44px));
+    transition: none;                                  /* scroll-linked, animasyon değil */
+}
+@media (max-width: 560px) {   /* mobilde höyük 165px → dolgu anchor'ı yükselir (yine tam dolum) */
+    .welcome-soil-fill { top: calc(100% - 85px); height: calc(85px + 100vh + 2px); }
+}
+@media (prefers-reduced-motion: reduce) {   /* yükseliş = navigasyonun kendisi, kalır; sadece hint kapat */
+    .welcome-soil, .welcome-soil-fill, .welcome-filiz-rise { will-change: auto; }
+}
+
+/* ─── GÖKYÜZÜ RENK KATMANLARI — gündüz→günbatımı→gece (smooth + sıralı) ──────
+   base (.welcome) = gündüz. sunset + night overlay'leri opacity ile crossfade;
+   night, sunset'in ÜSTÜNDE (DOM sırası). Sıralama .welcome-cycle (toggle) altında
+   yönlü transition-delay ile (aşağıda). z-index 0 → bulut/yıldız/güneş/ay arkasında. */
+.welcome-sky-sunset, .welcome-sky-night {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    transition: opacity 1.1s ease;
+}
+.welcome-sky-sunset { background: linear-gradient(180deg, #3a4a7a 0%, #8a5a8e 20%, #d9745f 48%, #f0954e 72%, #ffd49e 100%); }
+.welcome-sky-night  { background: linear-gradient(180deg, #0a1730 0%, #13294c 55%, #1d3a55 100%); }
+/* GECE (default): iki overlay de görünür (night, sunset'i örter) → gece */
+.welcome-sky-sunset, .welcome-sky-night { opacity: 1; }
+/* GÜNDÜZ: ikisi de saydam → base gündüz görünür */
+[data-theme="light"] .welcome-sky-sunset,
+[data-theme="light"] .welcome-sky-night { opacity: 0; }
+
+/* ─── SIRALI GÜN-GECE DÖNGÜSÜ — yalnız toggle (.welcome-cycle, root'ta; JS ekler) ─
+   Aşama 1 (0–1.1s): güneş bat + bulut dağıl + gökyüzü→günbatımı.
+   Aşama 2 (1.1–2.2s): ay çık + yıldız belir + günbatımı→gece. Tersinir.
+   transition-delay END duruma göre okunur: geceye giderken aşama-2 öğeleri 1.1s
+   gecikir; gündüze giderken tam tersi. Entrance (.welcome-cycle yok) etkilenmez. */
+.welcome-cycle .welcome-sun,  .welcome-cycle .wcloud, .welcome-cycle .welcome-sky-sunset { transition-delay: 0s; }
+.welcome-cycle .welcome-moon, .welcome-cycle .wstar,  .welcome-cycle .welcome-sky-night  { transition-delay: 1.1s; }
+[data-theme="light"].welcome-cycle .welcome-sun,  [data-theme="light"].welcome-cycle .wcloud, [data-theme="light"].welcome-cycle .welcome-sky-sunset { transition-delay: 1.1s; }
+[data-theme="light"].welcome-cycle .welcome-moon, [data-theme="light"].welcome-cycle .wstar,  [data-theme="light"].welcome-cycle .welcome-sky-night  { transition-delay: 0s; }
 
 /* ─── ÜST BAR (SFDAP üst-orta) ─────────────────────── */
 .welcome-topbar {
     display: flex; align-items: center; justify-content: center;
     padding: 96px 28px 0; flex-shrink: 0; z-index: 6;
+    /* tam-genişlik bar; güneş/ay (z-index 2) üstünde kalmasın diye tıklama geçirir
+       (logo etkileşimli değil) → köşedeki toggle'lar tıklanabilir kalır */
+    pointer-events: none;
 }
 .welcome-logo { font-size: 1.7rem; font-weight: 800; letter-spacing: .5px; display: flex; align-items: center; gap: 9px; }
 .welcome-logo span { color: var(--primary); }
 
-/* ─── ☀️/🌙 GÜN-GECE TOGGLE (batış / doğuş) ────────────
+/* ─── ☀️/🌙 GÜN-GECE TOGGLE (toprağın ARKASINA batış / doğuş) ──────────
    light = güneş sol-üstte; dark = ay sağ-üstte. Tıkla → görünen cisim
-   aşağı kayıp batar (yok olur), diğeri aşağıdan köşesine doğar. Tersinir. */
+   aşağı kayıp toprağın ARKASINA batar (soil z-index 3 > sun/moon 2 → örtülür),
+   diğeri toprağın arkasından doğar. Tersinir. */
 .welcome-sun, .welcome-moon {
-    position: absolute; background: none; border: none; padding: 0; cursor: pointer; z-index: 7;
-    transition: transform 1.1s cubic-bezier(.5,0,.25,1), opacity 1s ease, filter .3s ease;
+    position: absolute; background: none; border: none; padding: 0; cursor: pointer;
+    z-index: 2;  /* toprağın (z-index 3) ALTINDA → batışta soil arkasında kalır */
+    /* opacity: yalnız ilk-giriş "parlayarak/opaklaşarak" için (toggle'da opacity
+       sabit 1; gizlenme soil occlusion ile). transform: toggle batış/doğuş. */
+    transition: transform 1.1s cubic-bezier(.5,0,.4,1), opacity .9s ease, filter .3s ease;
 }
 .welcome-sun svg, .welcome-moon svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .welcome-sun  { top: 2px; left: 2px; width: 150px; height: 150px; filter: drop-shadow(0 0 16px rgba(252,211,77,.55)); }
@@ -38,36 +140,33 @@
 .welcome-sun .sun-rays { transform-origin: center; transform-box: fill-box; animation: welcomeSunSpin 60s linear infinite; }
 @keyframes welcomeSunSpin { to { transform: rotate(360deg); } }
 
-/* DARK (default): ay yukarıda görünür, güneş batmış */
-.welcome-sun  { transform: translateY(120vh) scale(.5); opacity: 0; pointer-events: none; }
-.welcome-moon { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
-/* LIGHT: güneş yukarıda görünür, ay batmış */
-[data-theme="light"] .welcome-sun  { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
-[data-theme="light"] .welcome-moon { transform: translateY(120vh) scale(.5); opacity: 0; pointer-events: none; }
+/* DARK (default): ay yukarıda; güneş toprağın arkasında (batmış). opacity 1 —
+   gizlenme soil örtmesiyle olur (fade ile değil) → "arkasına girme" hissi. */
+.welcome-sun  { transform: translateY(96vh) scale(.7); pointer-events: none; }
+.welcome-moon { transform: translateY(0) scale(1); pointer-events: auto; }
+/* LIGHT: güneş yukarıda; ay toprağın arkasında (batmış) */
+[data-theme="light"] .welcome-sun  { transform: translateY(0) scale(1); pointer-events: auto; }
+[data-theme="light"] .welcome-moon { transform: translateY(96vh) scale(.7); pointer-events: none; }
 
 /* ─── GÖKYÜZÜ: bulutlar (gündüz) + yıldızlar (gece) ─── */
 .welcome-sky { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
 
-/* LIGHT: welcome (landing) canlı gündüz gökyüzünü kullanır — dashboard'ın
-   yumuşak --page-bg tonundan ayrı, bold dursun (dark'ta ortak --page-bg). */
-[data-theme="light"] .welcome {
-    background: linear-gradient(180deg, #8ec8ea 0%, #c4e6f3 44%, #ecf7ef 100%);
-}
 
-/* Bulutlar (açık gri/beyaz, saydam) — gündüzde görünür, geceye geçişte yanlara dağılır */
+/* Bulutlar (açık gri/beyaz, saydam) — gündüzde görünür, geceye geçişte yanlara dağılır.
+   --fromx/--sc: giriş animasyonu (welcomeCloudIn) için yön + ölçek. */
 .wcloud {
     position: absolute; width: 130px; height: 40px; border-radius: 40px;
     background: rgba(255,255,255,.92); opacity: 0;
-    transition: transform 1.2s cubic-bezier(.4,0,.2,1), opacity 1s ease;
+    transition: transform 1.1s cubic-bezier(.4,0,.2,1), opacity 1s ease;
 }
 .wcloud::before, .wcloud::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
 .wcloud::before { width: 58px; height: 58px; top: -26px; left: 20px; }
 .wcloud::after  { width: 42px; height: 42px; top: -16px; right: 22px; }
-.wcloud-1 { top: 11%; left: 6%; }
-.wcloud-2 { top: 25%; left: 23%; }
-.wcloud-3 { top: 9%;  left: 49%; }
-.wcloud-4 { top: 18%; right: 19%; }
-.wcloud-5 { top: 33%; right: 6%; }
+.wcloud-1 { top: 11%; left: 6%;  --fromx: -82vw; --sc: 1; }
+.wcloud-2 { top: 25%; left: 23%; --fromx: -82vw; --sc: .78; }
+.wcloud-3 { top: 9%;  left: 49%; --fromx: -82vw; --sc: .66; }
+.wcloud-4 { top: 18%; right: 19%; --fromx: 82vw; --sc: .92; }
+.wcloud-5 { top: 33%; right: 6%;  --fromx: 82vw; --sc: .72; }
 /* DARK (default): bulutlar yanlara dağılmış + gizli */
 .wcloud-1 { transform: translateX(-82vw) scale(1); }
 .wcloud-2 { transform: translateX(-82vw) scale(.78); }
@@ -102,15 +201,43 @@
 .welcome-hero {
     display: flex; flex-direction: column; align-items: center;
     text-align: center; padding: 8px 24px 0; max-width: 760px; margin: 0 auto; z-index: 5;
-    animation: welcomeFadeUp .8s ease both;
+    pointer-events: none;  /* dar ekranda güneş/ay üstüne taşmasın; buton tekrar açılır */
+    /* DİKKAT: giriş animasyonu hero'da DEĞİL (aşağıda çocuklarda). Hero'da olursa animasyon
+       hero'nun scroll-fade opacity calc'ını EZER → dolumda başlık toprağın önünde kalır (#1 bug). */
 }
+/* Giriş animasyonu hero'nun ÇOCUKLARINDA → hero'nun opacity calc'ı (scroll-fade) tüm hero'yu soldurur */
+.welcome-title, .welcome-login-btn { animation: welcomeFadeUp 1.25s cubic-bezier(.22, 1, .36, 1) .35s both; }
 .welcome-title { font-size: clamp(1.9rem, 5.4vw, 3.2rem); font-weight: 800; line-height: 1.1; margin: 0; letter-spacing: -.6px; color: var(--text); }
 .welcome-title span {
     background: linear-gradient(120deg, #10b981, #34d399);
     -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.welcome-login-btn { margin-top: 26px; padding: 13px 38px; font-weight: 700; border-radius: 999px; font-size: 1.02rem; display: inline-block; }
-@keyframes welcomeFadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.welcome-login-btn { margin-top: 26px; padding: 13px 38px; font-weight: 700; border-radius: 999px; font-size: 1.02rem; display: inline-block; pointer-events: auto; }
+@keyframes welcomeFadeUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+
+/* ─── İLK GİRİŞ (intro) ─────────────────────────────────────────────────
+   from-state'ler .welcome-intro ile ilk-boyada uygulanır; main.js 2 frame
+   sonra class'ı kaldırır → elemanlar TOGGLE transition'ı ile doğal duruma
+   "girer". Aynı transition kullanıldığından animation-fill kilidi olmaz →
+   sonraki mod-değiştir toggle'ı serbest çalışır. Logo/hero ayrı (CSS
+   animation; toggle-transform'u olmadığından çakışmaz). Tema ilk-boyada
+   ayarlı (head inline script) → giriş o temaya göre. */
+
+/* Madde 1: Logo üstten hafifçe kayarak yerine otur (toggle'sız → animation) */
+.welcome-logo { animation: welcomeLogoDrop .9s cubic-bezier(.22,1,.36,1) .05s both; }
+@keyframes welcomeLogoDrop { from { opacity: 0; transform: translateY(-46px); } to { opacity: 1; transform: none; } }
+
+/* Madde 3: Gündüz — GÜNEŞ yerinde parlayarak (opacity) girer */
+[data-theme="light"] .welcome-intro .welcome-sun { opacity: 0; }
+/* Madde 3: Gündüz — BULUTLAR yandan (sağ/sol) kayarak girer (--fromx/--sc) */
+[data-theme="light"] .welcome-intro .wcloud {
+    opacity: 0; transform: translateX(var(--fromx, -82vw)) scale(var(--sc, 1));
+}
+/* Madde 5: Gece — AY yerinde opaklaşarak (opacity) girer */
+html:not([data-theme="light"]) .welcome-intro .welcome-moon { opacity: 0; }
+/* Madde 5: Gece — YILDIZLAR: hepsi parlayarak (opacity); descend olanlar üstten iner */
+html:not([data-theme="light"]) .welcome-intro .wstar { opacity: 0; }
+html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: translateY(-60vh); }
 
 /* ─── SAHNE (toprak + filiz) ──────────────────────── */
 .welcome-stage {
@@ -120,20 +247,24 @@
 
 /* Filiz — toprağa gömülü; soil'in ARKASINDA (z-index düşük) */
 .welcome-filiz {
-    position: absolute; left: 50%; bottom: 26px;
-    width: 280px; height: 327px; z-index: 2;
+    position: absolute; left: 50%; bottom: 44px;
+    width: 248px; height: 290px; z-index: 2;   /* biraz küçültüldü; soil (z-index 3) ARKASINDA */
     background: none; border: none; padding: 0; cursor: pointer;
-    transform: translateX(-50%) translateY(35%);   /* gömülü: yalnız sap + yaprak görünür */
-    transition: transform 1.3s cubic-bezier(.22,1,.36,1), filter .3s ease;  /* yavaşça */
+    transform: translateX(-50%) translateY(38%);   /* gömülü: yalnız sap + yaprak görünür */
+    transition: transform 1.4s cubic-bezier(.34,1.2,.4,1), filter .3s ease;  /* yavaşça, hafif yaylanma */
     filter: drop-shadow(0 12px 18px rgba(16,185,129,.28));
 }
+/* Göz takibi: pupil grubu fareye doğru yumuşak kayar (filiz.js mousemove) */
+.welcome-filiz .wf-pupil { transition: transform .12s ease-out; }
 .welcome-filiz svg { width: 100%; height: 100%; overflow: visible; display: block; }
 .welcome-filiz:hover { filter: drop-shadow(0 14px 24px rgba(16,185,129,.5)); }
 .welcome-filiz:focus-visible { outline: none; }
 .welcome-filiz:focus-visible svg { filter: drop-shadow(0 0 3px var(--primary)); }
 .welcome-stage.popped .welcome-filiz {
-    transform: translateX(-50%) translateY(-20%);   /* yavaşça çıktı: gövde + kollar höyük üstünde */
-    z-index: 4;
+    /* z-index DEĞİŞMEZ (2 = soil'in arkasında) → "perde önüne geçme" değil, topraktan
+       ÇIKMA hissi: soil (z-index 3) alt gövdeyi örter, üst (yüz + gövde) höyüğün
+       üstünde belirir; alt gövde toprakta gömülü kalır (groundhog gibi). */
+    transform: translateX(-50%) translateY(-15%);
 }
 
 /* Filiz canlandırmaları (filiz.css'teki global keyframe'leri kullanır) */
@@ -141,22 +272,57 @@
 .welcome-filiz .filiz-leaf-r { transform-origin: 60px 26px; transform-box: fill-box; animation: leafSwayR 3.5s ease-in-out infinite; }
 .welcome-filiz .eye-open   { animation: blinkOpen 5s infinite ease-in-out; }
 .welcome-filiz .eye-closed { opacity: 0; animation: blinkClosed 5s infinite ease-in-out; }  /* FIX: kapalı göz default gizli, sadece kırpışta görünür */
-.welcome-filiz:hover .filiz-arm-r { transform-origin: 102px 92px; transform-box: fill-box; animation: waveArm .6s ease-in-out 2; }
-.welcome-filiz:hover .filiz-arm-l { transform-origin: 18px 92px; transform-box: fill-box; animation: waveArm .6s ease-in-out 2 reverse; }
+/* TIKLAMA (love): Filiz ÇIKMIŞKEN tıklanınca — küçük kol salınımı + göz kırp +
+   kafasının üstünde kalpler (seviliyormuş gibi). filiz.js .loving ekler.
+   (hover wave kaldırıldı: çıkıştan sonra selamı eziyordu + tık olmalıydı.) */
+.welcome-stage.loving .filiz-arm-r { transform-origin: 102px 92px; transform-box: view-box; animation: waveArm 1.15s ease-in-out 1; }
+.welcome-stage.loving .filiz-arm-l { transform-origin: 18px 92px; transform-box: view-box; animation: waveArmL 1.15s ease-in-out 1; }
+.welcome-stage.loving .welcome-filiz .eye-open   { animation: loveBlinkOpen 1s ease 1; }
+.welcome-stage.loving .welcome-filiz .eye-closed { animation: loveBlinkClosed 1s ease 1; }
+@keyframes loveBlinkOpen   { 0%, 100% { opacity: 1; } 22%, 42% { opacity: 0; } }
+@keyframes loveBlinkClosed { 0%, 100% { opacity: 0; } 22%, 42% { opacity: 1; } }
+/* Kalpler (kafa üstü) — heartFloat* keyframe'leri filiz.css'te global */
+.welcome-filiz .filiz-hearts { opacity: 0; }
+.welcome-stage.loving .filiz-hearts { opacity: 1; }
+.welcome-stage.loving .heart-big   { transform-box: fill-box; transform-origin: center; animation: heartFloatBig 1.4s ease-out both; }
+.welcome-stage.loving .heart-left  { transform-box: fill-box; transform-origin: center; animation: heartFloatLeft 1.4s ease-out .15s both; }
+.welcome-stage.loving .heart-right { transform-box: fill-box; transform-origin: center; animation: heartFloatRight 1.4s ease-out .3s both; }
 
-/* ─── TOPRAK (tam genişlik) ───────────────────────── */
+/* İlk çıkış selamı: Filiz topraktan çıkınca SAĞ eliyle bir kez "merhaba" sallar
+   (hover wave'den farklı; yalnız sağ kol, daha yüksek + vücuttan ayrık).
+   main.js açılışta .greeting class'ını ekler (çıkış tamamlanınca). */
+.welcome-stage.greeting .filiz-arm-r {
+    transform-origin: 102px 92px; transform-box: view-box;
+    /* delay 1.4s: gövde yükselişini bekle. both: gecikme boyunca 0% (resting) tutar,
+       bitince 100% (resting) tutar → başta/sonda snap yok, tek temiz oynayış. */
+    animation: greetWave 1.8s ease-in-out 1.4s both;
+}
+/* Eli başın sağ-üstüne KALDIR (translateY) + sağ-sol YAY çizerek salla
+   (translateX salınımı + hafif rotate) → klasik "merhaba" yay hareketi. */
+@keyframes greetWave {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    20%  { transform: translate(7px, -54px) rotate(-12deg); }    /* eli başın sağ-üstüne kaldır (sağa kaydırılmış) */
+    37%  { transform: translate(-5px, -54px) rotate(16deg); }    /* sola yay */
+    54%  { transform: translate(11px, -54px) rotate(-16deg); }   /* sağa yay */
+    71%  { transform: translate(-3px, -54px) rotate(14deg); }    /* sola yay */
+    88%  { transform: translate(9px, -54px) rotate(-10deg); }    /* sağa yay */
+    100% { transform: translate(0, 0) rotate(0deg); }            /* indir */
+}
+
+/* ÇIKIŞ: yalnız gövde yükselir (transform transition). Kol AÇMA YOK — kollar
+   toplu kalır; çıkış tamamlanınca yalnız SAĞ el kalkıp selam verir (greetWave).
+   (Eski emerge kol-açma kaldırıldı: selamdan önce eli kısmen kaldırıp interrupt
+   yaratıyordu — el "başa sarıp" tekrar kalkıyordu.) */
+
+/* ─── TOPRAK (tam genişlik) — sun/moon'u (z-index 2) örter (z-index 3) ── */
 .welcome-soil {
     position: absolute; left: 0; right: 0; bottom: 0; width: 100%;
     height: 215px; z-index: 3; pointer-events: none;
 }
 .welcome-soil-svg { width: 100%; height: 100%; display: block; }
 
-/* Topraktan fırlayan toz/toprak parçacıkları (pop'ta) */
-.welcome-dirt {
-    position: absolute; left: 50%; bottom: 150px; width: 9px; height: 9px; border-radius: 50%;
-    background: #6b4423; opacity: 0; z-index: 5; pointer-events: none;
-}
-.welcome-stage.popped .welcome-dirt { animation: dirtBurst .85s ease-out forwards; animation-delay: var(--delay, 0s); }
+/* Topraktan fırlayan toz parçacıkları KALDIRILDI (#2 — pop'ta dağılan toprak animasyonu istenmiyor) */
+.welcome-dirt { display: none; }
 @keyframes dirtBurst {
     0%   { opacity: 0; transform: translate(-50%, 0) scale(.4); }
     15%  { opacity: 1; }
@@ -176,11 +342,335 @@
 
 /* ─── REDUCED MOTION ──────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-    .welcome-hero, .welcome-dirt,
+    .welcome-hero, .welcome-dirt, .welcome-logo,
     .welcome-filiz, .welcome-filiz .filiz-leaf-l, .welcome-filiz .filiz-leaf-r,
-    .welcome-filiz .eye-open, .welcome-filiz .eye-closed, .welcome-sun .sun-rays, .wstar {
+    .welcome-filiz .eye-open, .welcome-filiz .eye-closed, .welcome-sun .sun-rays, .wstar,
+    .welcome-intro .welcome-logo, .welcome-intro .welcome-sun, .welcome-intro .welcome-moon,
+    .welcome-intro .wcloud, .welcome-intro .wstar {
         animation: none !important;
     }
     .welcome-filiz { transition: transform .01s linear; }
     .welcome-sun, .welcome-moon, .wcloud, .wstar { transition: opacity .2s ease !important; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   FAZ 2 — TOPRAK-ALTI TANITIM KARTLARI (liquid glass) + scroll reveal
+   Dolum bitince (pin serbest) underground'a inilir; kartlar viewport'a girince
+   .wu-reveal → .in-view ile belirir (main.js IntersectionObserver).
+   ════════════════════════════════════════════════════════════════════════ */
+.welcome-underground { height: auto; }   /* sahneler kendi yüksekliğinde (her biri ~1 ekran) */
+
+/* Navigasyon FULLPAGE (main.js): her kaydırma = 1 sayfa, smooth yay. Native scroll-snap YOK. */
+
+/* Dolum ÖDÜLÜ intro: dolu toprağın üstünde --rise'a bağlı belirip oturur (#2).
+   --rise 0.5→0.88 arası fade + yüksel; 0.88+ oturmuş. pin'le yukarı kayıp gider. */
+.welcome-fill-intro {
+    position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 0 30px;
+    opacity: clamp(0, calc((var(--rise, 0) - 0.5) * 2.6), 1);
+    transform: translateY(clamp(0px, calc((0.88 - var(--rise, 0)) * 60px), 34px));
+}
+.welcome-fill-intro .wu-lead { max-width: 520px; }
+
+/* Tam-ekran sahne: kart + karşı açıklama; zigzag data-side ile yön değişir */
+.wu-scene {
+    min-height: 100vh;   /* fullpage: her sahne 1 ekran */
+    display: flex; align-items: center; justify-content: center;
+    gap: clamp(26px, 5vw, 70px); padding: 4vh 30px;
+    max-width: 1080px; margin: 0 auto;
+}
+.wu-scene-center { flex-direction: column; text-align: center; }   /* intro + cta: tek öğe, ortalı */
+.wu-scene[data-side="right"] { flex-direction: row-reverse; }
+.wu-scene[data-side] > * { flex: 1 1 0; min-width: 0; }
+.wu-scene .wu-card { max-width: 440px; }
+.wu-scene .wu-desc { max-width: 430px; }
+
+/* Açıklama (kartın karşısı) */
+.wu-desc p { margin: 0; font-size: 1.08rem; line-height: 1.7; color: rgba(245, 236, 216, .82); }
+.wu-desc strong { color: #f8efdb; font-weight: 700; }
+
+/* Intro */
+.wu-intro { max-width: 640px; }
+.wu-eyebrow { display: inline-block; font-size: .8rem; font-weight: 700; letter-spacing: 3px; color: #8fe388; margin-bottom: 14px; }
+.wu-title { font-size: clamp(1.9rem, 5.2vw, 2.9rem); font-weight: 800; line-height: 1.14; margin: 0 0 16px; color: #f5ecd8; letter-spacing: -.5px; }
+.wu-title span { background: linear-gradient(120deg, #34d399, #8fe388); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wu-lead { margin: 0; font-size: 1.06rem; line-height: 1.65; color: rgba(245, 236, 216, .82); }
+
+/* CTA */
+.wu-cta-title { font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 800; color: #f5ecd8; margin: 0 0 24px; letter-spacing: -.3px; }
+
+/* Renkli liquid glass kart (kahverengi toprak üstünde accent-tint buzlu cam) */
+.wu-card {
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column; gap: 14px;   /* dikey: head + mini-görsel + alt-bilgi */
+    padding: 22px 24px; border-radius: 22px;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 24%, transparent), rgba(255, 255, 255, .07)), rgba(40, 28, 18, .32);
+    backdrop-filter: blur(18px) saturate(1.7);
+    -webkit-backdrop-filter: blur(18px) saturate(1.7);
+    border: 1px solid color-mix(in srgb, var(--accent) 34%, rgba(255, 255, 255, .2));
+    box-shadow: 0 26px 64px rgba(0, 0, 0, .45),
+                inset 0 1px 0 rgba(255, 255, 255, .26),
+                0 0 70px -18px var(--accent, #fff);   /* karta özgü renkli ışıma */
+}
+.wu-card::before {   /* renkli sol kenar şeridi (accent vurgusu) */
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--accent); opacity: .9;
+}
+.wu-card-head { display: flex; align-items: center; gap: 14px; }
+.wu-card-ic {
+    flex-shrink: 0; width: 52px; height: 52px; border-radius: 15px;
+    display: grid; place-items: center; font-size: 1.7rem;
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
+}
+.wu-card-htx { min-width: 0; }
+.wu-card-htx h3 { margin: 0 0 3px; font-size: 1.13rem; font-weight: 700; color: #fff; }
+.wu-card-htx p { margin: 0; font-size: .88rem; line-height: 1.45; color: rgba(255, 255, 255, .78); }
+/* Mini-görsel alanı + alt-bilgi çipleri (per-card stiller dosya SONUNDA) */
+.wu-card-viz { position: relative; width: 100%; min-height: 84px; }
+.wu-card-viz > svg { display: block; width: 100%; }
+.wu-card-foot { display: flex; flex-wrap: wrap; gap: 8px; }
+.wu-chip {
+    display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 999px;
+    font-size: .72rem; font-weight: 600; line-height: 1.4; color: rgba(255, 255, 255, .9);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.wu-chip.wu-chip-soft { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .14); }
+.wu-cta { text-align: center; }
+
+/* Yaylı reveal: kart kendi tarafından, açıklama KARŞIDAN, intro/cta aşağıdan girer.
+   Yön sınıfları (.from-l / .from-r / .from-b) main.js'te data-side'a göre eklenir.
+   overshoot easing (1.56) = "yay/zıplama"; in-view = oturmuş. IO çıkışta sıfırlar (re-trigger). */
+.wu-reveal { opacity: 0; transition: opacity .42s ease, transform .62s cubic-bezier(.3, 1.55, .5, 1); }   /* çarpıcı + güçlü yay */
+.wu-reveal.from-l { transform: translateX(-120px) scale(.9); }
+.wu-reveal.from-r { transform: translateX(120px) scale(.9); }
+.wu-reveal.from-b { transform: translateY(56px) scale(.94); }
+.wu-reveal.in-view.in-view { opacity: 1; transform: none; }   /* çift sınıf → mobil override dahil her zaman kazanır */
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome { scroll-snap-type: none; }
+    .wu-reveal { opacity: 1; transform: none; transition: none; }
+}
+/* Mobil: dikey yığ (kart üstte, açıklama altta); yan giriş yerine aşağıdan (yatay taşma yok) */
+@media (max-width: 768px) {
+    .wu-scene { flex-direction: column !important; gap: 26px; padding: 12vh 22px; text-align: center; max-width: 560px; }
+    .wu-scene .wu-card { text-align: left; }
+    .wu-reveal.from-l, .wu-reveal.from-r { transform: translateY(44px); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   FAZ 3 — TOPRAK-ALTI DEKOR: boş toprağı doldurur + üst/alt geçişi süsler
+   ════════════════════════════════════════════════════════════════════════ */
+.wu-decor { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.wu-scene { position: relative; z-index: 1; }   /* sahneler dekorun ÖNÜNDE */
+/* Doku: ince çakıl/kesek deseni (tüm toprak boyunca, çok hafif) */
+.wu-decor::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(34, 22, 11, .5) 1px, transparent 1.7px);
+    background-size: 84px 78px; opacity: .5;
+}
+.wu-decor > svg, .wu-decor > .wu-pebble { position: absolute; }
+
+/* Kökler (yüzeyden sarkar → geçişi organik yapar) */
+.wu-root { width: clamp(52px, 6vw, 84px); opacity: .68; }
+.wu-root path { animation: wuRootSway 7s ease-in-out infinite; transform-origin: top center; }
+
+/* Solucan */
+.wu-worm { width: clamp(94px, 11vw, 140px); opacity: .9; transform-origin: center; animation: wuWormWiggle 4.5s ease-in-out infinite; }
+
+/* Uyuyan köstebek */
+.wu-mole { width: clamp(94px, 11vw, 134px); opacity: .95; }
+.wu-zzz { fill: #cbb89f; font-size: 15px; font-weight: 800; animation: wuZzz 3s ease-in-out infinite; }
+
+/* Filizlenen tohum */
+.wu-seed { width: clamp(19px, 2vw, 27px); opacity: .92; transform-origin: bottom center; animation: wuRootSway 6s ease-in-out infinite; }
+/* Mantar / kurtçuk / nem damlası / kaya */
+.wu-mushroom { width: clamp(40px, 4.2vw, 58px); opacity: .94; transform-origin: bottom center; animation: wuRootSway 6.5s ease-in-out infinite; }
+.wu-grub { width: clamp(38px, 4vw, 54px); opacity: .9; transform-origin: center; animation: wuWormWiggle 5.5s ease-in-out infinite; }
+.wu-drop { width: clamp(13px, 1.6vw, 19px); opacity: .85; transform-origin: top center; animation: wuDrop 3.6s ease-in-out infinite; }
+.wu-rock { opacity: .9; }
+/* Kristal / mineral pırıltısı (derin katman) */
+.wu-crystal { width: clamp(28px, 3vw, 40px); opacity: .82; animation: wuCrystal 4s ease-in-out infinite; filter: drop-shadow(0 0 6px rgba(160, 130, 220, .35)); }
+@keyframes wuCrystal { 0%, 100% { filter: drop-shadow(0 0 5px rgba(160, 130, 220, .3)); } 50% { filter: drop-shadow(0 0 11px rgba(160, 130, 220, .6)); } }
+.wu-mineral { width: 6px; height: 6px; border-radius: 50%; background: var(--c, #c9a3f0); box-shadow: 0 0 9px 1px var(--c, #c9a3f0); opacity: .65; animation: wuMineral 3s ease-in-out infinite; }
+@keyframes wuMineral { 0%, 100% { opacity: .35; transform: scale(.85); } 50% { opacity: .8; transform: scale(1.12); } }
+@keyframes wuDrop { 0%, 100% { transform: translateY(0) scaleY(1); } 55% { transform: translateY(3px) scaleY(1.04); } }
+
+/* Çakıl / tohum */
+.wu-pebble {
+    width: var(--s, 11px); height: calc(var(--s, 11px) * .82); border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, #6b482a, #3a2613 72%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .3), inset 0 1px 1px rgba(255, 255, 255, .12);
+    opacity: .8;
+}
+
+@keyframes wuRootSway { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(1.6deg); } }
+@keyframes wuWormWiggle { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-4px) rotate(-3.5deg); } }
+@keyframes wuZzz { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) {
+    .wu-root path, .wu-worm, .wu-zzz, .wu-seed, .wu-mushroom, .wu-grub, .wu-drop, .wu-crystal, .wu-mineral { animation: none; }
+}
+
+/* ─── YAN NAVİGASYON NOKTALARI — katmanlar arası hızlı geçiş (toprakta görünür) ───── */
+.wu-dots {
+    position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 13px; z-index: 1100;
+    opacity: 0; pointer-events: none; transition: opacity .45s ease;
+}
+.wu-dots.visible { opacity: 1; pointer-events: auto; }
+.wu-dot {
+    width: 11px; height: 11px; border-radius: 50%; padding: 0; cursor: pointer;
+    background: rgba(245, 236, 216, .28); border: 1.5px solid rgba(245, 236, 216, .5);
+    transition: background .3s ease, transform .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+.wu-dot:hover { background: rgba(245, 236, 216, .6); transform: scale(1.25); }
+.wu-dot.active { background: #8fe388; border-color: #8fe388; transform: scale(1.35); box-shadow: 0 0 10px rgba(143, 227, 136, .55); }
+@media (max-width: 560px) { .wu-dots { right: 12px; gap: 11px; } .wu-dot { width: 9px; height: 9px; } }
+
+/* ════════════════════════════════════════════════════════════════
+   KART MİNİ-GÖRSELLERİ (per-card) — nem sparkline · sulama litre+bar ·
+   hastalık yaprak+güven · gübre NPK · bildirim liste (workflow tasarımı)
+   ════════════════════════════════════════════════════════════════ */
+/* ── nem ── */
+.wu-card-viz .nem-spark { display: block; width: 100%; height: 100%; overflow: visible; }
+.wu-card-viz .nem-area { fill: color-mix(in srgb, var(--accent) 22%, transparent); stroke: none; }
+.wu-card-viz .nem-line { fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 4px color-mix(in srgb, var(--accent) 60%, transparent)); }
+.wu-card-viz .nem-thr { stroke: rgba(255, 255, 255, .42); stroke-width: 1; stroke-dasharray: 4 4; }
+.wu-card-viz .nem-dot { fill: #fff; stroke: var(--accent); stroke-width: 2; }
+.wu-card-viz .nem-read { position: absolute; top: 4px; right: 6px; display: flex; align-items: baseline; gap: 4px; line-height: 1; }
+.wu-card-viz .nem-read b { font-size: 1.18rem; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+.wu-card-viz .nem-read span { font-size: .62rem; color: rgba(255, 255, 255, .6); }
+.wu-card-viz .nem-thr-tag { position: absolute; left: 4px; top: calc(58 / 84 * 100% - 14px); font-size: .58rem; letter-spacing: .2px; color: rgba(255, 255, 255, .6); text-transform: uppercase; }
+
+/* ── sulama ── */
+.wu-card-viz .sulama-read {
+  display: flex; align-items: center; gap: 14px; width: 100%; height: 84px;
+}
+.wu-card-viz .sulama-num {
+  flex: 0 0 auto; display: flex; align-items: baseline; flex-wrap: wrap;
+  gap: 3px 4px; line-height: 1; min-width: 92px;
+}
+.wu-card-viz .sulama-amt {
+  font-size: 2.05rem; font-weight: 800; letter-spacing: -.5px;
+  color: var(--accent);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.wu-card-viz .sulama-unit {
+  font-size: 1rem; font-weight: 700;
+  color: color-mix(in srgb, var(--accent) 78%, #fff);
+}
+.wu-card-viz .sulama-cap {
+  flex-basis: 100%; margin-top: 5px;
+  font-size: .66rem; font-weight: 600; letter-spacing: .3px;
+  text-transform: uppercase; color: rgba(255,255,255,.6);
+}
+.wu-card-viz .sulama-svg { flex: 1 1 auto; min-width: 0; height: 84px; }
+/* droplet pips */
+.wu-card-viz .sulama-pips .sp.on   { fill: var(--accent); }
+.wu-card-viz .sulama-pips .sp.half {
+  fill: color-mix(in srgb, var(--accent) 42%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 70%, transparent); stroke-width: 1;
+}
+.wu-card-viz .sulama-pips .sp.off {
+  fill: rgba(255,255,255,.08);
+  stroke: rgba(255,255,255,.22); stroke-width: 1;
+}
+/* water-fill bar */
+.wu-card-viz .sulama-track { fill: rgba(255,255,255,.08); }
+.wu-card-viz .sulama-frame { fill: none; stroke: rgba(255,255,255,.16); stroke-width: 1; }
+.wu-card-viz .sulama-fill {
+  fill: color-mix(in srgb, var(--accent) 82%, transparent);
+}
+.wu-card-viz .sulama-wave {
+  fill: color-mix(in srgb, var(--accent) 82%, transparent);
+  animation: sulama-flow 2.6s ease-in-out infinite;
+}
+@keyframes sulama-flow {
+  0%,100% { transform: translateX(0); }
+  50%     { transform: translateX(-4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wu-card-viz .sulama-wave { animation: none; }
+}
+/* ticks */
+.wu-card-viz .sulama-tick {
+  fill: rgba(255,255,255,.5); font-size: 9px; font-weight: 600;
+  font-family: inherit;
+}
+.wu-card-viz .sulama-tick-r { text-anchor: end; }
+
+/* ── hastalik ── */
+.wu-card-viz .hastalik-viz { display: block; width: 100%; height: auto; overflow: visible; }
+.wu-card-viz .hastalik-leaf { transform-origin: 44px 40px; animation: hastalikLeafSway 5s ease-in-out infinite; }
+@keyframes hastalikLeafSway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2.5deg); } }
+.wu-card-viz .hastalik-lbl-muted { fill: rgba(255,255,255,.6); font-size: 11px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; font-family: inherit; }
+.wu-card-viz .hastalik-lbl-main { fill: #fff; font-size: 18px; font-weight: 800; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; letter-spacing: -.2px; }
+.wu-card-viz .hastalik-arc { animation: hastalikArc 1.1s cubic-bezier(.3, 1, .4, 1) .15s both; }
+@keyframes hastalikArc { from { stroke-dashoffset: 163.4; } to { stroke-dashoffset: 26.1; } }
+.wu-card-viz .hastalik-pct { fill: #fff; font-size: 16px; font-weight: 800; text-anchor: middle; font-family: inherit; }
+.wu-card-viz .hastalik-pct-sub { fill: rgba(255,255,255,.6); font-size: 8px; font-weight: 600; text-anchor: middle; letter-spacing: .6px; text-transform: uppercase; font-family: inherit; }
+@media (prefers-reduced-motion: reduce) {
+  .wu-card-viz .hastalik-leaf, .wu-card-viz .hastalik-arc { animation: none; }
+  .wu-card-viz .hastalik-arc { stroke-dashoffset: 26.1; }
+}
+
+/* ── gubre ── */
+.wu-card-viz .gubre-npk { display:block; width:100%; height:auto; overflow:visible; }
+.wu-card-viz .gubre-base { stroke:rgba(255,255,255,.18); stroke-width:1.5; stroke-linecap:round; }
+.wu-card-viz .gubre-track { fill:rgba(255,255,255,.06); }
+.wu-card-viz .gubre-bar { stroke:color-mix(in srgb, var(--accent) 55%, transparent); stroke-width:1; }
+.wu-card-viz .gubre-n { fill:var(--accent); }
+.wu-card-viz .gubre-p { fill:color-mix(in srgb, var(--accent) 45%, transparent); }
+.wu-card-viz .gubre-k { fill:color-mix(in srgb, var(--accent) 68%, transparent); }
+.wu-card-viz .gubre-val { fill:#fff; font:700 12px/1 system-ui,sans-serif; text-anchor:middle; }
+.wu-card-viz .gubre-lab { fill:rgba(255,255,255,.6); font:600 11px/1 system-ui,sans-serif; text-anchor:middle; letter-spacing:.5px; }
+
+/* ── bildirim ── */
+.wu-card-viz .bildirim-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.wu-card-viz .bildirim-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 9px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 12%, rgba(255, 255, 255, .03));
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.wu-card-viz .bildirim-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 26%, transparent);
+}
+.wu-card-viz .bildirim-dot--crit { color: #f87171; background: #f87171; }
+.wu-card-viz .bildirim-dot--warn { color: #fbbf24; background: #fbbf24; }
+.wu-card-viz .bildirim-dot--ok   { color: #4ade80; background: #4ade80; }
+.wu-card-viz .bildirim-txt {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: .82rem;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, .88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wu-card-viz .bildirim-tag {
+  flex: 0 0 auto;
+  font-size: .64rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .55);
 }
