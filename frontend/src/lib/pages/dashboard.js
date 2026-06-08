@@ -174,7 +174,7 @@ export async function loadDashboard() {
 
     // Trend chart'lar — weather Bearer üzerinden gelir (api() artık _authHeaders kullanıyor).
     const w = weather || [];
-    renderMoistureChart(w);
+    renderMoistureChart((summary && summary.soil_moisture_trend) || []);
     renderTempHumChart(w);
     renderPrecipChart(w);
 }

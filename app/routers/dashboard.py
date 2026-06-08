@@ -44,6 +44,7 @@ from app.routers.auth import get_current_user_or_403
 from app.schemas.schemas import (
     DashboardLastDisease,
     DashboardLastIrrigation,
+    DashboardMoisturePoint,
     DashboardOpenAlerts,
     DashboardSoilMoisture,
     DashboardSummaryResponse,
@@ -145,6 +146,28 @@ def get_dashboard_summary(
         status=_classify_moisture(avg_moisture),
     )
 
+    # Toprak nemi trendi (son 24 saat, saatlik ortalama) — dashboard grafiği için.
+    # DB-agnostik: ham okumalar Python'da saatlik bucket'lanır (~192 satır, hafif).
+    trend_q = (
+        db.query(SoilMoistureReading.reading_timestamp, SoilMoistureReading.moisture_percent)
+        .join(Sensor, SoilMoistureReading.sensor_id == Sensor.id)
+        .join(Field, Sensor.field_id == Field.id)
+        .join(Farm, Field.farm_id == Farm.id)
+        .filter(SoilMoistureReading.reading_timestamp >= since)
+    )
+    if not is_system:
+        trend_q = trend_q.filter(Farm.user_id == current_user.id)
+    hourly_buckets: dict[datetime, list[float]] = {}
+    for ts, moisture in trend_q.all():
+        if ts is None or moisture is None:
+            continue
+        bucket = ts.replace(minute=0, second=0, microsecond=0)
+        hourly_buckets.setdefault(bucket, []).append(moisture)
+    moisture_trend = [
+        DashboardMoisturePoint(hour=bucket, moisture_percent=round(sum(vals) / len(vals), 1))
+        for bucket, vals in sorted(hourly_buckets.items())
+    ]
+
     # ─── 2. Son sulama ───────────────────────────────────────────
     irrigation_q = (
         db.query(IrrigationSchedule, Field.name)
@@ -224,6 +247,7 @@ def get_dashboard_summary(
         field_count=field_count,
         sensor_count=sensor_count,
         soil_moisture_today=soil_moisture,
+        soil_moisture_trend=moisture_trend,
         last_irrigation=last_irrigation,
         open_alerts=open_alerts,
         last_disease=last_disease,
