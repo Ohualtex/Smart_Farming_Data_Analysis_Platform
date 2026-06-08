@@ -92,11 +92,11 @@ export async function loadWeather() {
     const sorted = [...data].reverse();
     // Cards
     if (data.length) {
-        const temps = data.map(d => d.temperature_c).filter(Boolean);
+        const temps = data.map(d => d.temperature_c).filter(t => t != null);
         document.getElementById('weatherCards').innerHTML = `
             <div class="card"><div class="card-icon" aria-hidden="true">🌡️</div><div class="card-value">${data[0].temperature_c?.toFixed(1) || '—'}°C</div><div class="card-label">Güncel Sıcaklık</div></div>
             <div class="card"><div class="card-icon" aria-hidden="true">💧</div><div class="card-value">%${data[0].humidity_percent?.toFixed(1) || '—'}</div><div class="card-label">Güncel Nem</div></div>
-            <div class="card"><div class="card-icon" aria-hidden="true">📊</div><div class="card-value">${Math.min(...temps).toFixed(1)}—${Math.max(...temps).toFixed(1)}°C</div><div class="card-label">Sıcaklık Aralığı</div></div>
+            <div class="card"><div class="card-icon" aria-hidden="true">📊</div><div class="card-value">${temps.length ? Math.min(...temps).toFixed(1) + '—' + Math.max(...temps).toFixed(1) : '—'}°C</div><div class="card-label">Sıcaklık Aralığı</div></div>
             <div class="card"><div class="card-icon" aria-hidden="true">🌧️</div><div class="card-value">${data.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1)}mm</div><div class="card-label">Toplam Yağış</div></div>
         `;
     }
@@ -217,10 +217,11 @@ export async function predictIrrigation() {
 export async function approveIrrigation() {
     const sel = document.getElementById('irrApproveField');
     if (!sel || !sel.value) { showToast('Lütfen bir tarla seç', 'warning'); return; }
+    if (_lastIrrigationRec == null) { showToast('Önce sulama önerisi hesapla', 'warning'); return; }
     const body = {
         field_id: parseInt(sel.value, 10),
         scheduled_date: new Date().toISOString(),
-        water_amount_liters: _lastIrrigationRec ?? 0,
+        water_amount_liters: _lastIrrigationRec,
     };
     const res = await apiAuth('/api/irrigation/schedules', { method: 'POST', body: JSON.stringify(body) });
     if (res) {
@@ -272,9 +273,9 @@ export async function recommendFertilizer() {
             <div class="result-card">
                 <h4>🌱 ${r.crop_name_tr} — Gübreleme Önerisi</h4>
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0;">
-                    <div><div style="font-size:.8rem;color:var(--text-muted)">Azot (N)</div><div style="font-size:1.3rem;font-weight:700;color:#10b981">${r.nitrogen_needed_kg} kg</div></div>
-                    <div><div style="font-size:.8rem;color:var(--text-muted)">Fosfor (P)</div><div style="font-size:1.3rem;font-weight:700;color:#3b82f6">${r.phosphorus_needed_kg} kg</div></div>
-                    <div><div style="font-size:.8rem;color:var(--text-muted)">Potasyum (K)</div><div style="font-size:1.3rem;font-weight:700;color:#f59e0b">${r.potassium_needed_kg} kg</div></div>
+                    <div><div style="font-size:.8rem;color:var(--text-muted)">Azot (N)</div><div style="font-size:1.3rem;font-weight:700;color:#10b981">${r.nitrogen_needed_kg ?? '—'} kg</div></div>
+                    <div><div style="font-size:.8rem;color:var(--text-muted)">Fosfor (P)</div><div style="font-size:1.3rem;font-weight:700;color:#3b82f6">${r.phosphorus_needed_kg ?? '—'} kg</div></div>
+                    <div><div style="font-size:.8rem;color:var(--text-muted)">Potasyum (K)</div><div style="font-size:1.3rem;font-weight:700;color:#f59e0b">${r.potassium_needed_kg ?? '—'} kg</div></div>
                 </div>
                 <p style="color:var(--text-muted);font-size:.85rem;">${r.recommendation}</p>
             </div>`;
@@ -300,6 +301,9 @@ export async function fertilizerSchedule() {
                 <tbody>${schedule.map(s => `<tr><td>${s.phase}</td><td>${s.target_date}</td><td>${s.fertilizer_type}</td><td>${s.amount_kg_per_hectare}</td><td style="color:var(--text-muted);font-size:.8rem;">${s.notes}</td></tr>`).join('')}</tbody></table>
             </div>`;
         showToast('Gübreleme takvimi oluşturuldu', 'success');
+    } else {
+        document.getElementById('scheduleResult').innerHTML = '<p class="empty-state">Gübreleme takvimi oluşturulamadı.</p>';
+        showToast('Gübreleme takvimi alınamadı', 'error');
     }
 }
 
@@ -392,6 +396,7 @@ export async function analyzePlantImage() {
         return;
     }
     const btn = document.getElementById('plantsAnalyzeBtn');
+    if (btn.disabled) return;  // çift-submit guard
     btn.disabled = true;
     btn.textContent = '⏳ Analiz ediliyor...';
     const fd = new FormData();
