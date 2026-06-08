@@ -41,7 +41,8 @@
     flex-shrink: 0;
     height: 200vh;
     position: relative; z-index: 4;   /* soil(3)+filiz(2) üstünde → bindirme seam'i + Filiz sızmasını örter */
-    margin-top: -8px;   /* pin altıyla hafif bindirme → sub-pixel boşluk/sızma kapanır (dikişsiz) */
+    margin-top: 0;   /* TAM act1 dibinde başlar → page-1 snap'inde alttan SIZMAZ. Dikişi soil-fill'in
+                        +2px bindirmesi + eşleşen #4e3119 renk kapatır (negatif margin sızmaya yol açıyordu). */
     /* üst = soil SVG dibi (#4e3119) → dikişsiz; KADEMELİ ve nazik koyulaşır (sert bant yok),
        dip hafif cooler/grayer (taşımsı derin toprak hissi). */
     background: linear-gradient(180deg,
@@ -368,7 +369,7 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
     position: absolute; inset: 0; z-index: 4; pointer-events: none;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; padding: 0 30px;
-    opacity: clamp(0, calc((var(--rise, 0) - 0.5) * 2.6), 1);
+    opacity: calc(clamp(0, calc((var(--rise, 0) - 0.5) * 2.6), 1) * (1 - var(--exit, 0)));   /* page-1'i geçince söner */
     transform: translateY(clamp(0px, calc((0.88 - var(--rise, 0)) * 60px), 34px));
 }
 .welcome-fill-intro .wu-lead { max-width: 520px; }
@@ -674,3 +675,119 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
   text-transform: uppercase;
   color: rgba(255, 255, 255, .55);
 }
+
+/* ════════════════════════════════════════════════════════════════
+   🎬 SİNEMATİK ATMOSFER — god-rays + toz zerreleri + derinlik sisi
+   .wu-atmos viewport'a STICKY; --depth-t (JS, scroll 0→1) ile sis
+   derinleşir. decor(z0) ÜSTÜ / scene(z1) ALTI. transform/opacity (GPU).
+   ════════════════════════════════════════════════════════════════ */
+.wu-atmos {
+    position: sticky; top: 0; height: 100vh; z-index: 0;
+    /* page-1'den (dolum) İTİBAREN yapışır → ışık TEK ve viewport-sabit katman: 1.→2. katman
+       geçişinde de huzmeler "kayar" (içerik altından akar). margin-top natural-top'u page-1'e (scroll
+       400) çeker; margin-bottom YOK → net flow 0 → SAHNELER KAYMAZ (margin-top+height+0 = 0). */
+    margin-top: -100vh;
+    pointer-events: none; overflow: hidden;
+    opacity: clamp(0, calc((var(--rise, 0) - 0.45) * 2), 1);   /* yüzeyde gizli; dolumda belirir; yeraltında tam */
+}
+/* Işık huzmeleri — sol-üstten sıcak ışık, screen blend ile toprağı aydınlatır */
+.wu-ray {
+    position: absolute; top: -25%; left: var(--x, 10%);
+    width: var(--w, 200px); height: 160%;
+    background: linear-gradient(to bottom,
+        color-mix(in srgb, #ffe9b5 36%, transparent) 0%,
+        color-mix(in srgb, #ffe9b5 13%, transparent) 42%,
+        transparent 76%);
+    transform: rotate(var(--rot, 13deg)); transform-origin: top center;
+    filter: blur(14px); mix-blend-mode: screen; opacity: var(--o, .5);
+    animation: wuRaySway 11s ease-in-out infinite alternate;
+    will-change: transform, opacity;
+}
+@keyframes wuRaySway {
+    from { transform: rotate(var(--rot, 13deg)) translateX(-7px); opacity: calc(var(--o, .5) * .72); }
+    to   { transform: rotate(calc(var(--rot, 13deg) + 2.5deg)) translateX(7px); opacity: var(--o, .5); }
+}
+/* Toz zerreleri — ışıkta süzülen ince parçacıklar */
+.wu-mote {
+    position: absolute; left: var(--x, 50%); top: var(--y, 50%);
+    width: var(--s, 3px); height: var(--s, 3px); border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 243, 214, .95), rgba(255, 243, 214, 0) 70%);
+    opacity: var(--o, .5);
+    animation: wuMoteDrift var(--d, 16s) ease-in-out infinite alternate;
+    will-change: transform;
+}
+@keyframes wuMoteDrift {
+    from { transform: translate(0, 0); }
+    to   { transform: translate(var(--dx, 12px), var(--dy, -24px)); }
+}
+/* Derinlik sisi — vignette hep var; derinleştikçe (--depth-t) cool koyu artar (DoF hissi) */
+.wu-fog {
+    position: absolute; inset: 0;
+    background:
+        radial-gradient(140% 105% at 50% 20%, transparent 38%, rgba(8, 6, 3, .62) 100%),
+        linear-gradient(180deg, transparent 35%,
+            color-mix(in srgb, #0a0e14 calc(var(--depth-t, 0) * 65%), transparent) 100%);
+    opacity: calc(.4 + var(--depth-t, 0) * .42);
+}
+@media (max-width: 768px) {   /* mobil: tek huzme + daha hafif sis (perf) */
+    .wu-ray ~ .wu-ray { display: none; }
+    .wu-fog { opacity: calc(.3 + var(--depth-t, 0) * .35); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .wu-ray, .wu-mote { animation: none; }
+}
+
+/* 🌙 GÜN/GECE IŞIK AÇISI — gündüz: güneş SOL-üst (mevcut, sıcak). Gece: ay SAĞ-üst
+   → atmosferi yatay AYNALA (ışık sağdan gelir) + huzmeler daha SOLUK ve SOĞUK
+   (narin ay ışığı). data-theme yoksa = gece (default). */
+html:not([data-theme="light"]) .wu-atmos { transform: scaleX(-1); }
+html:not([data-theme="light"]) .wu-ray {
+    filter: blur(14px) opacity(.5);                 /* gece daha soluk/narin */
+    background: linear-gradient(to bottom,
+        color-mix(in srgb, #cfddf5 26%, transparent) 0%,
+        color-mix(in srgb, #cfddf5 9%, transparent) 42%,
+        transparent 76%);                            /* soğuk ay ışığı (mavimsi-beyaz) */
+}
+
+/* ════════════════════════════════════════════════════════════════
+   🐜 1. TOPRAK KATMANI DEKORU (.welcome-fill-decor) — dolum-ödülü brown'unda
+   rise ile belirir; yüzey-altı hüzme + sarkan kökler + karıncalar + çakıllar.
+   z-index: soil-fill(3) ÜSTÜ (DOM'da sonra) / fill-intro(4) ALTI. ════════════ */
+.welcome-fill-decor {
+    position: absolute; inset: 0; z-index: 3;
+    overflow: hidden; pointer-events: none;
+    opacity: calc(clamp(0, calc((var(--rise, 0) - 0.55) * 2.6), 1) * (1 - var(--exit, 0)));   /* belirir + page-1'i geçince söner */
+}
+.welcome-fill-decor svg { overflow: visible; }
+/* yüzey-altı ışık hüzmesi (soluk; gündüz SOL, gece SAĞ — aşağıda mirror) */
+.wfd-ray {
+    position: absolute; top: -15%; left: var(--x, 15%);
+    width: 165px; height: 130%;
+    background: linear-gradient(to bottom, color-mix(in srgb, #ffe9b5 26%, transparent) 0%, transparent 70%);
+    /* 1. katman: toprak kayarken (--rise) ışık YOKTAN büyüyüp parlayarak girer (yapışık değil) */
+    transform: rotate(var(--rot, -13deg)) scaleY(calc(0.35 + var(--rise, 0) * 0.65)); transform-origin: top center;
+    filter: blur(17px) brightness(calc(0.55 + var(--rise, 0) * 0.95)); mix-blend-mode: screen; opacity: var(--o, .35);
+}
+/* üstten sarkan kökler — hafif salınım */
+.wfd-root { position: absolute; top: -2vh; transform-origin: top center; will-change: transform;
+            animation: wfdRootSway 7s ease-in-out infinite alternate; }
+@keyframes wfdRootSway { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
+/* karıncalar — hafif yürüme bob'u */
+.wfd-ant { position: absolute; width: 30px; will-change: transform; animation: wfdAntWalk 2.4s ease-in-out infinite; }
+.wfd-ant-flip { transform: scaleX(-1); animation: wfdAntWalkFlip 2.4s ease-in-out infinite; }
+@keyframes wfdAntWalk     { 0%,100% { transform: translate(0,0); }            50% { transform: translate(3px,-1.5px); } }
+@keyframes wfdAntWalkFlip { 0%,100% { transform: scaleX(-1) translate(0,0); } 50% { transform: scaleX(-1) translate(3px,-1.5px); } }
+/* çakıllar */
+.wfd-pebble {
+    position: absolute; width: var(--s, 10px); height: calc(var(--s, 10px) * .72);
+    border-radius: 50%; background: radial-gradient(circle at 38% 32%, #6e5235, #3a2a18 72%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .12);
+}
+/* 🌙 gece: hüzmeyi SAĞA al + ters açı + soluk/soğuk (narin ay ışığı); kök/karınca aynen kalır */
+html:not([data-theme="light"]) .wfd-ray {
+    left: auto; right: var(--x, 15%);
+    transform: rotate(calc(var(--rot, -13deg) * -1)) scaleY(calc(0.35 + var(--rise, 0) * 0.65));
+    filter: blur(17px) brightness(calc(0.5 + var(--rise, 0) * 0.7)) opacity(.6);
+    background: linear-gradient(to bottom, color-mix(in srgb, #cfddf5 22%, transparent) 0%, transparent 70%);
+}
+@media (prefers-reduced-motion: reduce) { .wfd-ray, .wfd-root, .wfd-ant, .wfd-ant-flip { animation: none; } }

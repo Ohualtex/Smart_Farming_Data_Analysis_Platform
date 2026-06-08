@@ -231,6 +231,7 @@ async function init() {
         const welcome = document.getElementById("welcome");
         const pin = document.querySelector(".welcome-pin");
         const act1 = document.querySelector(".welcome-act1");
+        const ug = document.querySelector(".welcome-underground");
         if (!welcome || !pin || !act1) return;
         let ticking = false;
         const update = () => {
@@ -238,6 +239,19 @@ async function init() {
             const travel = Math.max(act1.offsetHeight - welcome.clientHeight, 1);
             const rise = Math.min(Math.max(welcome.scrollTop / travel, 0), 1);   // [0,1] (iOS rubber-band clamp)
             pin.style.setProperty("--rise", rise.toFixed(4));
+            // page-1'i geçince fill-intro + fill-decor SÖNSÜN (page-2 içeriğiyle üst üste binmesin):
+            const exit = Math.min(Math.max((welcome.scrollTop - travel) / (travel * 0.5), 0), 1);
+            pin.style.setProperty("--exit", exit.toFixed(4));
+            // 🎬 Toprak-altı sinematik derinlik: --depth-t (0=giriş → 1=en derin) sis için;
+            // --cam (px, ham scroll) parallax katmanları için. Underground act1'den SONRA başlar.
+            if (ug) {
+                const ugTop = act1.offsetHeight;
+                const ugRange = Math.max(welcome.scrollHeight - welcome.clientHeight - ugTop, 1);
+                const depthT = Math.min(Math.max((welcome.scrollTop - ugTop) / ugRange, 0), 1);
+                ug.style.setProperty("--depth-t", depthT.toFixed(4));
+                ug.style.setProperty("--cam", Math.round(welcome.scrollTop));
+                ug.style.setProperty("--rise", rise.toFixed(4));   // atmos opacity → yüzeyde gizli, dolumda belirir
+            }
             ticking = false;
         };
         welcome.addEventListener("scroll", () => {
