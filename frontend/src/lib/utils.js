@@ -24,7 +24,7 @@ export function _fmtNumber(v, decimals = 1) {
 }
 
 export function _escAttr(s) {
-    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/<>/g, '&lt;').replace(/>/g, '&gt;');
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ─── Toast Notifications ──────────────────────────────────────

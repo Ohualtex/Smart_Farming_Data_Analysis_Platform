@@ -9,6 +9,7 @@
 import { _fmtDate, _fmtNumber, _escAttr, showToast, updateStatus, _STATUS_EMOJI, _STATUS_LABEL } from "../utils.js";
 import { api, apiAuth, getAuthToken } from "../api.js";
 import { _skeletonCards, _setBusy } from "../skeleton.js";
+import { irrigationStatusLabel, diagnosisLabel } from "../labels.js";
 import { renderMoistureChart, renderTempHumChart, renderPrecipChart } from "../charts.js";
 import { getCurrentUser, getApiOnline, setApiOnline } from "../session.js";
 import { _getRoleTips } from "../filiz.js";
@@ -41,7 +42,7 @@ function _renderSummaryCards(summary) {
             ? `<span class="severity-chip severity-${cls}">${cnt} ${label}</span>`
             : '';
     }).join(' ');
-    const diseaseDx = disease.diagnosis || '—';
+    const diseaseDx = diagnosisLabel(disease.diagnosis);
     const diseaseDetail = disease.diagnosis
         ? `${disease.field_name || 'Tarla'} · ${_fmtDate(disease.captured_at)} · güven %${_fmtNumber((disease.confidence_score || 0) * 100, 0)}`
         : 'Henüz yaprak görseli analiz edilmedi';
@@ -66,7 +67,7 @@ function _renderSummaryCards(summary) {
             </div>
             <div class="metric-value">${irrAmount}</div>
             <div class="metric-context"><strong>${_escAttr(irr.field_name || '—')}</strong> · ${_fmtDate(irr.scheduled_date)}</div>
-            <div class="metric-context">${_escAttr(irr.status || (irr.irrigation_id ? '—' : 'Sulama kaydı yok'))}</div>
+            <div class="metric-context">${_escAttr(irr.status ? irrigationStatusLabel(irr.status) : (irr.irrigation_id ? '—' : 'Sulama kaydı yok'))}</div>
             <div class="metric-scope">${scopeNote}</div>
         </div>
 

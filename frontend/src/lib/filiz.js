@@ -423,7 +423,7 @@ export function initFiliz() {
         setFilizMood(isLateNight ? 'sleepy' : 'happy');
 
         // Alert listesini balon için arka planda topla (mood'u etkilemez)
-        if (getApiOnline()) {
+        if (getApiOnline() && getCurrentUser()) {
             try {
                 const alerts = await api('/api/alerts/?severity=critical&is_resolved=false&limit=10');
                 filizCriticalAlerts = alerts || [];

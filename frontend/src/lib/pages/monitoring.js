@@ -9,6 +9,7 @@
 import { _escAttr, showToast } from "../utils.js";
 import { api, apiAuth, getAuthToken, API_BASE, _authHeaders } from "../api.js";
 import { _skeletonCards, _skeletonRows, _skeletonBlock, _setBusy } from "../skeleton.js";
+import { irrigationStatusLabel, diagnosisLabel, severityLabel } from "../labels.js";
 import { charts, renderSensorTypeChart, renderFarmTempChart, renderIrrigationStatusChart,
          renderNpkRadarChart, renderDailyTrendChart, renderSensorStatsChart,
          chartTick, chartLegend, chartGrid } from "../charts.js";
@@ -155,7 +156,7 @@ export async function loadIrrigation(page = 1) {
         <tr>
             <td>Tarla #${s.field_id}</td><td>${new Date(s.scheduled_date).toLocaleDateString('tr')}</td>
             <td>${s.duration_min || '—'} dk</td><td>${s.water_amount_liters?.toFixed(0) || '—'}</td>
-            <td><span class="badge ${s.status}">${s.status}</span></td>
+            <td><span class="badge ${s.status}">${irrigationStatusLabel(s.status)}</span></td>
         </tr>
     `).join('');
     _setBusy('irrigationTable', false);
@@ -368,9 +369,9 @@ export async function loadPlants() {
         html += `<tr>
             <td style="padding:8px;border-bottom:1px solid var(--border);">${date}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);">#${r.field_id}</td>
-            <td style="padding:8px;border-bottom:1px solid var(--border);">${r.diagnosis || '—'}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);">${diagnosisLabel(r.diagnosis)}</td>
             <td style="padding:8px;border-bottom:1px solid var(--border);">${conf}</td>
-            <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${sev}</span></td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);"><span style="color:${sevColor};font-weight:600;">${severityLabel(sev)}</span></td>
         </tr>`;
     }
     html += '</tbody></table>';
