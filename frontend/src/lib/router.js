@@ -27,6 +27,10 @@ export const pageTitles = {
  * @param {Function} startHeroTipRotation - Hero tip rotation starter
  */
 export function navigate(page, handlers, startHeroTipRotation) {
+    if (!document.getElementById(`page-${page}`) || !pageTitles[page]) {
+        console.warn(`navigate: bilinmeyen sayfa "${page}"`);
+        return;
+    }
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => {
         n.classList.remove('active');

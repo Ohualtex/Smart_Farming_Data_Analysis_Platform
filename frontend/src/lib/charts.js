@@ -246,7 +246,7 @@ export function renderDailyTrendChart(trends) {
 }
 
 export function renderSensorStatsChart(stats) {
-    if (!stats || !stats.moisture.avg) return;
+    if (!stats || !stats.moisture || !stats.soil_temperature || stats.moisture.avg == null) return;
     if (charts.sensorStats) charts.sensorStats.destroy();
     charts.sensorStats = new Chart(document.getElementById('sensorStatsChart'), {
         type: 'bar',

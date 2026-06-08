@@ -70,20 +70,10 @@ export async function loadAlerts() {
 }
 
 export async function resolveAlert(id) {
-    try {
-        const resp = await fetch(`${API_BASE}/api/alerts/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': 'dev-api-key' },
-            body: JSON.stringify({ is_resolved: true }),
-        });
-        if (resp.ok) {
-            showToast('Uyarı çözüldü olarak işaretlendi', 'success');
-            loadAlerts();
-        } else {
-            showToast(`Hata ${resp.status}`, 'error');
-        }
-    } catch (e) {
-        showToast('Sunucuya ulaşılamadı', 'error');
+    const res = await apiAuth(`/api/alerts/${id}`, { method: 'PATCH', body: JSON.stringify({ is_resolved: true }) });
+    if (res) {
+        showToast('Uyarı çözüldü olarak işaretlendi', 'success');
+        loadAlerts();
     }
 }
 
