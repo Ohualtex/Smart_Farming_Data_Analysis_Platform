@@ -245,60 +245,106 @@ async function init() {
         }, { passive: true });
         update();
     })();
-    // Toprak-altı sahneleri: kart/açıklama yandan (zigzag), intro/cta aşağıdan YAYLI girer.
-    // Yön sınıfı data-side'a göre eklenir; IO toggle ile re-trigger (çıkınca sıfırlanır → teker teker).
-    (() => {
-        const welcome = document.getElementById("welcome");
-        const reveals = document.querySelectorAll(".wu-reveal");
-        if (!reveals.length) return;
-        reveals.forEach((el) => {
-            const side = el.closest(".wu-scene")?.dataset.side;
-            if (!side) el.classList.add("from-b");                                              // intro/cta: aşağıdan
-            else if (el.classList.contains("wu-card")) el.classList.add(side === "left" ? "from-l" : "from-r");
-            else el.classList.add(side === "left" ? "from-r" : "from-l");                       // açıklama: KARŞI taraf
-        });
-        if (!welcome || !("IntersectionObserver" in window)) {
-            reveals.forEach((el) => el.classList.add("in-view"));
-            return;
-        }
-        const io = new IntersectionObserver((entries) => {
-            entries.forEach((e) => e.target.classList.toggle("in-view", e.isIntersecting));
-        }, { root: welcome, threshold: 0.4 });
-        reveals.forEach((el) => io.observe(el));
-    })();
-    // Dolum YAYLI snap (#2): act1 içinde scroll DURUNCA, yeterince çekildiyse başlığa
-    // YAYLANARAK (overshoot) oturur; az çekildiyse yüzeye geri döner (tersinir).
-    // Native scroll-snap yay yapamadığı için JS. Özellik sahneleri native snap'te kalır.
+    // Kart/açıklama giriş YÖNÜ (zigzag, data-side): kart kendi tarafından, açıklama karşıdan.
+    document.querySelectorAll(".wu-reveal").forEach((el) => {
+        const side = el.closest(".wu-scene")?.dataset.side;
+        if (!side) el.classList.add("from-b");
+        else if (el.classList.contains("wu-card")) el.classList.add(side === "left" ? "from-l" : "from-r");
+        else el.classList.add(side === "left" ? "from-r" : "from-l");   // açıklama: KARŞI taraf
+    });
+
+    // FULLPAGE navigasyon: HER kaydırma = 1 sayfa (yüzey → başlık → özellikler → CTA),
+    // smooth YAY ile kayar. Aktif sahnenin kartı/açıklaması girer; önceki "geldiği gibi" çıkar.
     (() => {
         const welcome = document.getElementById("welcome");
         const act1 = document.querySelector(".welcome-act1");
         if (!welcome || !act1) return;
-        let timer = null, animating = false, cancelled = false;
-        // easeOutBack: hedefi biraz aşıp geri oturur = "yay/zıplama"
-        const easeOutBack = (p) => { const c1 = 1.7, c3 = c1 + 1; return 1 + c3 * (p - 1) ** 3 + c1 * (p - 1) ** 2; };
-        const springTo = (target) => {
-            animating = true; cancelled = false;
-            const start = welcome.scrollTop, dist = target - start, dur = 480, t0 = performance.now();
+        const scenes = [...welcome.querySelectorAll(".wu-scene")];
+        let pages = [], page = 0, animating = false, locked = false, idleTimer = null, hardTimer = null;
+        const unlock = () => { locked = false; clearTimeout(hardTimer); };
+        const maybeUnlock = () => { if (!animating) unlock(); };   // tekerlek durunca + animasyon bitince açılır
+
+        const computePages = () => {
+            const ch = welcome.clientHeight, max = welcome.scrollHeight - ch;
+            const clamp = (v) => Math.max(0, Math.min(max, Math.round(v)));
+            const travel = Math.max(act1.offsetHeight - ch, 1);
+            const sceneTargets = scenes.map((s) => clamp(s.getBoundingClientRect().top + welcome.scrollTop + s.offsetHeight / 2 - ch / 2));
+            pages = [0, clamp(travel), ...sceneTargets];   // 0=yüzey, 1=başlık, 2..=özellikler/CTA
+        };
+        const updateReveals = () => {
+            scenes.forEach((s, i) => {
+                const active = page === i + 2;   // sayfa i+2 → sahne i aktif
+                s.querySelectorAll(".wu-reveal").forEach((el) => el.classList.toggle("in-view", active));
+            });
+        };
+        // Yan navigasyon noktaları — katmanlar arası HIZLI geçiş (toprağa inince görünür)
+        const dotsNav = document.createElement("nav");
+        dotsNav.className = "wu-dots"; dotsNav.setAttribute("aria-label", "Sayfa navigasyonu");
+        let dots = [];
+        const buildDots = () => {
+            dotsNav.innerHTML = "";
+            dots = pages.map((_, i) => {
+                const b = document.createElement("button");
+                b.type = "button"; b.className = "wu-dot"; b.setAttribute("aria-label", "Sayfa " + (i + 1));
+                b.addEventListener("click", () => navTo(i));
+                dotsNav.appendChild(b); return b;
+            });
+        };
+        const updateDots = () => {
+            dots.forEach((d, i) => d.classList.toggle("active", i === page));
+            dotsNav.classList.toggle("visible", page >= 1);   // yüzeyde gizli, toprakta görünür
+        };
+        welcome.appendChild(dotsNav);
+        const ease = (p) => 1 - Math.pow(1 - p, 3);   // easeOutCubic: yumuşak, TAŞMA YOK (sıçrama/jank yok)
+        const animateTo = (target) => {
+            animating = true;
+            const start = welcome.scrollTop, dist = target - start, dur = 520, t0 = performance.now();
             const step = (now) => {
-                if (cancelled) { animating = false; return; }
                 const p = Math.min((now - t0) / dur, 1);
-                welcome.scrollTop = start + dist * easeOutBack(p);
+                welcome.scrollTop = start + dist * ease(p);
                 if (p < 1) requestAnimationFrame(step);
-                else { welcome.scrollTop = target; animating = false; }
+                else { welcome.scrollTop = target; animating = false; clearTimeout(idleTimer); idleTimer = setTimeout(maybeUnlock, 70); }
             };
             requestAnimationFrame(step);
         };
-        const settle = () => {
-            if (animating) return;
-            const travel = Math.max(act1.offsetHeight - welcome.clientHeight, 1);
-            const st = welcome.scrollTop;
-            if (st <= 2 || st >= travel) return;              // yüzeyde ya da dolum tamam → native/serbest
-            const target = (st / travel) < 0.22 ? 0 : travel; // tersinir: az çekince→yüzey, yeterli→başlık
-            if (Math.abs(st - target) > 3) springTo(target);
+        const navTo = (target) => {
+            if (locked) return;
+            target = Math.max(0, Math.min(pages.length - 1, target));
+            if (target === page) return;
+            locked = true;
+            clearTimeout(hardTimer); hardTimer = setTimeout(unlock, 900);   // GARANTİ açılış → sürekli kaydırma takılmaz
+            page = target;
+            updateReveals();        // aktif kart girer, öncekiler "geldiği gibi" çıkar (aynı anda)
+            updateDots();
+            animateTo(pages[page]);
         };
-        welcome.addEventListener("scroll", () => { clearTimeout(timer); timer = setTimeout(settle, 130); }, { passive: true });
-        welcome.addEventListener("wheel", () => { if (animating) cancelled = true; }, { passive: true });
-        welcome.addEventListener("touchstart", () => { if (animating) cancelled = true; }, { passive: true });
+        const go = (dir) => navTo(page + dir);
+
+        computePages(); buildDots(); updateReveals(); updateDots();
+        window.addEventListener("resize", () => { computePages(); buildDots(); updateDots(); welcome.scrollTop = pages[page]; });
+        // TEK JEST = TEK SAHNE: nav sırasında + tekerlek durana dek kilitli (go locked'ı kontrol+set eder).
+        // HER wheel olayı idle sayacını erteler → tekerlek 90ms DURUNCA + animasyon bitince serbest kalır
+        // (maybeUnlock iki yoldan da çağrılır → asla takılı kalmaz).
+        welcome.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(maybeUnlock, 90);
+            go(e.deltaY > 0 ? 1 : -1);
+        }, { passive: false });
+        let touchY = null;
+        welcome.addEventListener("touchstart", (e) => { touchY = e.touches[0].clientY; }, { passive: true });
+        welcome.addEventListener("touchmove", (e) => { e.preventDefault(); }, { passive: false });
+        welcome.addEventListener("touchend", (e) => {
+            if (touchY === null) return;
+            const dy = touchY - e.changedTouches[0].clientY;
+            if (Math.abs(dy) > 42) go(dy > 0 ? 1 : -1);
+            touchY = null;
+        }, { passive: true });
+        window.addEventListener("keydown", (e) => {
+            if (!welcome.isConnected || getComputedStyle(welcome).display === "none") return;
+            if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); go(1); }
+            else if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); go(-1); }
+        });
     })();
 
     // Tema (light/dark)

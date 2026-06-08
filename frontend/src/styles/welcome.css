@@ -42,9 +42,10 @@
     height: 200vh;
     position: relative; z-index: 4;   /* soil(3)+filiz(2) üstünde → bindirme seam'i + Filiz sızmasını örter */
     margin-top: -8px;   /* pin altıyla hafif bindirme → sub-pixel boşluk/sızma kapanır (dikişsiz) */
-    /* üst = soil SVG dibi (#4e3119) → dikişsiz; aşağı YUMUŞAK koyulaşır (sert orta-bant yok,
-       dip çok kararmıyor → üst/alt farkı azaldı, daha smooth) */
-    background: linear-gradient(180deg, #4e3119 0%, #46291a 30%, #3c2415 60%, #34220f 100%);
+    /* üst = soil SVG dibi (#4e3119) → dikişsiz; KADEMELİ ve nazik koyulaşır (sert bant yok),
+       dip hafif cooler/grayer (taşımsı derin toprak hissi). */
+    background: linear-gradient(180deg,
+        #4e3119 0%, #4a2f1a 16%, #432b18 34%, #3a2616 54%, #2f2114 74%, #261c14 100%);
 }
 
 /* ─── SCROLLYTELLING: toprak DÜZ yukarı çıkıp ekranı doldurur (sticky pin) ─────
@@ -201,11 +202,11 @@
     display: flex; flex-direction: column; align-items: center;
     text-align: center; padding: 8px 24px 0; max-width: 760px; margin: 0 auto; z-index: 5;
     pointer-events: none;  /* dar ekranda güneş/ay üstüne taşmasın; buton tekrar açılır */
-    /* Madde 2: aşağıdan kayarak geliş — biraz daha uzun + biraz daha mesafe + gecikme.
-       backwards (both DEĞİL): bitince to-state'i TUTMAZ → scroll-fade calc'ı (opacity/
-       transform var(--rise)) devralır; aksi halde both, fade'i ezerdi. */
-    animation: welcomeFadeUp 1.25s cubic-bezier(.22,1,.36,1) .35s backwards;
+    /* DİKKAT: giriş animasyonu hero'da DEĞİL (aşağıda çocuklarda). Hero'da olursa animasyon
+       hero'nun scroll-fade opacity calc'ını EZER → dolumda başlık toprağın önünde kalır (#1 bug). */
 }
+/* Giriş animasyonu hero'nun ÇOCUKLARINDA → hero'nun opacity calc'ı (scroll-fade) tüm hero'yu soldurur */
+.welcome-title, .welcome-login-btn { animation: welcomeFadeUp 1.25s cubic-bezier(.22, 1, .36, 1) .35s both; }
 .welcome-title { font-size: clamp(1.9rem, 5.4vw, 3.2rem); font-weight: 800; line-height: 1.1; margin: 0; letter-spacing: -.6px; color: var(--text); }
 .welcome-title span {
     background: linear-gradient(120deg, #10b981, #34d399);
@@ -320,12 +321,8 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
 }
 .welcome-soil-svg { width: 100%; height: 100%; display: block; }
 
-/* Topraktan fırlayan toz/toprak parçacıkları (pop'ta) */
-.welcome-dirt {
-    position: absolute; left: 50%; bottom: 150px; width: 9px; height: 9px; border-radius: 50%;
-    background: #6b4423; opacity: 0; z-index: 5; pointer-events: none;
-}
-.welcome-stage.popped .welcome-dirt { animation: dirtBurst .85s ease-out forwards; animation-delay: var(--delay, 0s); }
+/* Topraktan fırlayan toz parçacıkları KALDIRILDI (#2 — pop'ta dağılan toprak animasyonu istenmiyor) */
+.welcome-dirt { display: none; }
 @keyframes dirtBurst {
     0%   { opacity: 0; transform: translate(-50%, 0) scale(.4); }
     15%  { opacity: 1; }
@@ -363,9 +360,7 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
    ════════════════════════════════════════════════════════════════════════ */
 .welcome-underground { height: auto; }   /* sahneler kendi yüksekliğinde (her biri ~1 ekran) */
 
-/* Scroll-snap: özellik sahneleri native proximity ile oturur. Dolum→başlık ise
-   JS YAYLI snap ile (main.js) — native yay yapamadığı için (#2). */
-.welcome { scroll-snap-type: y proximity; }
+/* Navigasyon FULLPAGE (main.js): her kaydırma = 1 sayfa, smooth yay. Native scroll-snap YOK. */
 
 /* Dolum ÖDÜLÜ intro: dolu toprağın üstünde --rise'a bağlı belirip oturur (#2).
    --rise 0.5→0.88 arası fade + yüksel; 0.88+ oturmuş. pin'le yukarı kayıp gider. */
@@ -380,7 +375,7 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
 
 /* Tam-ekran sahne: kart + karşı açıklama; zigzag data-side ile yön değişir */
 .wu-scene {
-    min-height: 80vh; scroll-snap-align: center;   /* daha kısa → daha az boşluk */
+    min-height: 100vh;   /* fullpage: her sahne 1 ekran */
     display: flex; align-items: center; justify-content: center;
     gap: clamp(26px, 5vw, 70px); padding: 4vh 30px;
     max-width: 1080px; margin: 0 auto;
@@ -435,10 +430,10 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
 /* Yaylı reveal: kart kendi tarafından, açıklama KARŞIDAN, intro/cta aşağıdan girer.
    Yön sınıfları (.from-l / .from-r / .from-b) main.js'te data-side'a göre eklenir.
    overshoot easing (1.56) = "yay/zıplama"; in-view = oturmuş. IO çıkışta sıfırlar (re-trigger). */
-.wu-reveal { opacity: 0; transition: opacity .32s ease, transform .5s cubic-bezier(.3, 1.5, .5, 1); }   /* daha hızlı + punchy yay */
-.wu-reveal.from-l { transform: translateX(-72px); }
-.wu-reveal.from-r { transform: translateX(72px); }
-.wu-reveal.from-b { transform: translateY(48px); }
+.wu-reveal { opacity: 0; transition: opacity .42s ease, transform .62s cubic-bezier(.3, 1.55, .5, 1); }   /* çarpıcı + güçlü yay */
+.wu-reveal.from-l { transform: translateX(-120px) scale(.9); }
+.wu-reveal.from-r { transform: translateX(120px) scale(.9); }
+.wu-reveal.from-b { transform: translateY(56px) scale(.94); }
 .wu-reveal.in-view.in-view { opacity: 1; transform: none; }   /* çift sınıf → mobil override dahil her zaman kazanır */
 
 @media (prefers-reduced-motion: reduce) {
@@ -478,6 +473,17 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
 
 /* Filizlenen tohum */
 .wu-seed { width: clamp(19px, 2vw, 27px); opacity: .92; transform-origin: bottom center; animation: wuRootSway 6s ease-in-out infinite; }
+/* Mantar / kurtçuk / nem damlası / kaya */
+.wu-mushroom { width: clamp(40px, 4.2vw, 58px); opacity: .94; transform-origin: bottom center; animation: wuRootSway 6.5s ease-in-out infinite; }
+.wu-grub { width: clamp(38px, 4vw, 54px); opacity: .9; transform-origin: center; animation: wuWormWiggle 5.5s ease-in-out infinite; }
+.wu-drop { width: clamp(13px, 1.6vw, 19px); opacity: .85; transform-origin: top center; animation: wuDrop 3.6s ease-in-out infinite; }
+.wu-rock { opacity: .9; }
+/* Kristal / mineral pırıltısı (derin katman) */
+.wu-crystal { width: clamp(28px, 3vw, 40px); opacity: .82; animation: wuCrystal 4s ease-in-out infinite; filter: drop-shadow(0 0 6px rgba(160, 130, 220, .35)); }
+@keyframes wuCrystal { 0%, 100% { filter: drop-shadow(0 0 5px rgba(160, 130, 220, .3)); } 50% { filter: drop-shadow(0 0 11px rgba(160, 130, 220, .6)); } }
+.wu-mineral { width: 6px; height: 6px; border-radius: 50%; background: var(--c, #c9a3f0); box-shadow: 0 0 9px 1px var(--c, #c9a3f0); opacity: .65; animation: wuMineral 3s ease-in-out infinite; }
+@keyframes wuMineral { 0%, 100% { opacity: .35; transform: scale(.85); } 50% { opacity: .8; transform: scale(1.12); } }
+@keyframes wuDrop { 0%, 100% { transform: translateY(0) scaleY(1); } 55% { transform: translateY(3px) scaleY(1.04); } }
 
 /* Çakıl / tohum */
 .wu-pebble {
@@ -491,5 +497,21 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
 @keyframes wuWormWiggle { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-4px) rotate(-3.5deg); } }
 @keyframes wuZzz { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
 @media (prefers-reduced-motion: reduce) {
-    .wu-root path, .wu-worm, .wu-zzz { animation: none; }
+    .wu-root path, .wu-worm, .wu-zzz, .wu-seed, .wu-mushroom, .wu-grub, .wu-drop, .wu-crystal, .wu-mineral { animation: none; }
 }
+
+/* ─── YAN NAVİGASYON NOKTALARI — katmanlar arası hızlı geçiş (toprakta görünür) ───── */
+.wu-dots {
+    position: fixed; right: 22px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 13px; z-index: 1100;
+    opacity: 0; pointer-events: none; transition: opacity .45s ease;
+}
+.wu-dots.visible { opacity: 1; pointer-events: auto; }
+.wu-dot {
+    width: 11px; height: 11px; border-radius: 50%; padding: 0; cursor: pointer;
+    background: rgba(245, 236, 216, .28); border: 1.5px solid rgba(245, 236, 216, .5);
+    transition: background .3s ease, transform .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+.wu-dot:hover { background: rgba(245, 236, 216, .6); transform: scale(1.25); }
+.wu-dot.active { background: #8fe388; border-color: #8fe388; transform: scale(1.35); box-shadow: 0 0 10px rgba(143, 227, 136, .55); }
+@media (max-width: 560px) { .wu-dots { right: 12px; gap: 11px; } .wu-dot { width: 9px; height: 9px; } }
