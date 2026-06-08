@@ -18,6 +18,8 @@ rm -f sfdap_dev.db && python database/seed_data.py
 make run                 # uvicorn → http://localhost:8000
 ```
 
+> 💡 **Alternatif** (DB sıfırlamadan): mevcut demo verisini koruyup okumaları tazelemek → `make demo-readings`.
+
 Tarayıcıda aç: **http://localhost:8000/dashboard/** (+ opsiyonel `/docs` Swagger).
 
 **Demo hesapları:**
