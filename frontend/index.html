@@ -273,8 +273,98 @@
     </div>
   </div><!-- /.welcome-pin -->
   </div><!-- /.welcome-act1 -->
-  <!-- 🌱 Toprak-altı: scroll mesafesi + Faz 2'de tanıtım kartları buraya gelecek -->
-  <div class="welcome-underground" aria-hidden="true"></div>
+  <!-- 🌱 Toprak-altı: tam-ekran "sahne"ler — kaydırınca snap'le oturur, kart yandan
+       yaylı girer, karşısında açıklama (zigzag). Boş alanlara dekor (Faz 3). -->
+  <div class="welcome-underground">
+    <!-- Intro sahnesi -->
+    <section class="wu-scene wu-scene-center">
+      <div class="wu-intro wu-reveal">
+        <span class="wu-eyebrow">SFDAP</span>
+        <h2 class="wu-title">Toprağın altında, <span>veriye dönüşen</span> tarım</h2>
+        <p class="wu-lead">Sensör, hava durumu ve yapay zekâ tahminlerini tek panelde
+          birleştiren çiftçi-odaklı akıllı tarım karar-destek platformu. Aşağı in, keşfet.</p>
+      </div>
+    </section>
+
+    <!-- Özellik sahneleri (zigzag: kart bir tarafta, açıklama karşıda) -->
+    <section class="wu-scene" data-side="left">
+      <article class="wu-card wu-reveal" style="--accent:#38bdf8">
+        <div class="wu-card-ic">💧</div>
+        <div class="wu-card-body">
+          <h3>Toprak Nemi & Sensörler</h3>
+          <p>Nemi 7/24 ölç, susuzluğu erken yakala.</p>
+        </div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>Tarlana gömülü sensörler nemi sürekli okur; eşik altına düşünce panelinde
+          <strong>🥵 Susuz</strong> rozeti ve uyarı belirir. Su stresine büyümeden müdahale et.</p>
+      </div>
+    </section>
+
+    <section class="wu-scene" data-side="right">
+      <article class="wu-card wu-reveal" style="--accent:#2dd4bf">
+        <div class="wu-card-ic">🚿</div>
+        <div class="wu-card-body">
+          <h3>Akıllı Sulama</h3>
+          <p>Ne kadar su? Model söylesin.</p>
+        </div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>RandomForest modeli; nem, sıcaklık ve bitkiye göre <strong>litre cinsinden</strong> öneri
+          verir. “Onayla” dediğinde sulama programına düşer; tamamlandı/iptal ile takip edersin.</p>
+      </div>
+    </section>
+
+    <section class="wu-scene" data-side="left">
+      <article class="wu-card wu-reveal" style="--accent:#fb923c">
+        <div class="wu-card-ic">🦠</div>
+        <div class="wu-card-body">
+          <h3>Hastalık Tanısı</h3>
+          <p>Yapraktan teşhis, saniyeler içinde.</p>
+        </div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>Yaprak fotoğrafını yükle; model hastalığı, <strong>güven skorunu</strong> ve şiddeti
+          döndürür. Sonuç tarla geçmişine işlenir — erken önlem şansı doğar.</p>
+      </div>
+    </section>
+
+    <section class="wu-scene" data-side="right">
+      <article class="wu-card wu-reveal" style="--accent:#4ade80">
+        <div class="wu-card-ic">🌱</div>
+        <div class="wu-card-body">
+          <h3>Gübre Önerisi</h3>
+          <p>Eksik besini kg cinsinden gör.</p>
+        </div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>Bitki, alan ve mevcut <strong>N-P-K</strong> değerlerini gir; eksikleri hesaplar +
+          Türkçe açıklamayla “neden bu kadar” der. 17 bitki türü desteklenir.</p>
+      </div>
+    </section>
+
+    <section class="wu-scene" data-side="left">
+      <article class="wu-card wu-reveal" style="--accent:#f472b6">
+        <div class="wu-card-ic">🔔</div>
+        <div class="wu-card-body">
+          <h3>Akıllı Bildirimler</h3>
+          <p>Önemli her şey tek çanda.</p>
+        </div>
+      </article>
+      <div class="wu-desc wu-reveal">
+        <p>Düşük nem, açık uyarı, yeni hastalık — hepsi çanda toplanır. <strong>“Kontrol et”</strong>
+          tarlaları tarar, tekrar etmeyen (dedup) hatırlatmalar üretir.</p>
+      </div>
+    </section>
+
+    <!-- CTA sahnesi -->
+    <section class="wu-scene wu-scene-center">
+      <div class="wu-cta wu-reveal">
+        <h3 class="wu-cta-title">Tarlanı tahmin etmeyi bırak.</h3>
+        <button class="btn-primary welcome-login-btn" data-action="goToLogin">Hadi başlayalım</button>
+      </div>
+    </section>
+  </div>
 </div>
 
 <!-- ═══ ÖN PANEL (LANDING / AUTH GATE) ═══════════════════════════

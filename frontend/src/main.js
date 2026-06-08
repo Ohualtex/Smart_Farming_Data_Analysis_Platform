@@ -245,6 +245,27 @@ async function init() {
         }, { passive: true });
         update();
     })();
+    // Toprak-altı sahneleri: kart/açıklama yandan (zigzag), intro/cta aşağıdan YAYLI girer.
+    // Yön sınıfı data-side'a göre eklenir; IO toggle ile re-trigger (çıkınca sıfırlanır → teker teker).
+    (() => {
+        const welcome = document.getElementById("welcome");
+        const reveals = document.querySelectorAll(".wu-reveal");
+        if (!reveals.length) return;
+        reveals.forEach((el) => {
+            const side = el.closest(".wu-scene")?.dataset.side;
+            if (!side) el.classList.add("from-b");                                              // intro/cta: aşağıdan
+            else if (el.classList.contains("wu-card")) el.classList.add(side === "left" ? "from-l" : "from-r");
+            else el.classList.add(side === "left" ? "from-r" : "from-l");                       // açıklama: KARŞI taraf
+        });
+        if (!welcome || !("IntersectionObserver" in window)) {
+            reveals.forEach((el) => el.classList.add("in-view"));
+            return;
+        }
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach((e) => e.target.classList.toggle("in-view", e.isIntersecting));
+        }, { root: welcome, threshold: 0.4 });
+        reveals.forEach((el) => io.observe(el));
+    })();
 
     // Tema (light/dark)
     initTheme();

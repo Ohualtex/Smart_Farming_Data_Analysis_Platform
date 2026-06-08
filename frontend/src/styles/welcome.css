@@ -42,8 +42,9 @@
     height: 200vh;
     position: relative; z-index: 4;   /* soil(3)+filiz(2) üstünde → bindirme seam'i + Filiz sızmasını örter */
     margin-top: -8px;   /* pin altıyla hafif bindirme → sub-pixel boşluk/sızma kapanır (dikişsiz) */
-    /* üst = soil SVG dibi (#4e3119) → dikişsiz geçiş; aşağı koyulaşır (derinlik) */
-    background: linear-gradient(180deg, #4e3119 0%, #3a2614 45%, #281a0d 100%);
+    /* üst = soil SVG dibi (#4e3119) → dikişsiz; aşağı YUMUŞAK koyulaşır (sert orta-bant yok,
+       dip çok kararmıyor → üst/alt farkı azaldı, daha smooth) */
+    background: linear-gradient(180deg, #4e3119 0%, #46291a 30%, #3c2415 60%, #34220f 100%);
 }
 
 /* ─── SCROLLYTELLING: toprak DÜZ yukarı çıkıp ekranı doldurur (sticky pin) ─────
@@ -353,4 +354,88 @@ html:not([data-theme="light"]) .welcome-intro .wstar-descend { transform: transl
     }
     .welcome-filiz { transition: transform .01s linear; }
     .welcome-sun, .welcome-moon, .wcloud, .wstar { transition: opacity .2s ease !important; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   FAZ 2 — TOPRAK-ALTI TANITIM KARTLARI (liquid glass) + scroll reveal
+   Dolum bitince (pin serbest) underground'a inilir; kartlar viewport'a girince
+   .wu-reveal → .in-view ile belirir (main.js IntersectionObserver).
+   ════════════════════════════════════════════════════════════════════════ */
+.welcome-underground { height: auto; }   /* sahneler kendi yüksekliğinde (her biri ~1 ekran) */
+
+/* Scroll-snap: dolum (act1) serbest kayar; toprak-altı SAHNELERİ yaklaşınca kameraya oturur */
+.welcome { scroll-snap-type: y proximity; }
+
+/* Tam-ekran sahne: kart + karşı açıklama; zigzag data-side ile yön değişir */
+.wu-scene {
+    min-height: 100vh; scroll-snap-align: center;
+    display: flex; align-items: center; justify-content: center;
+    gap: clamp(26px, 5vw, 70px); padding: 9vh 30px;
+    max-width: 1080px; margin: 0 auto;
+}
+.wu-scene-center { flex-direction: column; text-align: center; }   /* intro + cta: tek öğe, ortalı */
+.wu-scene[data-side="right"] { flex-direction: row-reverse; }
+.wu-scene[data-side] > * { flex: 1 1 0; min-width: 0; }
+.wu-scene .wu-card { max-width: 440px; }
+.wu-scene .wu-desc { max-width: 430px; }
+
+/* Açıklama (kartın karşısı) */
+.wu-desc p { margin: 0; font-size: 1.08rem; line-height: 1.7; color: rgba(245, 236, 216, .82); }
+.wu-desc strong { color: #f8efdb; font-weight: 700; }
+
+/* Intro */
+.wu-intro { max-width: 640px; }
+.wu-eyebrow { display: inline-block; font-size: .8rem; font-weight: 700; letter-spacing: 3px; color: #8fe388; margin-bottom: 14px; }
+.wu-title { font-size: clamp(1.9rem, 5.2vw, 2.9rem); font-weight: 800; line-height: 1.14; margin: 0 0 16px; color: #f5ecd8; letter-spacing: -.5px; }
+.wu-title span { background: linear-gradient(120deg, #34d399, #8fe388); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wu-lead { margin: 0; font-size: 1.06rem; line-height: 1.65; color: rgba(245, 236, 216, .82); }
+
+/* CTA */
+.wu-cta-title { font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 800; color: #f5ecd8; margin: 0 0 24px; letter-spacing: -.3px; }
+
+/* Renkli liquid glass kart (kahverengi toprak üstünde accent-tint buzlu cam) */
+.wu-card {
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; gap: 18px;
+    padding: 22px 24px 22px 28px; border-radius: 22px;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 20%, transparent), rgba(255, 255, 255, .03));
+    backdrop-filter: blur(18px) saturate(1.7);
+    -webkit-backdrop-filter: blur(18px) saturate(1.7);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, rgba(255, 255, 255, .14));
+    box-shadow: 0 26px 64px rgba(0, 0, 0, .45),
+                inset 0 1px 0 rgba(255, 255, 255, .26),
+                0 0 70px -18px var(--accent, #fff);   /* karta özgü renkli ışıma */
+}
+.wu-card::before {   /* renkli sol kenar şeridi (accent vurgusu) */
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--accent); opacity: .9;
+}
+.wu-card-ic {
+    flex-shrink: 0; width: 58px; height: 58px; border-radius: 16px;
+    display: grid; place-items: center; font-size: 1.85rem;
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
+}
+.wu-card-body h3 { margin: 0 0 5px; font-size: 1.16rem; font-weight: 700; color: #fff; }
+.wu-card-body p { margin: 0; font-size: .92rem; line-height: 1.5; color: rgba(255, 255, 255, .8); }
+.wu-cta { text-align: center; }
+
+/* Yaylı reveal: kart kendi tarafından, açıklama KARŞIDAN, intro/cta aşağıdan girer.
+   Yön sınıfları (.from-l / .from-r / .from-b) main.js'te data-side'a göre eklenir.
+   overshoot easing (1.56) = "yay/zıplama"; in-view = oturmuş. IO çıkışta sıfırlar (re-trigger). */
+.wu-reveal { opacity: 0; transition: opacity .5s ease, transform .75s cubic-bezier(.34, 1.56, .64, 1); }
+.wu-reveal.from-l { transform: translateX(-72px); }
+.wu-reveal.from-r { transform: translateX(72px); }
+.wu-reveal.from-b { transform: translateY(48px); }
+.wu-reveal.in-view.in-view { opacity: 1; transform: none; }   /* çift sınıf → mobil override dahil her zaman kazanır */
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome { scroll-snap-type: none; }
+    .wu-reveal { opacity: 1; transform: none; transition: none; }
+}
+/* Mobil: dikey yığ (kart üstte, açıklama altta); yan giriş yerine aşağıdan (yatay taşma yok) */
+@media (max-width: 768px) {
+    .wu-scene { flex-direction: column !important; gap: 26px; padding: 12vh 22px; text-align: center; max-width: 560px; }
+    .wu-scene .wu-card { text-align: left; }
+    .wu-reveal.from-l, .wu-reveal.from-r { transform: translateY(44px); }
 }
