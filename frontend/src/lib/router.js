@@ -4,6 +4,8 @@
    Hash-based SPA navigation, sidebar toggle, page title yönetimi.
    ============================================================ */
 
+import { getCurrentUser } from "./session.js";
+
 export const pageTitles = {
     dashboard: ['Genel Bakış', 'Tarlanın özeti'],
     fields: ['Tarlalarım', 'Çiftliklerine bağlı tarlalar'],
@@ -18,6 +20,15 @@ export const pageTitles = {
     alerts: ['Uyarılar', 'Sistem ve sensör uyarıları'],
     users: ['Kullanıcı Yönetimi', 'Tüm kullanıcılar (admin)'],
     auth: ['Hesabım', 'Profil ve şifre'],
+};
+
+// Sistem rolleri (developer/overseer/admin) TÜM sistemi görür → çiftçi-odaklı
+// ("kendi tarlan") alt başlıklar yanıltıcı. Bu sayfalarda kapsam-doğru metin:
+const SYSTEM_SUBTITLES = {
+    dashboard: 'Sistem geneli özet',
+    fields: 'Tüm çiftlikler ve tarlalar',
+    sensors: 'Sistemdeki tüm sensörler',
+    irrigation: 'Tüm sulama kayıtları ve önerisi',
 };
 
 /**
@@ -45,7 +56,9 @@ export function navigate(page, handlers, startHeroTipRotation) {
         navItem.setAttribute('aria-current', 'page');
     }
     document.getElementById('pageTitle').textContent = pageTitles[page][0];
-    document.getElementById('pageSubtitle').textContent = pageTitles[page][1];
+    const _u = getCurrentUser();
+    const _sysSub = _u && _u.role !== 'farmer' && SYSTEM_SUBTITLES[page];
+    document.getElementById('pageSubtitle').textContent = _sysSub || pageTitles[page][1];
     // Sayfa her zaman TEPEDEN açılsın + a11y odağı (odak kaydırmasın → preventScroll).
     window.scrollTo(0, 0);
     const main = document.getElementById('main-content');

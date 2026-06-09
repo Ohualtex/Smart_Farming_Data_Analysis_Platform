@@ -11,18 +11,21 @@ input, select { font-family: var(--font); }
 /* Selection highlight */
 ::selection { background: rgba(16,185,129,.28); color: var(--text); }
 
-/* Global scrollbar */
+/* Global scrollbar — SADECE ::-webkit (Chrome/Safari kalıcı özel scrollbar).
+   scrollbar-color KULLANMA: modern Chrome onu görünce ::-webkit'i yok sayıp ince
+   standart (overlay) scrollbar'a geçiyor → scrollbar "kayboluyor".
+   Gece varsayılan = slate; gündüz (yeşil) override → theme-light.css. */
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
-    background: rgba(16,185,129,.28);
+    background: rgba(100,116,139,.55);
     border-radius: 6px;
     border: 2px solid transparent;
     background-clip: padding-box;
     transition: background .2s ease;
 }
 *::-webkit-scrollbar-thumb:hover {
-    background: rgba(16,185,129,.55);
+    background: rgba(148,163,184,.72);
     background-clip: padding-box;
 }
 

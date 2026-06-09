@@ -9,7 +9,7 @@
 import { _fmtDate, _escAttr, showToast } from "../utils.js";
 import { getAuthToken, setAuthToken, clearAuthToken, apiAuth, API_BASE } from "../api.js";
 import { _skeletonBlock, _setBusy } from "../skeleton.js";
-import { setCurrentUser } from "../session.js";
+import { setCurrentUser, getCurrentUser } from "../session.js";
 import { navigate } from "../nav.js";
 import { refreshBell, _hideBell } from "./alerts.js";
 
@@ -317,11 +317,13 @@ export async function loadUsers() {
         .map(r => `<option value="${r}"${r === sel ? ' selected' : ''}>${ROLE_LABELS[r]}</option>`).join('');
     let html = '<table class="detail-table"><caption class="sr-only">Kullanıcı listesi</caption><thead><tr>'
         + '<th>Ad</th><th>E-posta</th><th>Rol</th><th>Çiftlik</th><th>Kayıt</th><th>İşlem</th></tr></thead><tbody>';
+    const me = getCurrentUser();
     for (const u of list) {
+        const isSelf = me && u.id === me.id;
         html += `<tr>
             <td>${_escAttr(u.name)}</td>
             <td>${_escAttr(u.email)}</td>
-            <td><select class="user-role-select" data-action="changeUserRole" data-id="${u.id}">${roleOpts(u.role)}</select></td>
+            <td><select class="user-role-select" data-action="changeUserRole" data-id="${u.id}"${isSelf ? ' disabled title="Kendi rolünü değiştiremezsin — lock-out koruması (başka bir admin değiştirmeli)"' : ''}>${roleOpts(u.role)}</select></td>
             <td>${u.owned_farms_count ?? 0}</td>
             <td>${_fmtDate(u.created_at)}</td>
             <td class="user-actions">
