@@ -167,6 +167,15 @@ async def analyze_plant_image(
     # ─── CNN modelinden tahmin ───────────────────────────────────
     prediction = plant_disease_model.predict(content)
 
+    # Audit fix (#16): görsel decode edilemezse model error dict döner
+    # (diagnosis='unknown', confidence 0.0). Bunu 200 başarı + sahte satır
+    # olarak kaydetmek yerine 4xx ile reddet, DB'ye yazma.
+    if prediction.get("error") or prediction.get("diagnosis") == "unknown":
+        raise HTTPException(
+            status_code=422,
+            detail=prediction.get("error") or "Goruntu analiz edilemedi (gecersiz/bozuk gorsel).",
+        )
+
     # ─── DB kaydı ────────────────────────────────────────────────
     record = PlantHealthImage(
         field_id=field_id,

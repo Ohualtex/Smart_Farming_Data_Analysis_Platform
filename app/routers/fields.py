@@ -51,6 +51,7 @@ from app.models.models import (
     User,
 )
 from app.routers.auth import get_current_user_or_403
+from app.schemas.base import _serialize_utc
 from app.schemas.schemas import (
     FieldAlertSummary,
     FieldCreate,
@@ -258,7 +259,10 @@ def get_field_readings(
     # En yeniden çektik; grafik için kronolojik (eskiden yeniye) ters çevir.
     result = [
         {
-            "reading_timestamp": str(reading.reading_timestamp),
+            # Audit fix (#9): raw str() çıktısı UTC offset taşımıyordu →
+            # Safari'de "Invalid Date" / yanlış-gün etiketleri. API'nin geri
+            # kalanıyla uyumlu ISO 8601 (UTC suffix'li) için _serialize_utc.
+            "reading_timestamp": _serialize_utc(reading.reading_timestamp),
             "sensor_id": reading.sensor_id,
             "sensor_type": sensor_type,
             "moisture_percent": reading.moisture_percent,

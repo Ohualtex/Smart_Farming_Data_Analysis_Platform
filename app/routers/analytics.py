@@ -256,8 +256,10 @@ def compare_analytics(
         )
 
         return {
-            "temp_avg": round(sum(temps) / len(temps), 2) if temps else 0,
-            "humidity_avg": round(sum(hums) / len(hums), 2) if hums else 0,
+            # AUDIT FIX (#5): boş periyotta ortalama 0 yerine None döner;
+            # aksi halde _diff 0'ı gerçek baseline sanıp sahte %100 üretiyordu.
+            "temp_avg": round(sum(temps) / len(temps), 2) if temps else None,
+            "humidity_avg": round(sum(hums) / len(hums), 2) if hums else None,
             "precipitation_mm": round(precip, 2),
             "sensor_readings": readings,
             "irrigations": irrigations,
@@ -266,10 +268,14 @@ def compare_analytics(
     stats_1 = _get_stats(start_date_1, end_date_1)
     stats_2 = _get_stats(start_date_2, end_date_2)
 
-    def _diff(val1: float, val2: float) -> float:
-        if val1 == 0:
-            return 100.0 if val2 > 0 else 0.0
-        return round(((val2 - val1) / val1) * 100, 2)
+    def _diff(val1: float | None, val2: float | None) -> float | None:
+        # AUDIT FIX (#5): baseline/current veri yoksa (None) veya baseline 0 ise
+        # anlamlı bir yüzde hesaplanamaz → None.
+        if val1 is None or val2 is None or val1 == 0:
+            return None
+        # AUDIT FIX (#4): negatif baseline'da yüzdenin işareti ters dönmesin diye
+        # paydada abs(val1) kullanılır; pay işareti (val2 - val1) korunur.
+        return round(((val2 - val1) / abs(val1)) * 100, 2)
 
     return {
         "period_1": {"start": start_date_1, "end": end_date_1, "stats": stats_1},
