@@ -26,12 +26,21 @@ export async function loadAlerts() {
     let qs = 'limit=100';
     if (sev) qs += `&severity=${encodeURIComponent(sev)}`;
     if (resolved) qs += `&is_resolved=${resolved}`;
-    const list = await api(`/api/alerts/?${qs}`);
+    // Audit fix (#25): özet kartları FİLTRELİ + 100-capped listeden değil,
+    // filtreden bağımsız tam listelerden hesaplanır — aksi halde "Kritik"/"Açık"
+    // kartları aktif filtre altında etiketleriyle çelişiyordu. Kartlar için
+    // severity/resolved filtresini yok sayan ayrı sorgular kullanılır.
+    const [list, allList, openList, criticalList] = await Promise.all([
+        api(`/api/alerts/?${qs}`),
+        api('/api/alerts/?limit=500'),
+        api('/api/alerts/?is_resolved=false&limit=500'),
+        api('/api/alerts/?severity=critical&limit=500'),
+    ]);
 
-    // Özet kartları
-    const total = list ? list.length : 0;
-    const critical = list ? list.filter(a => a.severity === 'critical').length : 0;
-    const open = list ? list.filter(a => !a.is_resolved).length : 0;
+    // Özet kartları — filtreden bağımsız tam sayımlar
+    const total = allList ? allList.length : 0;
+    const critical = criticalList ? criticalList.length : 0;
+    const open = openList ? openList.length : 0;
     cards.innerHTML = `
         <div class="card"><div class="card-icon" aria-hidden="true">📋</div><div class="card-value">${total}</div><div class="card-label">Toplam</div></div>
         <div class="card"><div class="card-icon" aria-hidden="true">⚠️</div><div class="card-value">${open}</div><div class="card-label">Açık</div></div>

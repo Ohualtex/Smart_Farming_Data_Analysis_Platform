@@ -137,9 +137,14 @@ describe("extractErrorMessage", () => {
     expect(await extractErrorMessage(res)).toBe("HTTP 500");
   });
 
-  it("detail array ise (Pydantic 422) onu kullanmaz, fallback'a düşer", async () => {
+  it("detail array ise (Pydantic 422) alan mesajlarını birleştirir", async () => {
     const res = mockRes({ detail: [{ loc: ["body", "email"], msg: "field required" }] }, 422);
-    expect(await extractErrorMessage(res)).toBe("HTTP 422");
+    expect(await extractErrorMessage(res)).toBe("field required");
+  });
+
+  it("detail array çok alanlıysa mesajları ' · ' ile birleştirir", async () => {
+    const res = mockRes({ detail: [{ msg: "field required" }, { msg: "value too long" }] }, 422);
+    expect(await extractErrorMessage(res)).toBe("field required · value too long");
   });
 
   it("res.clone() kullanır — body stream sonra başka yerde okunabilir", async () => {

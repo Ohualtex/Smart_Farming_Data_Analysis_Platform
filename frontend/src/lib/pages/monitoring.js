@@ -9,7 +9,7 @@
 import { _escAttr, showToast } from "../utils.js";
 import { api, apiAuth, getAuthToken, API_BASE, _authHeaders } from "../api.js";
 import { _skeletonCards, _skeletonRows, _skeletonBlock, _setBusy } from "../skeleton.js";
-import { irrigationStatusLabel, diagnosisLabel, severityLabel } from "../labels.js";
+import { irrigationStatusLabel, diagnosisLabel, severityLabel, sensorTypeLabel, sensorStatusLabel } from "../labels.js";
 import { charts, renderSensorTypeChart, renderFarmTempChart, renderIrrigationStatusChart,
          renderNpkRadarChart, renderDailyTrendChart, renderSensorStatsChart,
          chartTick, chartLegend, chartGrid } from "../charts.js";
@@ -30,13 +30,10 @@ export async function loadSensors(page = 1) {
     // Table skeleton — 6 rows × 4 columns before the fetch returns.
     document.getElementById('sensorsTable').innerHTML = _skeletonRows(6, 4);
     _setBusy('sensorsTable', true);
-    // Toplam sayiyi her sayfa degisikliginde tekrar cekmek pahali —
-    // ilk yuklemede al, sonra cache'le. Yeni sensor eklenirse sayfa
-    // degistiginde tekrar fetch edilir (bilincli trade-off).
-    if (sensorsTotal === 0) {
-        const cnt = await api('/api/sensors/count');
-        sensorsTotal = cnt?.total || 0;
-    }
+    // Toplam sayıyı HER yüklemede tazele: field-detail'den sensör eklenip/silinin
+    // (monitoring dışı) cache stale kalıyordu (audit ORTA #24). COUNT ucuz query.
+    const cnt = await api('/api/sensors/count');
+    sensorsTotal = cnt?.total || 0;
     const totalPages = Math.max(1, Math.ceil(sensorsTotal / PAGE_SIZE));
     sensorsPage = Math.min(Math.max(1, page), totalPages);
     const skip = (sensorsPage - 1) * PAGE_SIZE;
@@ -59,11 +56,13 @@ export async function loadSensors(page = 1) {
     // keyboard navigation acilir.
     // XSS koruması: sensor_type/status kullanıcı-kaynaklı (SensorCreate.sensor_type
     // serbest str) → escape şart (audit YÜKSEK stored-XSS). serial_number zaten escape'liydi.
+    // Audit fix (#27): ham snake_case/İngilizce yerine Türkçe etiket; bilinmeyen
+    // değerde fallback ham değeri döndürdüğü için _escAttr sarması korunur.
     document.getElementById('sensorsTable').innerHTML = sensors.map(s => `
-        <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${_escAttr(s.sensor_type)}) detayını aç"
+        <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${_escAttr(sensorTypeLabel(s.sensor_type))}) detayını aç"
             style="cursor:pointer" data-action="loadSensorDetail" data-id="${s.id}">
-            <td>${s.id}</td><td>${_escAttr(s.sensor_type)}</td><td>${_escAttr(s.serial_number)}</td>
-            <td><span class="badge active">${_escAttr(s.status)}</span></td>
+            <td>${s.id}</td><td>${_escAttr(sensorTypeLabel(s.sensor_type))}</td><td>${_escAttr(s.serial_number)}</td>
+            <td><span class="badge active">${_escAttr(sensorStatusLabel(s.status))}</span></td>
         </tr>
     `).join('');
     _setBusy('sensorsTable', false);
@@ -101,6 +100,11 @@ export async function loadWeather() {
             <div class="card"><div class="card-icon" aria-hidden="true">📊</div><div class="card-value">${temps.length ? Math.min(...temps).toFixed(1) + '—' + Math.max(...temps).toFixed(1) : '—'}°C</div><div class="card-label">Sıcaklık Aralığı</div></div>
             <div class="card"><div class="card-icon" aria-hidden="true">🌧️</div><div class="card-value">${data.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1)}mm</div><div class="card-label">Toplam Yağış</div></div>
         `;
+    } else {
+        // Audit fix (#23): veri boş/çevrimdışı ise skeleton kartlar sonsuza
+        // dek dönmesin — "Veri yok" durumu göster.
+        document.getElementById('weatherCards').innerHTML =
+            '<p class="empty-state" style="grid-column: 1 / -1;">🌤️ Hava durumu verisi yok veya sunucuya ulaşılamadı.</p>';
     }
     _setBusy('weatherCards', false);
     // Temperature chart
