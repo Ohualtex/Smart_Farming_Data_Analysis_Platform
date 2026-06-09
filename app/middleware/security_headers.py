@@ -4,7 +4,6 @@ Security Headers Middleware
 Production response header guarantee for the FastAPI app:
 
   Content-Security-Policy          XSS / data exfiltration defense
-  Strict-Transport-Security        Force HTTPS (production only)
   X-Frame-Options: DENY            Clickjacking defense
   X-Content-Type-Options: nosniff  MIME sniffing defense
   Referrer-Policy                  PII leak via Referer header
@@ -23,8 +22,9 @@ Notes:
   de data-action'a çevrildiğinde CSP'den `'unsafe-inline'` drop
   edilebilir.
 
-- HSTS sadece `ENVIRONMENT=production` iken eklenir; dev/HTTPS olmayan
-  setup'larda eklenmesi browser'da preload yanlış pin'leyebilir.
+- HSTS (Strict-Transport-Security) BURADA EKLENMEZ: TLS'i nginx terminate
+  ettiği için header'ın tek sahibi nginx'tir (nginx/conf.d/default.conf.template).
+  App katmanında eklemek çakışan/duplike header üretiyordu.
 
 - `/metrics` endpoint'i `include_in_schema=False` ve robotlardan uzak
   durmalı; X-Robots-Tag: noindex bunu sağlar.
@@ -41,8 +41,6 @@ from __future__ import annotations
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-
-from app.config import settings
 
 # Sabit header değerleri — modül seviyesi, request başına yeniden hesaplanmasın.
 
@@ -76,27 +74,37 @@ PERMISSIONS_POLICY = (
 )
 
 
+def apply_security_headers(headers) -> None:  # noqa: ANN001 — starlette Headers (mutable mapping)
+    """Defense-in-depth response header'larını verilen header map'ine yaz.
+
+    `setdefault` kullanır → zaten set edilmiş header'lar ezilmez (idempotent).
+    Hem `SecurityHeadersMiddleware` hem de exception handler'ları (bkz.
+    exceptions.py) bu tek kaynağı çağırır; böylece middleware'i baypas eden
+    500 yanıtlarında bile aynı header seti garanti edilir. HSTS burada YOK —
+    onun tek sahibi nginx (bkz. nginx/conf.d/default.conf.template).
+    """
+    # CSP — XSS + data exfiltration.
+    headers.setdefault("Content-Security-Policy", CSP_HEADER)
+    # Clickjacking.
+    headers.setdefault("X-Frame-Options", "DENY")
+    # MIME sniffing.
+    headers.setdefault("X-Content-Type-Options", "nosniff")
+    # Referrer leakage.
+    headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    # Browser API allowlist (deny by default for unused).
+    headers.setdefault("Permissions-Policy", PERMISSIONS_POLICY)
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Inject defense-in-depth response headers on every response."""
 
     async def dispatch(self, request: Request, call_next) -> Response:  # noqa: ANN001
         response: Response = await call_next(request)
-        # CSP — XSS + data exfiltration.
-        response.headers.setdefault("Content-Security-Policy", CSP_HEADER)
-        # Clickjacking.
-        response.headers.setdefault("X-Frame-Options", "DENY")
-        # MIME sniffing.
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        # Referrer leakage.
-        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        # Browser API allowlist (deny by default for unused).
-        response.headers.setdefault("Permissions-Policy", PERMISSIONS_POLICY)
-        # HSTS — only in production (assumes HTTPS in front).
-        if settings.ENVIRONMENT == "production":
-            response.headers.setdefault(
-                "Strict-Transport-Security",
-                "max-age=31536000; includeSubDomains",
-            )
+        apply_security_headers(response.headers)
+        # HSTS — TLS'i nginx terminate ettiği için Strict-Transport-Security
+        # tek otorite olarak nginx tarafında set edilir (nginx/conf.d/default.conf.template).
+        # App katmanında tekrar eklemek çakışan/duplike header üretiyordu → kaldırıldı.
+        # (App doğrudan HTTPS sunmadığından burada HSTS doğru pin'lenemez.)
         # /metrics endpoint'i public-discoverable olmasın.
         if request.url.path == "/metrics":
             response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")

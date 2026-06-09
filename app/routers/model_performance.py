@@ -31,6 +31,7 @@ from app.middleware.auth import verify_api_key
 from app.middleware.exceptions import NotFoundError, ValidationError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.models.models import ModelPerformanceLog, SystemAlert
+from app.routers.auth import get_current_user_or_403, require_role
 from app.schemas.schemas import (
     ModelPerformanceCompareItem,
     ModelPerformanceDriftReport,
@@ -62,6 +63,9 @@ ALERT_DEDUP_WINDOW_HOURS = 24
     "/",
     response_model=list[ModelPerformanceLogResponse],
     summary="Performans loglarını listele",
+    # AUDIT FIX (#7): read ucu artık Bearer token zorunlu kılıyor (auth eksikti).
+    dependencies=[Depends(get_current_user_or_403)],
+    responses={401: {"description": "Bearer token gerekli"}},
 )
 def list_logs(
     model_name: str | None = Query(default=None, description="Filtre: belirli bir model"),
@@ -128,7 +132,12 @@ def update_log(
     response_model=ModelPerformanceSummary,
     summary="Model bazlı agregat performans özeti",
     description="Belirtilen model için toplam tahmin sayısı, ortalama doğruluk skoru ve son log zamanını döndürür.",
-    responses={404: {"description": "Belirtilen model için log bulunamadı"}},
+    # AUDIT FIX (#7): read ucu artık Bearer token zorunlu kılıyor (auth eksikti).
+    dependencies=[Depends(get_current_user_or_403)],
+    responses={
+        401: {"description": "Bearer token gerekli"},
+        404: {"description": "Belirtilen model için log bulunamadı"},
+    },
 )
 def model_summary(model_name: str, db: Session = Depends(get_db)) -> ModelPerformanceSummary:
     rows = (
@@ -156,6 +165,9 @@ def model_summary(model_name: str, db: Session = Depends(get_db)) -> ModelPerfor
     summary="Günlük accuracy zaman serisi",
     description="Modelin son N gündeki günlük ortalama accuracy değerini döndürür. "
     "Trend takibi ve drift tespiti için kullanılır.",
+    # AUDIT FIX (#7): read ucu artık Bearer token zorunlu kılıyor (auth eksikti).
+    dependencies=[Depends(get_current_user_or_403)],
+    responses={401: {"description": "Bearer token gerekli"}},
 )
 def model_timeseries(
     model_name: str,
@@ -194,7 +206,12 @@ def model_timeseries(
     summary="Birden fazla modeli karşılaştır",
     description="Virgülle ayrılmış model isimleri için yan-yana metrikler (toplam tahmin, "
     "ortalama / min / max accuracy, son log zamanı). Örnek: `?models=irrigation_rf,plant_disease_cnn`",
-    responses={400: {"description": "Geçerli model adı sağlanmadı"}},
+    # AUDIT FIX (#7): read ucu artık Bearer token zorunlu kılıyor (auth eksikti).
+    dependencies=[Depends(get_current_user_or_403)],
+    responses={
+        400: {"description": "Geçerli model adı sağlanmadı"},
+        401: {"description": "Bearer token gerekli"},
+    },
 )
 def compare_models(
     models: str = Query(..., description="Virgülle ayrılmış model isimleri"),
@@ -247,6 +264,10 @@ def compare_models(
     description="Son N gün accuracy ortalamasını önceki periyotla karşılaştırır. "
     "Belirlenen eşikten fazla düşüş varsa otomatik olarak `SystemAlert` (severity=medium) yaratır. "
     "İdeal sıklık: günde 1-2 kez (cron veya scheduler ile).",
+    # AUDIT FIX (#7): SystemAlert INSERT eden write-yan-etkili uç; auth eksikti.
+    # Yazma işlemi olduğundan yalnız admin/developer'a açıldı.
+    dependencies=[Depends(require_role("admin", "developer"))],
+    responses={401: {"description": "Bearer token gerekli"}, 403: {"description": "admin/developer rolü gerekli"}},
 )
 def detect_drift(
     model_name: str,

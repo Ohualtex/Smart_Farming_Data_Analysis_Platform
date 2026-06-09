@@ -46,7 +46,10 @@ def _build_engine_kwargs() -> dict:
     multi-thread arg, server DBs get pool tuning.
     """
     is_sqlite = settings.DATABASE_URL.startswith("sqlite")
-    kwargs: dict = {"echo": settings.API_DEBUG}
+    # echo prod'da ZORLA kapalı: SQLAlchemy echo tüm SQL + parametreleri (şifre
+    # hash, PII) log'a yazar. API_DEBUG yanlışlıkla True bırakılsa bile prod'da
+    # sızıntı olmaz (audit YÜKSEK).
+    kwargs: dict = {"echo": settings.API_DEBUG and settings.ENVIRONMENT != "production"}
 
     if is_sqlite:
         kwargs["connect_args"] = {"check_same_thread": False}
@@ -57,6 +60,12 @@ def _build_engine_kwargs() -> dict:
         kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
         kwargs["pool_pre_ping"] = settings.DB_POOL_PRE_PING
         kwargs["pool_recycle"] = settings.DB_POOL_RECYCLE
+        # AUDIT L7: PostgreSQL oturum saat dilimini UTC'ye sabitle. Modelde naive
+        # DateTime kolonları (TIMESTAMP WITHOUT TIME ZONE) var; filtreler ise UTC-aware
+        # (datetime.now(UTC)). Oturum TZ'i UTC olmayınca karşılaştırma sunucu saatine
+        # göre kayabilir → UTC'ye sabitlemek naive-kolon/aware-filtre tutarlılığını
+        # garanti eder (timestamptz kolonlara geçiş = ayrı migration, follow-up).
+        kwargs["connect_args"] = {"options": "-c timezone=utc"}
     return kwargs
 
 

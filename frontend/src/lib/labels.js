@@ -19,8 +19,22 @@ export const irrigationStatusLabel = _map({
     pending: 'Beklemede', completed: 'Tamamlandı', cancelled: 'İptal', scheduled: 'Planlandı',
 });
 
+// Audit fix (#27): sensör tipi — daha önce ham snake_case render ediliyordu.
+// charts.js'teki typeLabels'ı yansıtır + field-detail form seçenekleri.
+export const sensorTypeLabel = _map({
+    soil_moisture: 'Toprak Nemi', soil_temperature: 'Toprak Sıcaklığı',
+    humidity: 'Hava Nemi', electrical_conductivity: 'Elektriksel İletkenlik',
+});
+
+// Audit fix (#27): sensör durumu — daha önce ham İngilizce render ediliyordu.
+export const sensorStatusLabel = _map({
+    active: 'Aktif', inactive: 'Pasif', maintenance: 'Bakımda', faulty: 'Arızalı',
+});
+
 // Hastalık tanısı (ML sınıfları)
+// Audit fix (#17): hata durumu teşhisi 'unknown' ham İngilizce sızıyordu (map'te yoktu) → Türkçe karşılık ekle.
 export const diagnosisLabel = _map({
     healthy: 'Sağlıklı', leaf_spot: 'Yaprak lekesi', powdery_mildew: 'Külleme', rust: 'Pas',
     blight: 'Yanıklık', mosaic_virus: 'Mozaik virüsü', bacterial_wilt: 'Bakteriyel solgunluk', anthracnose: 'Antraknoz',
+    unknown: 'Belirsiz',
 });

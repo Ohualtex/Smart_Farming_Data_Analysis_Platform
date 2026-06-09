@@ -22,6 +22,14 @@ export const pageTitles = {
     auth: ['Hesabım', 'Profil ve şifre'],
 };
 
+// Audit fix (#25): rol-kapısı — sistem-yönetim sayfaları yalnız ilgili rollere.
+// index.html nav-item data-role'leriyle birebir aynı: çiftçi #users/#analytics
+// kabuğunu hash ile açamasın (veri zaten server-side korunuyor; bu boş kabuğu gizler).
+const PAGE_ROLE_GUARD = {
+    analytics: new Set(['admin', 'overseer', 'developer']),
+    users: new Set(['admin']),
+};
+
 // Sistem rolleri (developer/overseer/admin) TÜM sistemi görür → çiftçi-odaklı
 // ("kendi tarlan") alt başlıklar yanıltıcı. Bu sayfalarda kapsam-doğru metin:
 const SYSTEM_SUBTITLES = {
@@ -40,6 +48,15 @@ const SYSTEM_SUBTITLES = {
 export function navigate(page, handlers, startHeroTipRotation) {
     if (!document.getElementById(`page-${page}`) || !pageTitles[page]) {
         console.warn(`navigate: bilinmeyen sayfa "${page}"`);
+        return;
+    }
+    // Audit fix (#25): rol-kapısı — yetkisiz kullanıcı sistem-yönetim sayfasının
+    // kabuğunu açamaz; sessizce dashboard'a yönlendir. Kullanıcı yoksa (init/test)
+    // kapı uygulanmaz → mevcut akış/testler korunur.
+    const _user = getCurrentUser();
+    const _allowed = PAGE_ROLE_GUARD[page];
+    if (_user && _allowed && !_allowed.has(_user.role)) {
+        if (page !== 'dashboard') navigate('dashboard', handlers, startHeroTipRotation);
         return;
     }
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));

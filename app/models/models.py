@@ -1,6 +1,18 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -22,6 +34,16 @@ class User(Base):
     """ORM model for `users` table."""
 
     __tablename__ = "users"
+    # RBAC bütünlüğü: `role` yalnız 4 geçerli değerden biri olabilir. Alembic
+    # migration (b1c2d3e4f5a6) prod'da aynı CHECK'i kurar; model'de de tanımlı
+    # olması create_all yolunun (dev/test) prod ile AYNI constraint'i üretmesini
+    # sağlar (audit: iki şema yolu ayrışmasın).
+    __table_args__ = (
+        CheckConstraint(
+            "role IN (" + ", ".join(f"'{_r}'" for _r in USER_ROLES) + ")",
+            name="ck_users_role_valid",
+        ),
+    )
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, nullable=False, index=True)
@@ -118,6 +140,9 @@ class SoilMoistureReading(Base):
     __tablename__ = "soil_moisture_readings"
     id = Column(Integer, primary_key=True, index=True)
     sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False)
+    # Audit L7: naive DateTime; filtreler UTC-aware datetime kullanıyor.
+    # PostgreSQL'de doğruluk doğrulanmadı. DateTime(timezone=True)'a geçiş
+    # migration gerektirir → SKIP (davranış değişikliği yok).
     reading_timestamp = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
     moisture_percent = Column(Float, nullable=False)
     depth_cm = Column(Float)
@@ -158,6 +183,7 @@ class SensorReadingMonthlyAggregate(Base):
     soil_temperature_max = Column(Float)
     electrical_conductivity_avg = Column(Float)
 
+    # Audit L7: naive DateTime — bkz. SoilMoistureReading.reading_timestamp notu (SKIP, migration gerekir).
     archived_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     __table_args__ = (
@@ -172,6 +198,7 @@ class WeatherData(Base):
     __tablename__ = "weather_data"
     id = Column(Integer, primary_key=True, index=True)
     farm_id = Column(Integer, ForeignKey("farms.id"))
+    # Audit L7: naive DateTime — bkz. SoilMoistureReading.reading_timestamp notu (SKIP, migration gerekir).
     recorded_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
     temperature_c = Column(Float)
     humidity_percent = Column(Float)
@@ -203,6 +230,7 @@ class PlantHealthImage(Base):
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"))
     image_url = Column(String(500))
+    # Audit L7: naive DateTime — bkz. SoilMoistureReading.reading_timestamp notu (SKIP, migration gerekir).
     captured_at = Column(DateTime, default=lambda: datetime.now(UTC))
     diagnosis = Column(String(200))
     confidence_score = Column(Float)

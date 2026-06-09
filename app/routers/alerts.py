@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.exceptions import ForbiddenError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
-from app.middleware.rbac import _BYPASS_ROLES, assert_farm_ownership, require_write
+from app.middleware.rbac import _BYPASS_ROLES, assert_farm_ownership, assert_field_ownership, require_write
 from app.models.models import Farm, Field, PlantHealthImage, Sensor, SoilMoistureReading, SystemAlert, User
 from app.routers.auth import get_current_user_or_403
 from app.schemas.schemas import SystemAlertCreate, SystemAlertResponse, SystemAlertUpdate
@@ -132,6 +132,10 @@ def create_alert(
         assert_farm_ownership(db, payload.farm_id, current_user)
     elif current_user.role == "farmer":
         raise ForbiddenError(detail="Farmer sistem-geneli uyarı (farm_id=None) oluşturamaz.")
+    # Audit fix: field_id verilmişse tarla sahipliği de doğrulanmalı — aksi
+    # halde alert sahibi olmadığın bir tarlayı referanslayabilir.
+    if payload.field_id is not None:
+        assert_field_ownership(db, payload.field_id, current_user)
     alert = SystemAlert(**payload.model_dump())
     db.add(alert)
     db.commit()

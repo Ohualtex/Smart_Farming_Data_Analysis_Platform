@@ -14,7 +14,11 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from loguru import logger
 from sqlalchemy.exc import IntegrityError
+
+from app.config import settings
+from app.middleware.security_headers import apply_security_headers
 
 # ─── CUSTOM EXCEPTION SINIFLARI ─────────────────────────────────
 
@@ -125,7 +129,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         # detail None ise message'i fallback olarak koy (HTTPException uyumu)
         detail = exc.detail if exc.detail is not None else exc.message
 
-        return JSONResponse(
+        response = JSONResponse(
             status_code=status_code,
             content={
                 "error_code": error_code,
@@ -133,6 +137,11 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "detail": detail,
             },
         )
+        # status>=500 yanıtları SecurityHeadersMiddleware'i baypas edip dışarıdaki
+        # ServerErrorMiddleware'den döndüğü için güvenlik header'larını burada da
+        # garanti ediyoruz (setdefault → idempotent, baypas etmeyen yollarda no-op).
+        apply_security_headers(response.headers)
+        return response
 
     @app.exception_handler(IntegrityError)
     async def integrity_exception_handler(request: Request, exc: IntegrityError):
@@ -146,14 +155,20 @@ def register_exception_handlers(app: FastAPI) -> None:
         UNIQUE/FK ihlallerini 409 Conflict olarak normalize eder; aksi
         halde 500 olarak yansır ve client hatası gibi davranmaz.
         """
-        return JSONResponse(
+        # Ham DB hata metni (str(exc.orig)) tablo/kolon/constraint adlarını —
+        # bazen değerleri — sızdırır → prod'da gizle, sunucuda logla (audit YÜKSEK).
+        raw = str(exc.orig) if exc.orig else str(exc)
+        logger.warning(f"IntegrityError: {raw}")
+        response = JSONResponse(
             status_code=409,
             content={
                 "error_code": "CONFLICT",
                 "message": "Veri çakışması: kayıt zaten mevcut veya ilişki kuralı ihlal edildi.",
-                "detail": str(exc.orig) if exc.orig else str(exc),
+                "detail": raw if settings.ENVIRONMENT != "production" else None,
             },
         )
+        apply_security_headers(response.headers)
+        return response
 
     @app.exception_handler(RequestValidationError)
     async def request_validation_handler(request: Request, exc: RequestValidationError):
@@ -165,7 +180,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         yollarında kullanılır (validation İngilizce kalır; frontend toast tarafı
         message map'leme yapar).
         """
-        return JSONResponse(
+        response = JSONResponse(
             status_code=422,
             content={
                 "detail": [
@@ -178,15 +193,26 @@ def register_exception_handlers(app: FastAPI) -> None:
                 ],
             },
         )
+        apply_security_headers(response.headers)
+        return response
 
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
-        """Beklenmeyen hataları yakalar ve tutarlı format döndürür."""
-        return JSONResponse(
+        """Beklenmeyen hataları yakalar ve tutarlı format döndürür.
+
+        Ham exception metni (str(exc)) path/SQL/secret sızdırabilir → prod'da
+        client'a dönmez, tam traceback sunucuda loglanır (audit YÜKSEK).
+        """
+        logger.exception(f"Beklenmeyen hata: {exc}")
+        response = JSONResponse(
             status_code=500,
             content={
                 "error_code": "INTERNAL_ERROR",
                 "message": "Beklenmeyen bir sunucu hatası oluştu.",
-                "detail": str(exc) if exc.args else None,
+                "detail": (str(exc) if exc.args else None) if settings.ENVIRONMENT != "production" else None,
             },
         )
+        # 500 yanıtı dıştaki ServerErrorMiddleware'den döner →
+        # SecurityHeadersMiddleware'i baypas eder; header'ları burada enjekte et.
+        apply_security_headers(response.headers)
+        return response

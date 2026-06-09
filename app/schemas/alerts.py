@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.base import SqliteSafeInt, UtcDateTime
 
@@ -25,8 +27,9 @@ class SystemAlertCreate(BaseModel):
 
     farm_id: SqliteSafeInt | None = None
     field_id: SqliteSafeInt | None = None
-    alert_type: str  # 'sensor_anomaly' | 'weather_warning' | 'system_error' | ...
-    severity: str = "low"  # 'low' | 'medium' | 'critical'
+    alert_type: str = Field(..., max_length=50)  # 'sensor_anomaly' | 'weather_warning' | ...
+    # Audit düzeltmesi: keyfi severity değerleri dashboard/metrik kovalarını bozmasın.
+    severity: Literal["low", "medium", "critical"] = "low"
     message: str
 
 
@@ -42,12 +45,14 @@ class SystemAlertResponse(BaseModel):
     severity: str
     message: str
     is_resolved: bool
-    created_at: UtcDateTime
+    # Audit düzeltmesi: DB kolonu nullable → NULL gelirse serialize'da 500 olmasın.
+    created_at: UtcDateTime | None = None
 
 
 class SystemAlertUpdate(BaseModel):
     """Alert'in resolved durumunu güncellemek icin kismi update."""
 
     is_resolved: bool | None = None
-    severity: str | None = None
+    # Audit düzeltmesi: severity sadece geçerli kovalarla kısıtlandı.
+    severity: Literal["low", "medium", "critical"] | None = None
     message: str | None = None

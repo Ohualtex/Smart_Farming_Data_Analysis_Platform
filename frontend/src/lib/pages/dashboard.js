@@ -9,7 +9,7 @@
 import { _fmtDate, _fmtNumber, _escAttr, showToast, updateStatus, _STATUS_EMOJI, _STATUS_LABEL } from "../utils.js";
 import { api, apiAuth, getAuthToken } from "../api.js";
 import { _skeletonCards, _setBusy } from "../skeleton.js";
-import { irrigationStatusLabel, diagnosisLabel } from "../labels.js";
+import { irrigationStatusLabel, diagnosisLabel, severityLabel } from "../labels.js";
 import { renderMoistureChart, renderTempHumChart, renderPrecipChart } from "../charts.js";
 import { getCurrentUser, getApiOnline, setApiOnline } from "../session.js";
 import { _getRoleTips } from "../filiz.js";
@@ -32,14 +32,22 @@ function _renderSummaryCards(summary) {
         : '—';
     const irrTitle = irr.field_name ? `${irr.field_name} · ${_fmtDate(irr.scheduled_date)}` : 'Sulama kaydı yok';
     const sev = alerts.by_severity || {};
-    const severityChips = [
+    const _knownSev = [
         { key: 'critical', label: 'kritik', cls: 'critical' },
         { key: 'medium', label: 'orta', cls: 'medium' },
         { key: 'low', label: 'düşük', cls: 'low' },
-    ].map(({ key, label, cls }) => {
+    ];
+    // Audit fix (#28): bilinen seviyeler dışındaki severity'ler (örn. 'high')
+    // sessizce düşüyordu → chip toplamı gerçek total ile uyuşmuyordu. Backend
+    // sapmış severity'leri koruyor; bilinmeyenleri de sona ekle.
+    const _knownKeys = new Set(_knownSev.map((s) => s.key));
+    const _extraSev = Object.keys(sev)
+        .filter((k) => !_knownKeys.has(k) && (sev[k] || 0) > 0)
+        .map((k) => ({ key: k, label: severityLabel(k), cls: _escAttr(k) }));
+    const severityChips = [..._knownSev, ..._extraSev].map(({ key, label, cls }) => {
         const cnt = sev[key] || 0;
         return cnt > 0
-            ? `<span class="severity-chip severity-${cls}">${cnt} ${label}</span>`
+            ? `<span class="severity-chip severity-${cls}">${cnt} ${_escAttr(label)}</span>`
             : '';
     }).join(' ');
     const diseaseDx = diagnosisLabel(disease.diagnosis);
@@ -167,6 +175,9 @@ export async function loadDashboard() {
         if (heroFarms) heroFarms.textContent = summary.farm_count;
         if (heroSensors) heroSensors.textContent = summary.sensor_count;
         if (heroReadings) heroReadings.textContent = (summary.soil_moisture_today || {}).reading_count || 0;
+        // Audit fix (#28): count-up animasyonu veri YAZILDIKTAN sonra tetiklenmeli.
+        // init()'te '—' placeholder'ı okunduğu için hiç çalışmıyordu (ölü özellik).
+        animateHeroStats();
     } else {
         cards.innerHTML = `
             <div class="empty-state" style="grid-column: 1 / -1;">

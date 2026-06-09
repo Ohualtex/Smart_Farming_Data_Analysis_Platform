@@ -25,7 +25,7 @@ from app.middleware.rbac import (
     require_write,
     scope_sensors_to_user,
 )
-from app.models.models import Sensor, SoilMoistureReading, User
+from app.models.models import Sensor, SensorReadingMonthlyAggregate, SoilMoistureReading, User
 from app.routers.auth import get_current_user_or_403
 from app.schemas.schemas import SensorCreate, SensorReadingCreate, SensorReadingResponse, SensorResponse
 
@@ -142,6 +142,13 @@ def delete_sensor(
     if not sensor:
         # assert_sensor_ownership zaten 404 fırlattı; race condition defensive.
         raise NotFoundError("Sensör")
+    # Cascade: sensörün okuma + aylık-özet satırları onunla silinir. Gerçek
+    # sensörlerin HER ZAMAN okuması olur → guard yerine cascade şart; aksi halde
+    # FK IntegrityError ile prod'da 500, SQLite'ta orphan satır (audit YÜKSEK).
+    db.query(SoilMoistureReading).filter(SoilMoistureReading.sensor_id == sensor_id).delete(synchronize_session=False)
+    db.query(SensorReadingMonthlyAggregate).filter(SensorReadingMonthlyAggregate.sensor_id == sensor_id).delete(
+        synchronize_session=False
+    )
     db.delete(sensor)
     db.commit()
     return {"message": "Sensor silindi"}

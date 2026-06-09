@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ========== FERTILIZER (Gübreleme) ==========
@@ -29,7 +29,9 @@ class FertilizerRecommendRequest(BaseModel):
     soil_nitrogen: float  # mg/kg
     soil_phosphorus: float  # mg/kg
     soil_potassium: float  # mg/kg
-    area_hectares: float
+    # Negatif/sıfır alan → negatif gübre kg veya yanlış "toprak yeterli" sonucu
+    # (audit YÜKSEK). gt=0 ile Pydantic 422 döner, servis hiç çalışmaz.
+    area_hectares: float = Field(..., gt=0.0)
 
 
 class FertilizerRecommendResponse(BaseModel):
@@ -52,7 +54,7 @@ class FertilizerScheduleRequest(BaseModel):
 
     crop_type: str
     planting_date: str  # YYYY-MM-DD
-    area_hectares: float
+    area_hectares: float = Field(..., gt=0.0)  # negatif/sıfır alan reddedilir (audit YÜKSEK)
     soil_nitrogen: float = 0.0
     soil_phosphorus: float = 0.0
     soil_potassium: float = 0.0

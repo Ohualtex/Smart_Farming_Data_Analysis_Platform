@@ -9,7 +9,7 @@
 import { _escAttr, showToast } from "../utils.js";
 import { api, apiAuth, getAuthToken, API_BASE, _authHeaders } from "../api.js";
 import { _skeletonCards, _skeletonRows, _skeletonBlock, _setBusy } from "../skeleton.js";
-import { irrigationStatusLabel, diagnosisLabel, severityLabel } from "../labels.js";
+import { irrigationStatusLabel, diagnosisLabel, severityLabel, sensorTypeLabel, sensorStatusLabel } from "../labels.js";
 import { charts, renderSensorTypeChart, renderFarmTempChart, renderIrrigationStatusChart,
          renderNpkRadarChart, renderDailyTrendChart, renderSensorStatsChart,
          chartTick, chartLegend, chartGrid } from "../charts.js";
@@ -30,18 +30,17 @@ export async function loadSensors(page = 1) {
     // Table skeleton — 6 rows × 4 columns before the fetch returns.
     document.getElementById('sensorsTable').innerHTML = _skeletonRows(6, 4);
     _setBusy('sensorsTable', true);
-    // Toplam sayiyi her sayfa degisikliginde tekrar cekmek pahali —
-    // ilk yuklemede al, sonra cache'le. Yeni sensor eklenirse sayfa
-    // degistiginde tekrar fetch edilir (bilincli trade-off).
-    if (sensorsTotal === 0) {
-        const cnt = await api('/api/sensors/count');
-        sensorsTotal = cnt?.total || 0;
-    }
+    // Toplam sayıyı HER yüklemede tazele: field-detail'den sensör eklenip/silinin
+    // (monitoring dışı) cache stale kalıyordu (audit ORTA #24). COUNT ucuz query.
+    // Audit fix (#10): Bearer-zorunlu endpoint → apiAuth (api() X-API-Key fallback'i tutarsız).
+    const cnt = await apiAuth('/api/sensors/count');
+    sensorsTotal = cnt?.total || 0;
     const totalPages = Math.max(1, Math.ceil(sensorsTotal / PAGE_SIZE));
     sensorsPage = Math.min(Math.max(1, page), totalPages);
     const skip = (sensorsPage - 1) * PAGE_SIZE;
 
-    const sensors = await api(`/api/sensors/?skip=${skip}&limit=${PAGE_SIZE}`) || [];
+    // Audit fix (#10): Bearer-zorunlu endpoint → apiAuth.
+    const sensors = await apiAuth(`/api/sensors/?skip=${skip}&limit=${PAGE_SIZE}`) || [];
 
     // Nav buton'larini guncelle
     document.getElementById('sensorsPrevBtn').disabled = sensorsPage <= 1;
@@ -57,18 +56,23 @@ export async function loadSensors(page = 1) {
     // Tabloyu render et — a11y: satira role=button + keyboard handler
     // EN / TR: satir click + Enter/Space ile detay yuklenir; tabindex=0 ile
     // keyboard navigation acilir.
+    // XSS koruması: sensor_type/status kullanıcı-kaynaklı (SensorCreate.sensor_type
+    // serbest str) → escape şart (audit YÜKSEK stored-XSS). serial_number zaten escape'liydi.
+    // Audit fix (#27): ham snake_case/İngilizce yerine Türkçe etiket; bilinmeyen
+    // değerde fallback ham değeri döndürdüğü için _escAttr sarması korunur.
     document.getElementById('sensorsTable').innerHTML = sensors.map(s => `
-        <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${s.sensor_type}) detayını aç"
+        <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${_escAttr(sensorTypeLabel(s.sensor_type))}) detayını aç"
             style="cursor:pointer" data-action="loadSensorDetail" data-id="${s.id}">
-            <td>${s.id}</td><td>${s.sensor_type}</td><td>${_escAttr(s.serial_number)}</td>
-            <td><span class="badge active">${s.status}</span></td>
+            <td>${s.id}</td><td>${_escAttr(sensorTypeLabel(s.sensor_type))}</td><td>${_escAttr(s.serial_number)}</td>
+            <td><span class="badge active">${_escAttr(sensorStatusLabel(s.status))}</span></td>
         </tr>
     `).join('');
     _setBusy('sensorsTable', false);
 }
 
 export async function loadSensorDetail(sensorId) {
-    const readings = await api(`/api/sensors/${sensorId}/readings?limit=30`) || [];
+    // Audit fix (#10): Bearer-zorunlu endpoint → apiAuth.
+    const readings = await apiAuth(`/api/sensors/${sensorId}/readings?limit=30`) || [];
     const sorted = [...readings].reverse();
     if (charts.sensorDetail) charts.sensorDetail.destroy();
     charts.sensorDetail = new Chart(document.getElementById('sensorDetailChart'), {
@@ -99,6 +103,11 @@ export async function loadWeather() {
             <div class="card"><div class="card-icon" aria-hidden="true">📊</div><div class="card-value">${temps.length ? Math.min(...temps).toFixed(1) + '—' + Math.max(...temps).toFixed(1) : '—'}°C</div><div class="card-label">Sıcaklık Aralığı</div></div>
             <div class="card"><div class="card-icon" aria-hidden="true">🌧️</div><div class="card-value">${data.reduce((a,d) => a + (d.precipitation_mm||0), 0).toFixed(1)}mm</div><div class="card-label">Toplam Yağış</div></div>
         `;
+    } else {
+        // Audit fix (#23): veri boş/çevrimdışı ise skeleton kartlar sonsuza
+        // dek dönmesin — "Veri yok" durumu göster.
+        document.getElementById('weatherCards').innerHTML =
+            '<p class="empty-state" style="grid-column: 1 / -1;">🌤️ Hava durumu verisi yok veya sunucuya ulaşılamadı.</p>';
     }
     _setBusy('weatherCards', false);
     // Temperature chart
@@ -180,13 +189,22 @@ async function _myFieldOptions() {
 }
 
 export async function predictIrrigation() {
-    const body = {
-        soil_moisture: +document.getElementById('irr_moisture').value,
-        soil_temperature: +document.getElementById('irr_soil_temp').value,
-        humidity: +document.getElementById('irr_humidity').value,
-        temperature: +document.getElementById('irr_temp').value,
-        precipitation: +document.getElementById('irr_precip').value,
+    // Audit fix (#32): boş input'lar unary + ile 0'a dönüşüp model uydurma sıfırlarla
+    // tahmin yapıyordu → her alanı doğrula, boş/NaN varsa toast ile reddet.
+    const fields = {
+        soil_moisture: 'irr_moisture', soil_temperature: 'irr_soil_temp',
+        humidity: 'irr_humidity', temperature: 'irr_temp', precipitation: 'irr_precip',
     };
+    const body = {};
+    for (const [key, id] of Object.entries(fields)) {
+        const raw = document.getElementById(id).value.trim();
+        const num = Number(raw);
+        if (raw === '' || !Number.isFinite(num)) {
+            showToast('Tüm alanları geçerli sayılarla doldur', 'warning');
+            return;
+        }
+        body[key] = num;
+    }
     const result = await api('/api/irrigation/predict', { method: 'POST', body: JSON.stringify(body) });
     if (result) {
         _lastIrrigationRec = result.recommended_water_liters;
@@ -368,7 +386,8 @@ export async function loadPlants() {
     for (const r of list) {
         const sev = r.severity || '—';
         const sevColor = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f59e0b' : sev === 'low' ? '#eab308' : '#22c55e';
-        const conf = r.confidence_score ? (r.confidence_score * 100).toFixed(0) + '%' : '—';
+        // Audit fix (#18): 0.0 falsy olduğu için '—' görünüyordu → null/undefined kontrolü ile 0% göster.
+        const conf = r.confidence_score != null ? (r.confidence_score * 100).toFixed(0) + '%' : '—';
         const date = r.captured_at ? new Date(r.captured_at).toLocaleDateString('tr-TR') : '—';
         html += `<tr>
             <td style="padding:8px;border-bottom:1px solid var(--border);">${date}</td>

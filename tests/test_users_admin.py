@@ -145,6 +145,34 @@ class TestCreateUser:
         assert resp.status_code == 403
 
 
+# ─── ROLE UPDATE ───────────────────────────────────────────────
+
+
+class TestUpdateUserRole:
+    """PATCH /api/auth/users/{id}/role — happy path + self-lockout + 404."""
+
+    def test_admin_changes_other_user_role(self, admin_client, db):
+        client, _admin = admin_client
+        target = _make_user(db, "farmer")
+        resp = client.patch(f"/api/auth/users/{target.id}/role", json={"role": "overseer"})
+        assert resp.status_code == 200
+        assert resp.json()["role"] == "overseer"
+        assert resp.json()["id"] == target.id
+        # DB'ye gerçekten yazıldı mı?
+        db.refresh(target)
+        assert target.role == "overseer"
+
+    def test_admin_cannot_change_own_role_409(self, admin_client):
+        client, admin = admin_client
+        resp = client.patch(f"/api/auth/users/{admin.id}/role", json={"role": "farmer"})
+        assert resp.status_code == 409
+
+    def test_role_update_missing_user_404(self, admin_client):
+        client, _admin = admin_client
+        resp = client.patch("/api/auth/users/999999/role", json={"role": "developer"})
+        assert resp.status_code == 404
+
+
 # ─── PASSWORD RESET ────────────────────────────────────────────
 
 

@@ -72,8 +72,10 @@ server {
     resolver_timeout 5s;
 
     # ─── Guvenlik header'lari ─────────────────────────────────────
-    # 6 ay HSTS (preload listesine eklemek icin >1y onerilir)
-    add_header Strict-Transport-Security "max-age=15552000; includeSubDomains" always;
+    # HSTS'in TEK sahibi nginx'tir (TLS burada terminate edilir). App katmaninda
+    # (security_headers.py) ayrica eklenmiyor — duplike/cakisan header olmasin diye.
+    # 1 yil + includeSubDomains: hsts preload listesi icin minimum esik karsilanir.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Frame-Options DENY always;
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;

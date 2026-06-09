@@ -18,7 +18,7 @@ import { rethemeCharts } from "./lib/charts.js";
 
 // ─── Sayfa modülleri ─────────────────────────────────────────
 import {
-    loadDashboard, loadDemoData, animateHeroStats, _startHeroTipRotation,
+    loadDashboard, loadDemoData, _startHeroTipRotation,
 } from "./lib/pages/dashboard.js";
 import {
     loadFields, toggleForm, submitNewFarm, submitNewField, editFarm, deleteFarm,
@@ -152,6 +152,10 @@ async function init() {
     document.addEventListener('click', (e) => {
         const el = e.target.closest('[data-action]');
         if (!el) return;
+        // <select> YALNIZ 'change' ile sürülür: dropdown'a tıklamak (açmak) click
+        // delegation'ı tetikleyip istenmeyen aksiyon göndermesin — örn. admin rol
+        // dropdown'ını açmak istenmeyen rol-değişikliği PATCH'i atardı (audit YÜKSEK).
+        if (el.tagName === 'SELECT') return;
         const action = el.dataset.action;
         const handler = actionMap[action];
         if (handler) {
@@ -218,8 +222,9 @@ async function init() {
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Hero sayılarına count-up animasyonu (sevimlilik pack)
-    animateHeroStats();
+    // Hero sayılarına count-up animasyonu artık loadDashboard()'da, veri
+    // yazıldıktan SONRA tetikleniyor (audit #28). init'te '—' okunduğu için
+    // çalışmıyordu → buradaki ölü çağrı kaldırıldı.
 
     // Filiz maskotu
     initFiliz();

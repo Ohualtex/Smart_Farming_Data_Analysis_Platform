@@ -17,9 +17,14 @@ kullanımını engeller (fail-fast).
 from __future__ import annotations
 
 import warnings
+from urllib.parse import urlsplit
 
 from pydantic import ConfigDict, model_validator
 from pydantic_settings import BaseSettings
+
+# Loopback/local host adları — production CORS allowlist'inde yasak.
+# urlsplit().hostname IPv6 köşeli parantezleri soyduğu için '::1' ham olarak karşılaştırılır.
+_LOCAL_HOSTNAMES = frozenset({"localhost", "127.0.0.1", "::1"})
 
 # Local-only sentinel'ler. Production'da bunlar görüldüğünde uygulama başlatılmaz.
 _DEV_API_KEY = "dev-api-key"  # noqa: S105 — sentinel, gerçek secret değil
@@ -49,7 +54,9 @@ class Settings(BaseSettings):
     # Default: localhost. Container/prod için env üzerinden 0.0.0.0 verilebilir.
     API_HOST: str = "127.0.0.1"
     API_PORT: int = 8000
-    API_DEBUG: bool = True
+    # echo'yu sürer → prod'da tüm SQL + parametreler (şifre hash/PII) log'a sızar
+    # (audit YÜKSEK). Güvenli default = False; dev'de .env ile True yapılabilir.
+    API_DEBUG: bool = False
     API_TITLE: str = "SFDAP - Akilli Tarim Veri Analizi Platformu API"
     API_VERSION: str = "1.0.0"
 
@@ -124,7 +131,10 @@ class Settings(BaseSettings):
                 )
             # CORS allowlist hijack defense: production'da `*` veya local
             # origin'ler attack surface açar (CSRF, credential exfil).
-            insecure_origins = [o for o in self.cors_origins_list if o == "*" or "localhost" in o or "127.0.0.1" in o]
+            # Substring eşleşmesi yerine her origin'i parse edip HOSTNAME'i tam
+            # karşılaştır: 'app.localhost.example.com' gibi meşru domain'ler
+            # yanlışlıkla bloklanmasın, IPv6 loopback ('[::1]') de kaçmasın.
+            insecure_origins = [o for o in self.cors_origins_list if o == "*" or self._is_local_origin(o)]
             if insecure_origins:
                 raise RuntimeError(
                     f"ENVIRONMENT=production iken CORS_ORIGINS guvensiz origin'ler "
@@ -136,7 +146,26 @@ class Settings(BaseSettings):
                     "ENVIRONMENT=production ama API_HOST=127.0.0.1; container icinde 0.0.0.0 olmali.",
                     stacklevel=2,
                 )
+            if self.API_DEBUG:
+                warnings.warn(
+                    "ENVIRONMENT=production ama API_DEBUG=True; SQLAlchemy echo SQL+parametreleri "
+                    "(sifre hash/PII) log'a yazar. .env'de API_DEBUG=False yapin "
+                    "(echo yine de prod'da zorla kapatilir, bkz. database.py).",
+                    stacklevel=2,
+                )
         return self
+
+    @staticmethod
+    def _is_local_origin(origin: str) -> bool:
+        """Origin'in loopback/localhost'a işaret edip etmediğini hostname bazında belirle.
+
+        Substring kontrolü ('localhost' in o) yanlış pozitif üretir
+        ('app.localhost.example.com' meşru bir domain'dir) ve IPv6 loopback'i
+        ('[::1]') kaçırır. urlsplit ile host kısmını ayıklayıp tam eşleştiriyoruz.
+        urlsplit, IPv6 host'un köşeli parantezlerini soyar → '::1' ile karşılaştırılır.
+        """
+        host = urlsplit(origin).hostname
+        return host is not None and host.lower() in _LOCAL_HOSTNAMES
 
     @property
     def cors_origins_list(self) -> list[str]:

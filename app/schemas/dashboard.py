@@ -58,7 +58,7 @@ class DashboardLastDisease(BaseModel):
     field_name: str | None = None
     captured_at: UtcDateTime | None = None
     diagnosis: str | None = None
-    severity: str | None = None  # 'none' | 'mild' | 'moderate' | 'severe'
+    severity: str | None = None  # 'none' | 'low' | 'medium' | 'high'
     confidence_score: float | None = None
 
 

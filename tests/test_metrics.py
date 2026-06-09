@@ -33,15 +33,16 @@ class TestDeepHealth:
         resp = client.get("/api/health/deep")
         assert resp.json()["components"]["db"]["status"] == "ok"
 
-    def test_no_auth_required(self):
+    def test_deep_health_requires_auth(self):
+        """audit ORTA #6: deep-health scheduler/pool/DB-hata içeriği sızdırır →
+        artık admin/developer ister. (Sığ /api/health/ load balancer için public kalır.)"""
         from fastapi.testclient import TestClient
 
         from app.main import app
 
         with TestClient(app) as c:
             resp = c.get("/api/health/deep")
-            # Health endpoint'leri public olmalı
-            assert resp.status_code == 200
+            assert resp.status_code in (401, 403)
 
     def test_uptime_component_present(self, client):
         """v3-7: uptime bileşeni eklendi, uptime_seconds >= 0 olmalı."""

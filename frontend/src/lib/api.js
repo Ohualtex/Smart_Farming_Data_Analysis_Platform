@@ -14,13 +14,17 @@ export function setAuthToken(t) { localStorage.setItem(AUTH_TOKEN_KEY, t); }
 export function clearAuthToken() { localStorage.removeItem(AUTH_TOKEN_KEY); }
 
 /**
- * Auth header builder — Bearer token varsa Authorization, yoksa X-API-Key.
+ * Auth header builder — Bearer token varsa Authorization döner.
+ * Audit fix (#26): hardcoded 'dev-api-key' fallback prod bundle'a sızıyordu ve
+ * gerçek prod key ile asla eşleşmiyordu. Pano Bearer-tabanlı olduğu için artık
+ * yalnızca açıkça yapılandırılmış (window.SFDAP_API_KEY) gerçek bir key varsa
+ * X-API-Key gönderilir; aksi halde hiç auth header eklenmez.
  */
 export function _authHeaders() {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    return token
-        ? { 'Authorization': `Bearer ${token}` }
-        : { 'X-API-Key': 'dev-api-key' };
+    if (token) return { 'Authorization': `Bearer ${token}` };
+    const apiKey = window.SFDAP_API_KEY;
+    return apiKey ? { 'X-API-Key': apiKey } : {};
 }
 
 /**
@@ -31,6 +35,12 @@ export async function _extractErrorMessage(res) {
         const body = await res.clone().json();
         if (body && typeof body.message === "string" && body.message.trim()) return body.message;
         if (body && typeof body.detail === "string" && body.detail.trim()) return body.detail;
+        // Pydantic 422: detail bir dizi ({loc,msg,type}) → alan mesajlarını birleştir
+        // (audit ORTA #26: aksi halde kullanıcı ham "HTTP 422" görüyordu).
+        if (body && Array.isArray(body.detail) && body.detail.length) {
+            const msgs = body.detail.map(e => (e && typeof e.msg === "string" ? e.msg : null)).filter(Boolean);
+            if (msgs.length) return msgs.join(" · ");
+        }
     } catch {
         // body JSON değil veya parse hatası — generic mesaja düş
     }

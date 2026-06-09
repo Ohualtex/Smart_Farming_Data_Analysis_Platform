@@ -16,8 +16,11 @@ class IrrigationCreate(BaseModel):
 
     field_id: SqliteSafeInt
     scheduled_date: datetime
-    duration_min: int | None = None
-    water_amount_liters: float | None = None
+    # Audit düzeltmesi: negatif süre ve negatif/sıfır su miktarı reddedilir.
+    duration_min: int | None = Field(None, ge=0)
+    water_amount_liters: float | None = Field(None, gt=0)
+    # Audit düzeltmesi: manuel program model default'u ('model') ile etiketlenmesin.
+    source: str = "manual"
 
 
 class IrrigationResponse(BaseModel):
@@ -28,6 +31,8 @@ class IrrigationResponse(BaseModel):
     id: int
     field_id: int
     scheduled_date: UtcDateTime
+    # Audit düzeltmesi: frontend "Süre (dk)" kolonu için duration_min eksikti.
+    duration_min: int | None
     water_amount_liters: float | None
     status: str
 

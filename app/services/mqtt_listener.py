@@ -169,8 +169,14 @@ class MQTTListener:
         if sensor is None:
             logger.warning(f"Bilinmeyen sensor_id={sensor_id}, mesaj atlandi")
             return False
+        # Audit fix (#15): moisture_percent eksik/None ise 0'a düşürmek yerine
+        # okumayı atla — aksi halde sahte %0 değeri sınır kontrolünü geçip kaydedilir.
+        raw_moisture = payload.get("moisture_percent")
+        if raw_moisture is None:
+            logger.warning(f"moisture_percent eksik, okuma atlandi: {payload!r}")
+            return False
         try:
-            moisture = float(payload.get("moisture_percent", 0))
+            moisture = float(raw_moisture)
         except (TypeError, ValueError):
             logger.warning(f"Gecersiz moisture_percent: {payload!r}")
             return False

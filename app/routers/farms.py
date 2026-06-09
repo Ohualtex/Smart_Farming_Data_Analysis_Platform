@@ -26,7 +26,7 @@ from app.database import MAX_SQLITE_INT, get_db
 from app.middleware.exceptions import ConflictError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import assert_farm_ownership, require_write, scope_to_user
-from app.models.models import Farm, Field, SoilAnalysis, User
+from app.models.models import Farm, Field, SoilAnalysis, SystemAlert, User, WeatherData
 from app.routers.auth import get_current_user_or_403
 from app.schemas.schemas import (
     FarmCreate,
@@ -188,6 +188,9 @@ def update_farm(
     require_write(current_user)
     assert_farm_ownership(db, farm_id, current_user)
     farm = db.query(Farm).filter(Farm.id == farm_id).first()
+    if farm is None:
+        # assert_farm_ownership zaten 404 fırlattı; defensive (race — satır silinmiş olabilir).
+        raise NotFoundError("Çiftlik")
     updates = payload.model_dump(exclude_unset=True)
     for field_name, value in updates.items():
         setattr(farm, field_name, value)
@@ -222,5 +225,13 @@ def delete_farm(
     if field_count > 0:
         raise ConflictError(message=f"Bu çiftliğin {field_count} tarlası var; önce tarlaları sil.")
     farm = db.query(Farm).filter(Farm.id == farm_id).first()
+    if farm is None:
+        # assert_farm_ownership zaten 404 fırlattı; defensive (race — satır silinmiş olabilir).
+        raise NotFoundError("Çiftlik")
+    # Cascade: çiftliğe doğrudan bağlı hava-durumu + uyarı satırları onunla silinir
+    # → aksi halde FK IntegrityError ile prod'da 500 (audit YÜKSEK). Tarlalar
+    # yukarıda guard'la bloke (önce onlar silinir).
+    db.query(WeatherData).filter(WeatherData.farm_id == farm_id).delete(synchronize_session=False)
+    db.query(SystemAlert).filter(SystemAlert.farm_id == farm_id).delete(synchronize_session=False)
     db.delete(farm)
     db.commit()

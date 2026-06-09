@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.base import SqliteSafeInt, UtcDateTime
+
+# NOT: max_length DB kolon uzunluklarıyla hizalı (User/Farm/Field). Aksi halde
+# aşırı-uzun string SQLite'ta geçer ama PostgreSQL'de 500 (StringDataRightTruncation)
+# verirdi (audit YÜKSEK: SQLite↔PG ayrışması). Burada Pydantic 422 ile erken döner.
 
 
 # ========== FARM / FIELD / SOIL (Cycle 9 GET endpoint'leri) ==========
@@ -59,9 +63,9 @@ class FarmCreate(BaseModel):
         }
     )
 
-    name: str
-    city: str | None = None
-    region: str | None = None
+    name: str = Field(..., max_length=150)
+    city: str | None = Field(None, max_length=100)
+    region: str | None = Field(None, max_length=100)
     area_hectares: float | None = None
     location_lat: float | None = None
     location_lng: float | None = None
@@ -70,9 +74,9 @@ class FarmCreate(BaseModel):
 class FarmUpdate(BaseModel):
     """Çiftlik kısmi güncelleme — yalnız verilen alanlar değişir (exclude_unset)."""
 
-    name: str | None = None
-    city: str | None = None
-    region: str | None = None
+    name: str | None = Field(None, max_length=150)
+    city: str | None = Field(None, max_length=100)
+    region: str | None = Field(None, max_length=100)
     area_hectares: float | None = None
     location_lat: float | None = None
     location_lng: float | None = None
@@ -95,8 +99,8 @@ class FieldCreate(BaseModel):
     )
 
     farm_id: SqliteSafeInt
-    name: str
-    soil_type: str | None = None
+    name: str = Field(..., max_length=150)
+    soil_type: str | None = Field(None, max_length=50)
     area_hectares: float | None = None
     elevation_m: float | None = None
     crop_id: SqliteSafeInt | None = None
@@ -105,8 +109,8 @@ class FieldCreate(BaseModel):
 class FieldUpdate(BaseModel):
     """Tarla kısmi güncelleme — yalnız verilen alanlar değişir."""
 
-    name: str | None = None
-    soil_type: str | None = None
+    name: str | None = Field(None, max_length=150)
+    soil_type: str | None = Field(None, max_length=50)
     area_hectares: float | None = None
     elevation_m: float | None = None
     crop_id: SqliteSafeInt | None = None
@@ -119,7 +123,8 @@ class SoilAnalysisResponse(BaseModel):
 
     id: int
     field_id: int
-    analysis_date: UtcDateTime
+    # Audit düzeltmesi: DB kolonu nullable → NULL gelirse serialize'da 500 olmasın.
+    analysis_date: UtcDateTime | None = None
     ph_level: float | None = None
     organic_matter_pct: float | None = None
     nitrogen_mg_kg: float | None = None

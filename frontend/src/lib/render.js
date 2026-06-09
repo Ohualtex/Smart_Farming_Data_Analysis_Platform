@@ -8,7 +8,7 @@
  */
 
 import { _escAttr, _fmtDate, _fmtNumber, _STATUS_EMOJI, _STATUS_LABEL } from "./utils.js";
-import { irrigationStatusLabel, diagnosisLabel, severityLabel } from "./labels.js";
+import { irrigationStatusLabel, diagnosisLabel, severityLabel, sensorTypeLabel, sensorStatusLabel } from "./labels.js";
 
 export function renderFieldDetail(d) {
     const cropName = d.crop ? d.crop.name : 'Ekili bitki yok';
@@ -19,9 +19,12 @@ export function renderFieldDetail(d) {
     const sensorRows = (d.sensors || []).map(s => {
         const m = s.latest_moisture_percent != null ? `%${_fmtNumber(s.latest_moisture_percent)}` : '—';
         const t = s.latest_soil_temperature_c != null ? `${_fmtNumber(s.latest_soil_temperature_c)}°C` : '—';
-        const label = `${s.sensor_type}${s.serial_number ? ' (' + s.serial_number + ')' : ''}`;
+        // Audit fix (#27): ham snake_case/İngilizce yerine Türkçe etiket;
+        // bilinmeyen değerde fallback ham değeri döndürdüğü için _escAttr korunur.
+        // CSS sınıfı (sensor-${status}) ham status'tan üretilmeye devam eder.
+        const label = `${sensorTypeLabel(s.sensor_type)}${s.serial_number ? ' (' + s.serial_number + ')' : ''}`;
         return `<div class="detail-mini-card sensor-card-wrap">
-            <div class="detail-mini-title">📡 ${_escAttr(s.sensor_type)} <span class="sensor-status sensor-${_escAttr(s.status)}">${_escAttr(s.status)}</span></div>
+            <div class="detail-mini-title">📡 ${_escAttr(sensorTypeLabel(s.sensor_type))} <span class="sensor-status sensor-${_escAttr(s.status)}">${_escAttr(sensorStatusLabel(s.status))}</span></div>
             <div class="detail-mini-row">Nem: <strong>${m}</strong> · Toprak: <strong>${t}</strong></div>
             <div class="detail-mini-sub">${s.latest_reading_at ? _fmtDate(s.latest_reading_at) : 'okuma yok'}</div>
             <button class="btn-mini btn-danger sensor-card-del" data-action="deleteSensor" data-id="${s.id}" data-name="${_escAttr(label)}" title="Sensörü sil">🗑</button>
@@ -140,11 +143,13 @@ export function renderPlantResult(data) {
         <h3 style="margin-top:0;">🧪 Sonuç: ${_escAttr(diagnosisLabel(data.diagnosis))}</h3>
         <p><strong>Güven:</strong> %${conf}</p>
         <p><strong>Şiddet:</strong> <span style="color:${sevColor};font-weight:600;">${_escAttr(severityLabel(sev))}</span></p>
-        <p><strong>Model:</strong> ${data.model_version}</p>
+        <p><strong>Model:</strong> ${_escAttr(data.model_version)}</p>
         <details style="margin-top:12px;"><summary style="cursor:pointer;">Tüm sınıf skorları</summary>
         <ul style="margin-top:8px;">`;
+    // Audit fix (#31): model_version ve all_scores sınıf anahtarları veri-güdümlü →
+    // innerHTML'e ham gömmek latent XSS; _escAttr ile kaçır.
     for (const [cls, score] of Object.entries(data.all_scores || {})) {
-        html += `<li>${cls}: ${(score * 100).toFixed(1)}%</li>`;
+        html += `<li>${_escAttr(cls)}: ${(score * 100).toFixed(1)}%</li>`;
     }
     html += '</ul></details></div>';
     const box = document.getElementById('plantsResultBox');

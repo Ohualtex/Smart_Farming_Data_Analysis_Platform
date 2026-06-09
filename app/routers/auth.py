@@ -35,7 +35,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -67,6 +67,10 @@ router = APIRouter(prefix="/api/auth", tags=["Kimlik Doğrulama"])
 # bcrypt context — round count default 12; production'da yüksek
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# bcrypt algoritması parolayı 72 BYTE'ta sessizce keser (truncation). Audit
+# fix (L3): bu sınırı aşan parolaları açıkça reddetmek için tek kaynak sabit.
+_BCRYPT_MAX_BYTES = 72
+
 # JWT için stateless logout sağlayan in-memory blacklist.
 # `jti` (JWT ID, RFC 7519 §4.1.7) üzerinden çalışır — aynı kullanıcının aynı
 # saniyede aldığı iki token'ın `sub`+`iat`+`exp` payload'ı identical olabilir
@@ -91,10 +95,10 @@ class UserRegisterRequest(BaseModel):
         }
     )
 
-    name: str
-    email: str  # TODO: switch to EmailStr once pydantic[email] is in.
+    name: str = Field(..., min_length=1, max_length=100)
+    email: str = Field(..., max_length=150)  # TODO: EmailStr (email-validator gerekli)
     password: str  # min 8 karakter (validator alttaki register'da)
-    phone: str | None = None
+    phone: str | None = Field(None, max_length=20)
 
 
 class UserLoginRequest(BaseModel):
@@ -163,6 +167,19 @@ class PasswordChangeResponse(BaseModel):
 
 
 # ─── Yardımcılar ─────────────────────────────────────────────────────
+def _is_email_sane(email: str) -> bool:
+    """Hafif e-posta sağlık kontrolü — EmailStr/email-validator yok.
+
+    Audit fix (L1): en az 3 karakter, tam bir '@' ve '@'tan sonra bir '.'
+    içermeli. Tam RFC doğrulaması değil; boş/sahte adresleri eler.
+    EN: Lightweight email sanity check (no email-validator dependency).
+    """
+    if len(email) < 3 or email.count("@") != 1:
+        return False
+    local, _, domain = email.partition("@")
+    return bool(local) and "." in domain and not domain.startswith(".") and not domain.endswith(".")
+
+
 def _hash_password(password: str) -> str:
     """bcrypt hash üret — `pwd_context` her seferinde yeni salt kullanır.
 
@@ -204,7 +221,14 @@ def _create_token(user_id: int) -> tuple[str, int]:
 def _decode_token(token: str) -> int:
     """JWT decode + sub'ı user_id olarak döndür. Geçersizse 401 fırlat."""
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        # Audit fix (L2): exp + sub claim'leri zorunlu — exp'siz token süresiz
+        # geçerli kalmasın, sub'suz token kimliksiz kabul edilmesin.
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            options={"require": ["exp", "sub"]},
+        )
     except JWTError as exc:
         raise UnauthorizedError(detail="Geçersiz token.") from exc
     # jti blacklist kontrolü — payload.get çünkü eski (jti'siz) token'lara
@@ -307,8 +331,15 @@ def require_role(*allowed_roles: str) -> Callable[..., User]:
 )
 @limiter.limit(AUTH_RATE)
 def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)) -> User:
-    if db.query(User).filter(User.email == payload.email).first():
-        raise ConflictError(message="Bu e-posta zaten kayıtlı.")
+    # Audit fix: e-posta normalize (strip + lower) — case/whitespace varyantları
+    # mükerrer hesap yaratmasın ve dup-check ile insert aynı değeri kullansın.
+    email = payload.email.strip().lower()
+    # Audit fix (L1): hafif e-posta sağlık kontrolü — email-validator/EmailStr
+    # kurulu değil; en az '@' + '.' içermeli ve makul uzunlukta olmalı.
+    if not _is_email_sane(email):
+        raise ValidationError(message="Geçerli bir e-posta adresi girin.")
+    # Audit fix (L4): şifre uzunluğu kontrolü dup-email kontrolünden ÖNCE çalışır
+    # — geçersiz şifre 409 yerine 400 döner ve dup-check ile user enumeration azalır.
     if len(payload.password) < 8:
         # 400 — FastAPI'nin auto-generated 422 şeması list[ValidationError]
         # bekler; düz-string detail uyumsuz olur.
@@ -316,9 +347,14 @@ def register(request: Request, payload: UserRegisterRequest, db: Session = Depen
         # 400 — FastAPI's auto-generated 422 schema expects
         # list[ValidationError]; a plain-string detail breaks it.
         raise ValidationError(message="Şifre en az 8 karakter olmalı.")
+    # Audit fix (L3): bcrypt 72 BYTE'ta sessizce keser; açıkça reddet.
+    if len(payload.password.encode("utf-8")) > _BCRYPT_MAX_BYTES:
+        raise ValidationError(message=f"Şifre en fazla {_BCRYPT_MAX_BYTES} bayt olmalı.")
+    if db.query(User).filter(User.email == email).first():
+        raise ConflictError(message="Bu e-posta zaten kayıtlı.")
     user = User(
         name=payload.name,
-        email=payload.email,
+        email=email,
         password_hash=_hash_password(payload.password),
         role="farmer",
         phone=payload.phone,
@@ -344,7 +380,10 @@ def register(request: Request, payload: UserRegisterRequest, db: Session = Depen
 )
 @limiter.limit(AUTH_RATE)
 def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    user = db.query(User).filter(User.email == payload.email).first()
+    # Audit fix: register ile aynı normalize (strip + lower) — case/whitespace
+    # varyantı login'i bloklamasın, stored e-posta ile eşleşsin.
+    email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
     if user is None or not _verify_password(payload.password, user.password_hash or ""):
         raise UnauthorizedError(detail="E-posta veya şifre hatalı.")
     token, expires_in = _create_token(user.id)
@@ -433,6 +472,9 @@ def change_password(
         raise UnauthorizedError(detail="Mevcut şifre hatalı.")
     if len(payload.new_password) < 8:
         raise ValidationError(message="Yeni şifre en az 8 karakter olmalı.")
+    # Audit fix (L3): bcrypt 72 BYTE'ta sessizce keser; açıkça reddet.
+    if len(payload.new_password.encode("utf-8")) > _BCRYPT_MAX_BYTES:
+        raise ValidationError(message=f"Yeni şifre en fazla {_BCRYPT_MAX_BYTES} bayt olmalı.")
     if payload.new_password == payload.current_password:
         raise ValidationError(message="Yeni şifre mevcut şifreyle aynı olamaz.")
     user.password_hash = _hash_password(payload.new_password)

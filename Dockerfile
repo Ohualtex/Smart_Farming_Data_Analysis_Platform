@@ -29,8 +29,11 @@ RUN pip install --no-cache /wheels/*
 # Copy application code
 COPY . .
 
+# Entrypoint'i çalıştırılabilir yap (prod'da `alembic upgrade head` → uvicorn)
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application (prod: migrate-then-serve; dev: create_all main.py'de)
+CMD ["/app/docker-entrypoint.sh"]

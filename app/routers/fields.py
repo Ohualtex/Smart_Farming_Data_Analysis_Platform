@@ -37,8 +37,10 @@ from app.middleware.exceptions import ConflictError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import assert_farm_ownership, assert_field_ownership, require_write
 from app.models.models import (
+    CropPlanting,
     CropType,
     Farm,
+    FertilizerRecommendationLog,
     Field,
     IrrigationSchedule,
     PlantHealthImage,
@@ -49,6 +51,7 @@ from app.models.models import (
     User,
 )
 from app.routers.auth import get_current_user_or_403
+from app.schemas.base import _serialize_utc
 from app.schemas.schemas import (
     FieldAlertSummary,
     FieldCreate,
@@ -213,7 +216,10 @@ def get_field_detail(
         region=farm.region,
         city=farm.city,
         crop=FieldCropInfo.model_validate(crop) if crop else None,
-        moisture_status=_classify_moisture(avg_moisture),
+        # AUDIT FIX (L9): rozet ile gösterilen sayı uyumlu olsun diye sınıflandırma
+        # da gösterilen YUVARLANMIŞ değer üzerinden yapılır (ör. 29.95 → 30.0% optimal,
+        # ham değerde 'dry' rozeti çelişkisi olmaz).
+        moisture_status=_classify_moisture(round(avg_moisture, 1) if avg_moisture is not None else None),
         avg_moisture_percent=round(avg_moisture, 1) if avg_moisture is not None else None,
         sensors=sensor_summaries,
         recent_irrigations=[FieldIrrigationSummary.model_validate(i) for i in irrigations],
@@ -256,7 +262,10 @@ def get_field_readings(
     # En yeniden çektik; grafik için kronolojik (eskiden yeniye) ters çevir.
     result = [
         {
-            "reading_timestamp": str(reading.reading_timestamp),
+            # Audit fix (#9): raw str() çıktısı UTC offset taşımıyordu →
+            # Safari'de "Invalid Date" / yanlış-gün etiketleri. API'nin geri
+            # kalanıyla uyumlu ISO 8601 (UTC suffix'li) için _serialize_utc.
+            "reading_timestamp": _serialize_utc(reading.reading_timestamp),
             "sensor_id": reading.sensor_id,
             "sensor_type": sensor_type,
             "moisture_percent": reading.moisture_percent,
@@ -322,6 +331,9 @@ def update_field(
     require_write(current_user)
     assert_field_ownership(db, field_id, current_user)
     field = db.query(Field).filter(Field.id == field_id).first()
+    if field is None:
+        # assert_field_ownership zaten 404 fırlattı; defensive (race — satır silinmiş olabilir).
+        raise NotFoundError("Tarla")
     updates = payload.model_dump(exclude_unset=True)
     for field_name, value in updates.items():
         setattr(field, field_name, value)
@@ -356,5 +368,20 @@ def delete_field(
     if sensor_count > 0:
         raise ConflictError(message=f"Bu tarlanın {sensor_count} sensörü var; önce sensörleri sil.")
     field = db.query(Field).filter(Field.id == field_id).first()
+    if field is None:
+        # assert_field_ownership zaten 404 fırlattı; defensive (race — satır silinmiş olabilir).
+        raise NotFoundError("Tarla")
+    # Cascade: tarlanın veri-kayıtları (analiz/sulama/görsel/ekim/gübre/uyarı)
+    # onunla silinir → aksi halde FK IntegrityError ile prod'da 500 (audit YÜKSEK).
+    # Sensörler yukarıda guard'la bloke (önce onlar silinir).
+    for _model, _fk in (
+        (SoilAnalysis, SoilAnalysis.field_id),
+        (IrrigationSchedule, IrrigationSchedule.field_id),
+        (PlantHealthImage, PlantHealthImage.field_id),
+        (CropPlanting, CropPlanting.field_id),
+        (FertilizerRecommendationLog, FertilizerRecommendationLog.field_id),
+        (SystemAlert, SystemAlert.field_id),
+    ):
+        db.query(_model).filter(_fk == field_id).delete(synchronize_session=False)
     db.delete(field)
     db.commit()

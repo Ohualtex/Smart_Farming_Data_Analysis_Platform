@@ -18,8 +18,6 @@ import { navigate } from "../nav.js";
 // ─── TARLALARIM (FIELD LIST) ──────────────────────────────────
 // REBUILD Faz 3 / Adım 6: çiftlik bazlı tarla listesi.
 // /api/farms/ → her farm için /api/farms/{id} (nested fields).
-// Tarlalarım sayfasında çiftlik dropdown'ı için son çekilen çiftlik listesi
-let _myFarms = [];
 
 export async function loadFields() {
     const container = document.getElementById('fieldsListContainer');
@@ -39,7 +37,6 @@ export async function loadFields() {
         _setBusy('fieldsListContainer', false);
         return;
     }
-    _myFarms = farms;
 
     // ─── Eylem çubuğu: çiftlik/tarla ekle (toggle formlar) ───
     const farmOpts = farms.map(f => `<option value="${f.id}">${_escAttr(f.name)}</option>`).join('');
@@ -243,6 +240,13 @@ let currentFieldId = null;
 export function getCurrentFieldId() { return currentFieldId; }
 
 export function openFieldDetail(fieldId) {
+    // Audit fix (#27): kart tıklaması openFieldDetail'i çağırır + aşağıda hash'i
+    // set eder → kendi tetiklediği hashchange router üzerinden openFieldDetail'i
+    // tekrar çağırıyordu (loadFieldDetail 2×). Aynı tarla zaten açıksa (hash de
+    // eşleşiyorsa) re-entry'yi yut → detay tek kez yüklenir. Doğrudan
+    // hash/refresh ilk girişte currentFieldId farklı/null olduğu için çalışır.
+    const _detailActive = document.getElementById('page-field-detail')?.classList.contains('active');
+    if (_detailActive && currentFieldId === fieldId && location.hash === `#field/${fieldId}`) return;
     currentFieldId = fieldId;
     // Sayfayı aktive et (navigate yerine doğrudan — parametrik route).
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -323,7 +327,8 @@ export async function analyzeFieldLeaf() {
         }
         const data = await resp.json();
         const sev = data.severity || 'none';
-        const sevColor = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f97316' : sev === 'low' ? '#eab308' : '#22c55e';
+        // Audit fix (#29): 'medium' rengi render.js (#f59e0b) ile hizalandı (önceden #f97316).
+        const sevColor = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f59e0b' : sev === 'low' ? '#eab308' : '#22c55e';
         const box = document.getElementById('fieldLeafResult');
         box.innerHTML = `<div style="border-left:4px solid ${sevColor};padding-left:12px;">
             <h4 style="margin:0 0 6px;">🧪 ${_escAttr(diagnosisLabel(data.diagnosis))}</h4>

@@ -33,9 +33,14 @@ services:
       # DATABASE_URL=postgresql://sfdap_user:sfdap_password@db:5432/sfdap_db
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./sfdap_dev.db}
       - CORS_ORIGINS=${CORS_ORIGINS:-https://${DOMAIN:-localhost}}
-    volumes:
-      - .:/app
-      - /app/.venv
+    # Audit fix: host kaynak bind mount (`.:/app`) prod image'in uzerine host
+    # kodunu + host .env/dev DB'sini bindirip prod container'in host kodu
+    # calistirmasina sebep oluyordu. Image'i self-contained tutmak icin
+    # default'tan kaldirildi. Local dev'de canli reload icin asagidaki
+    # `volumes` blogunu yorumdan cikarin:
+    #   volumes:
+    #     - .:/app
+    #     - /app/.venv
     restart: unless-stopped
     networks:
       - sfdap_net
