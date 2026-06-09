@@ -11,18 +11,21 @@ input, select { font-family: var(--font); }
 /* Selection highlight */
 ::selection { background: rgba(16,185,129,.28); color: var(--text); }
 
-/* Global scrollbar */
+/* Global scrollbar — marka yeşili, temaya uyumlu (hem WebKit hem Firefox).
+   Varsayılan = GECE: koyu zeminde görünür parlak yeşil. Gündüz (orijinal, daha
+   koyu yeşil) override → theme-light.css. */
+html { scrollbar-color: rgba(100,116,139,.6) transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
-    background: rgba(16,185,129,.28);
+    background: rgba(100,116,139,.55);
     border-radius: 6px;
     border: 2px solid transparent;
     background-clip: padding-box;
     transition: background .2s ease;
 }
 *::-webkit-scrollbar-thumb:hover {
-    background: rgba(16,185,129,.55);
+    background: rgba(148,163,184,.72);
     background-clip: padding-box;
 }
 
