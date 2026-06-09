@@ -161,19 +161,24 @@
                     </linearGradient>
                 </defs>
 
-                <!-- SAP -->
+                <!-- SAP (site-içi maskotla aynı: koyu + açık highlight) -->
                 <path d="M 60 38 Q 59 30 60 22" fill="none" stroke="#15803d" stroke-width="3.5" stroke-linecap="round"/>
-                <!-- YAPRAK SOL -->
+                <path d="M 60 38 Q 59 30 60 22" fill="none" stroke="#22c55e" stroke-width="1.2" stroke-linecap="round" opacity=".7"/>
+                <!-- YAPRAK SOL (yan damarlar + parıltı maskotla eşit) -->
                 <g class="filiz-leaf-l">
                     <path d="M 60 26 Q 40 6 24 22 Q 32 36 60 32 Z" fill="url(#wfLeaf)"/>
                     <path d="M 60 28 Q 45 22 30 26" stroke="#15803d" stroke-width="1" fill="none" opacity=".55"/>
-                    <ellipse cx="41" cy="18" rx="8" ry="2.4" fill="#fff" opacity=".3" transform="rotate(10 41 18)"/>
+                    <path d="M 50 26 L 47 21" stroke="#15803d" stroke-width=".7" fill="none" opacity=".5"/>
+                    <path d="M 42 27 L 39 23" stroke="#15803d" stroke-width=".7" fill="none" opacity=".5"/>
+                    <ellipse cx="42" cy="20" rx="9" ry="3" fill="#fff" opacity=".22" transform="rotate(-25 42 20)"/>
                 </g>
                 <!-- YAPRAK SAĞ -->
                 <g class="filiz-leaf-r">
                     <path d="M 60 26 Q 80 6 96 22 Q 88 36 60 32 Z" fill="url(#wfLeaf)"/>
                     <path d="M 60 28 Q 75 22 90 26" stroke="#15803d" stroke-width="1" fill="none" opacity=".55"/>
-                    <ellipse cx="79" cy="18" rx="8" ry="2.4" fill="#fff" opacity=".3" transform="rotate(-10 79 18)"/>
+                    <path d="M 70 26 L 73 21" stroke="#15803d" stroke-width=".7" fill="none" opacity=".5"/>
+                    <path d="M 78 27 L 81 23" stroke="#15803d" stroke-width=".7" fill="none" opacity=".5"/>
+                    <ellipse cx="78" cy="20" rx="9" ry="3" fill="#fff" opacity=".22" transform="rotate(25 78 20)"/>
                 </g>
                 <!-- GÖVDE -->
                 <ellipse cx="60" cy="78" rx="42" ry="44" fill="url(#wfBody)"/>
@@ -183,22 +188,28 @@
                 <!-- KOLLAR -->
                 <g class="filiz-arm-l">
                     <ellipse cx="18" cy="92" rx="7" ry="11" fill="#16a34a" transform="rotate(-25 18 92)"/>
+                    <ellipse cx="18" cy="92" rx="3" ry="5" fill="#4ade80" opacity=".5" transform="rotate(-25 18 92)"/>
                     <circle cx="14" cy="100" r="6" fill="#22c55e"/>
+                    <circle cx="13" cy="98" r="2" fill="#86efac" opacity=".7"/>
                 </g>
                 <g class="filiz-arm-r">
                     <ellipse cx="102" cy="92" rx="7" ry="11" fill="#16a34a" transform="rotate(25 102 92)"/>
+                    <ellipse cx="102" cy="92" rx="3" ry="5" fill="#4ade80" opacity=".5" transform="rotate(25 102 92)"/>
                     <circle cx="106" cy="100" r="6" fill="#22c55e"/>
+                    <circle cx="107" cy="98" r="2" fill="#86efac" opacity=".7"/>
                 </g>
                 <!-- YANAKLAR -->
                 <ellipse cx="30" cy="86" rx="10" ry="7" fill="url(#wfCheek)"/>
                 <ellipse cx="90" cy="86" rx="10" ry="7" fill="url(#wfCheek)"/>
-                <!-- SOL GÖZ -->
+                <!-- SOL GÖZ (alt-gölge + eye-bg pupilin DIŞINDA + 3. parıltı: maskotla eşit) -->
                 <g class="filiz-eye">
                     <g class="eye-open">
+                        <ellipse cx="42" cy="74" rx="11" ry="4" fill="#000" opacity=".15"/>
+                        <ellipse cx="42" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
                         <g class="wf-pupil" id="welcomeFilizPupilL">
-                            <ellipse cx="42" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
                             <circle cx="44" cy="66" r="4" fill="#fff"/>
                             <circle cx="40" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                            <circle cx="46" cy="68" r=".7" fill="#fff" opacity=".9"/>
                         </g>
                     </g>
                     <path class="eye-closed" d="M 32 70 Q 42 73 52 70" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round"/>
@@ -206,10 +217,12 @@
                 <!-- SAĞ GÖZ -->
                 <g class="filiz-eye">
                     <g class="eye-open">
+                        <ellipse cx="78" cy="74" rx="11" ry="4" fill="#000" opacity=".15"/>
+                        <ellipse cx="78" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
                         <g class="wf-pupil" id="welcomeFilizPupilR">
-                            <ellipse cx="78" cy="70" rx="11" ry="13" fill="url(#wfEyeBg)"/>
                             <circle cx="80" cy="66" r="4" fill="#fff"/>
                             <circle cx="76" cy="74" r="1.5" fill="#fff" opacity=".75"/>
+                            <circle cx="82" cy="68" r=".7" fill="#fff" opacity=".9"/>
                         </g>
                     </g>
                     <path class="eye-closed" d="M 68 70 Q 78 73 88 70" fill="none" stroke="#0a1224" stroke-width="3.5" stroke-linecap="round"/>
