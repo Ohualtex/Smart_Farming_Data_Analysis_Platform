@@ -134,6 +134,5 @@
 }
 
 /* Light tema scrollbar — ORİJİNAL marka yeşili (açık zeminde mükemmeldi, korundu) */
-[data-theme="light"] { scrollbar-color: rgba(16,185,129,.5) transparent; }
 [data-theme="light"] *::-webkit-scrollbar-thumb { background: rgba(16,185,129,.28); }
 [data-theme="light"] *::-webkit-scrollbar-thumb:hover { background: rgba(16,185,129,.55); }

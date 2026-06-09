@@ -11,10 +11,10 @@ input, select { font-family: var(--font); }
 /* Selection highlight */
 ::selection { background: rgba(16,185,129,.28); color: var(--text); }
 
-/* Global scrollbar — marka yeşili, temaya uyumlu (hem WebKit hem Firefox).
-   Varsayılan = GECE: koyu zeminde görünür parlak yeşil. Gündüz (orijinal, daha
-   koyu yeşil) override → theme-light.css. */
-html { scrollbar-color: rgba(100,116,139,.6) transparent; }
+/* Global scrollbar — SADECE ::-webkit (Chrome/Safari kalıcı özel scrollbar).
+   scrollbar-color KULLANMA: modern Chrome onu görünce ::-webkit'i yok sayıp ince
+   standart (overlay) scrollbar'a geçiyor → scrollbar "kayboluyor".
+   Gece varsayılan = slate; gündüz (yeşil) override → theme-light.css. */
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
