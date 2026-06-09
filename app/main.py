@@ -203,8 +203,11 @@ Yukarıdaki **🔒 Authorize** butonuna tıklayıp şu anahtarı girin: `dev-api
 **SFDAP**, 5 kişilik öğrenci ekibi tarafından geliştirilen Scrum tabanlı bir projedir.
 Çiftçi-odaklı bir saha aracıdır; admin/gözetmen rolleri sistem-geneli gözetim sağlar.
 """,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    # AUDIT FIX (#8): production'da Swagger/ReDoc/OpenAPI şemasını kapat — uç
+    # listesi + auth pattern'leri sızdırmasın. Dev/staging'de açık kalır.
+    docs_url=None if settings.ENVIRONMENT == "production" else "/docs",
+    redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
+    openapi_url=None if settings.ENVIRONMENT == "production" else "/openapi.json",
     openapi_tags=TAGS_METADATA,
     lifespan=lifespan,
 )

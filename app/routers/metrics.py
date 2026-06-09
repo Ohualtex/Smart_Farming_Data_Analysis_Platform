@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models.models import Sensor, SoilMoistureReading, SystemAlert
+from app.routers.auth import require_role
 from app.schemas.schemas import HealthCheckResponse
 
 router = APIRouter(prefix="/api/health", tags=["Sistem Metrikleri"])
@@ -180,6 +181,10 @@ def _check_alerts(db: Session) -> dict:
     summary="Derin sistem sağlığı kontrolü",
     description="DB, scheduler ve ML model bileşenlerini kontrol eder. "
     "Herhangi bir bileşen 'fail' olursa overall 'degraded' döndürür.",
+    # AUDIT FIX (#6): scheduler iş listesi / pool internals / ham DB hata
+    # string'leri sızdıran bu uç artık yalnız admin/developer'a açık.
+    dependencies=[Depends(require_role("admin", "developer"))],
+    responses={401: {"description": "Bearer token gerekli"}, 403: {"description": "admin/developer rolü gerekli"}},
 )
 def deep_health_check(db: Session = Depends(get_db)) -> HealthCheckResponse:
     components = {
@@ -219,7 +224,14 @@ def deep_health_check(db: Session = Depends(get_db)) -> HealthCheckResponse:
         "library bağımlılığı olmadan basit gauge'lar yayar. Production'da bir "
         "Prometheus instance'ı buradan periyodik scrape eder."
     ),
-    responses={200: {"content": {"text/plain": {}}, "description": "Prometheus exposition format"}},
+    # AUDIT FIX (#6): aktif sensör / alert sayıları gibi sistem iç metriklerini
+    # sızdıran scrape ucu artık yalnız admin/developer'a açık.
+    dependencies=[Depends(require_role("admin", "developer"))],
+    responses={
+        200: {"content": {"text/plain": {}}, "description": "Prometheus exposition format"},
+        401: {"description": "Bearer token gerekli"},
+        403: {"description": "admin/developer rolü gerekli"},
+    },
 )
 def prometheus_metrics(db: Session = Depends(get_db)) -> PlainTextResponse:
     """Lightweight Prometheus exposition — manual text format (no client_python dep)."""
