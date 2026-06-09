@@ -123,7 +123,8 @@ class SoilAnalysisResponse(BaseModel):
 
     id: int
     field_id: int
-    analysis_date: UtcDateTime
+    # Audit düzeltmesi: DB kolonu nullable → NULL gelirse serialize'da 500 olmasın.
+    analysis_date: UtcDateTime | None = None
     ph_level: float | None = None
     organic_matter_pct: float | None = None
     nitrogen_mg_kg: float | None = None

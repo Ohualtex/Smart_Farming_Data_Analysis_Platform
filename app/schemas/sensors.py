@@ -64,6 +64,7 @@ class SensorReadingResponse(BaseModel):
 
     id: int
     sensor_id: int
-    reading_timestamp: UtcDateTime
+    # Audit düzeltmesi: DB kolonu nullable → NULL gelirse serialize'da 500 olmasın.
+    reading_timestamp: UtcDateTime | None = None
     moisture_percent: float
     soil_temperature_c: float | None

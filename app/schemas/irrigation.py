@@ -19,6 +19,8 @@ class IrrigationCreate(BaseModel):
     # Audit düzeltmesi: negatif süre ve negatif/sıfır su miktarı reddedilir.
     duration_min: int | None = Field(None, ge=0)
     water_amount_liters: float | None = Field(None, gt=0)
+    # Audit düzeltmesi: manuel program model default'u ('model') ile etiketlenmesin.
+    source: str = "manual"
 
 
 class IrrigationResponse(BaseModel):

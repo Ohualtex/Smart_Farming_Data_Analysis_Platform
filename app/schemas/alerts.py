@@ -45,7 +45,8 @@ class SystemAlertResponse(BaseModel):
     severity: str
     message: str
     is_resolved: bool
-    created_at: UtcDateTime
+    # Audit düzeltmesi: DB kolonu nullable → NULL gelirse serialize'da 500 olmasın.
+    created_at: UtcDateTime | None = None
 
 
 class SystemAlertUpdate(BaseModel):
