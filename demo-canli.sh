@@ -26,7 +26,10 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-echo "🌐 [3/3] Cloudflare tunnel açılıyor — aşağıdaki HTTPS URL'ini paylaş:"
+echo "🌐 [3/3] Cloudflare tunnel açılıyor (☕ uyku engellendi) — aşağıdaki HTTPS URL'ini paylaş:"
 echo "        (giriş: admin@demo.test / 123456)"
 echo ""
-cloudflared tunnel --url http://localhost:8000
+# caffeinate: demo boyunca Mac uyumasın (idle/display/system) → tunnel kopmaz.
+# cloudflared'in alt-süreci olarak çalışır; Ctrl+C ile birlikte serbest kalır.
+# (macOS yerleşik komutu, kurulum gerekmez.)
+caffeinate -dimsu cloudflared tunnel --url http://localhost:8000
