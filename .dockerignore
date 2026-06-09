@@ -1,0 +1,35 @@
+# Audit fix: Dockerfile "COPY . ." dev sqlite DB / logs / .git / tests / .env
+# secret'lerini prod image'e gomuyordu. Runtime'da gereksiz ve hassas dosyalari
+# image disinda tutmak icin eklendi.
+# Calisma zamaninda gereken sey context'te kalir: app/, frontend/, alembic/,
+# requirements.txt, alembic.ini, docker-entrypoint.sh
+
+# Version control
+.git
+.github
+
+# Veritabani dosyalari (dev sqlite vs.)
+*.db
+*.sqlite*
+
+# Secrets / ortam
+.env
+
+# Sanal ortam ve Python cache
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+htmlcov
+
+# Loglar
+logs/
+
+# Frontend bagimliliklari
+node_modules
+
+# Test ve dokuman dosyalari (runtime'da gereksiz)
+tests/
+docs/
+*.md

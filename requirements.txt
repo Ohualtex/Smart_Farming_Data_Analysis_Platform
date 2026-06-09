@@ -2,62 +2,63 @@
 # SFDAP API Dependencies
 # ========================
 
+# Audit fix: tum bagimliliklar reproducible prod build icin yuklu surume "==" ile pinlendi
 # Web Framework
-fastapi>=0.110.0
-uvicorn[standard]>=0.27.0
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
 
 # Database
-sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.0
-alembic>=1.13.0
+sqlalchemy==2.0.49
+psycopg2-binary==2.9.12
+alembic==1.18.4
 
 # Data Validation
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
+pydantic==2.13.3
+pydantic-settings==2.14.0
 
 # Data Processing
-pandas>=2.2.0
-numpy>=1.26.0
+pandas==3.0.2
+numpy==2.4.4
 
 # Machine Learning
-scikit-learn>=1.4.0
-joblib>=1.3.0
+scikit-learn==1.8.0
+joblib==1.5.3
 
 # Environment & Config
-python-dotenv>=1.0.0
+python-dotenv==1.2.2
 
 # CORS & Security
-python-multipart>=0.0.6
-slowapi>=0.1.9
+python-multipart==0.0.27
+slowapi==0.1.9
 
 # Auth (Cycle 8 — JWT backend)
 # Miraç: bcrypt password hashing + JWT token üretimi
 # bcrypt<5.0 — passlib 1.7.4 yeni bcrypt 5.x ile uyumsuz (`__about__` kaldırıldı)
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-bcrypt>=4.0,<5.0
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.3.0
 
 # HTTP Client (for weather API)
-httpx>=0.27.0
+httpx==0.28.1
 
 # Logging & Background Tasks
-loguru>=0.7.2
-apscheduler>=3.10.4
+loguru==0.7.3
+apscheduler==3.11.2
 
 # Reporting & Export (Cycle 6)
-fpdf2>=2.7.0
-openpyxl>=3.1.0
+fpdf2==2.8.7
+openpyxl==3.1.5
 
 # Cycle 7 — IoT Stream & ML Görüntü Analizi
 # Emirhan: MQTT broker üzerinden gerçek zamanlı sensör verisi alımı
 paho-mqtt>=2.1.0
 # Ayşe: CNN bitki sağlığı modeli (lightweight inference; tensorflow yerine)
 onnxruntime>=1.18.0
-pillow>=10.3.0
+pillow==12.2.0
 
 # shiftFinal — Observability (Sentry + Prometheus + structured logging)
 # Mehmet'in A2 paketi: production gözlemlenebilirliği
 # - Sentry: SENTRY_DSN env varsa uncaught exception toplama (FastAPI integration)
 # - Prometheus: /metrics endpoint + request counter/histogram metrikleri
-sentry-sdk[fastapi]>=2.0.0
-prometheus-client>=0.20.0
+sentry-sdk[fastapi]==2.59.0
+prometheus-client==0.25.0
