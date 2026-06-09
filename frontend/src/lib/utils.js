@@ -35,11 +35,14 @@ export function showToast(message, type = 'info', duration = 3500) {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+    // message backend hata detayı (örn. dosya adı) olabilir → textContent ile yaz;
+    // innerHTML interpolasyonu reflected XSS açardı (audit YÜKSEK).
     toast.innerHTML = `
         <span class="toast-icon">${icon}</span>
-        <span class="toast-message">${message}</span>
+        <span class="toast-message"></span>
         <button class="toast-close" aria-label="Kapat" title="Kapat">×</button>
     `;
+    toast.querySelector('.toast-message').textContent = message;
     container.appendChild(toast);
 
     let timer = null;

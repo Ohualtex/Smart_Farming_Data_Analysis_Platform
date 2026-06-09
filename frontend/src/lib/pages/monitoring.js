@@ -57,11 +57,13 @@ export async function loadSensors(page = 1) {
     // Tabloyu render et — a11y: satira role=button + keyboard handler
     // EN / TR: satir click + Enter/Space ile detay yuklenir; tabindex=0 ile
     // keyboard navigation acilir.
+    // XSS koruması: sensor_type/status kullanıcı-kaynaklı (SensorCreate.sensor_type
+    // serbest str) → escape şart (audit YÜKSEK stored-XSS). serial_number zaten escape'liydi.
     document.getElementById('sensorsTable').innerHTML = sensors.map(s => `
-        <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${s.sensor_type}) detayını aç"
+        <tr tabindex="0" role="button" aria-label="Sensör ${s.id} (${_escAttr(s.sensor_type)}) detayını aç"
             style="cursor:pointer" data-action="loadSensorDetail" data-id="${s.id}">
-            <td>${s.id}</td><td>${s.sensor_type}</td><td>${_escAttr(s.serial_number)}</td>
-            <td><span class="badge active">${s.status}</span></td>
+            <td>${s.id}</td><td>${_escAttr(s.sensor_type)}</td><td>${_escAttr(s.serial_number)}</td>
+            <td><span class="badge active">${_escAttr(s.status)}</span></td>
         </tr>
     `).join('');
     _setBusy('sensorsTable', false);
