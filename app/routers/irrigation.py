@@ -25,7 +25,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import MAX_SQLITE_INT, get_db
-from app.middleware.exceptions import NotFoundError
+from app.middleware.exceptions import ConflictError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import _BYPASS_ROLES, assert_field_ownership, require_write
 from app.ml.irrigation_model import irrigation_optimizer
@@ -46,6 +46,10 @@ MAX_PAGE_SIZE = 500
 # ---
 # sensors.py ile aynı int64 overflow koruması — skip 1M ile sınırlanır.
 MAX_SKIP = 1_000_000
+
+# Terminal durumlar: tamamlanan/iptal edilen program geri açılamaz (one-way).
+# Bu durumlardan çıkış (ör. completed → pending) 409 ile bloke edilir.
+_TERMINAL_STATUSES = frozenset({"completed", "cancelled"})
 
 router = APIRouter(prefix="/api/irrigation", tags=["Sulama Optimizasyonu"])
 
@@ -189,6 +193,7 @@ def create_schedule(
         401: {"description": "Bearer token gerekli"},
         403: {"description": "Yazma yetkisi yok veya başkasının tarlası"},
         404: {"description": "Program bulunamadı"},
+        409: {"description": "Terminal durumdaki program (completed/cancelled) güncellenemez"},
     },
 )
 @limiter.limit(STRICT_RATE)
@@ -206,6 +211,9 @@ def update_schedule_status(
         raise NotFoundError("Sulama programı")
     # field ownership: schedule.field_id farmer'ın olmalı
     assert_field_ownership(db, schedule.field_id, current_user)
+    # Terminal durumdan (completed/cancelled) çıkış engellenir — geri açılamaz.
+    if schedule.status in _TERMINAL_STATUSES:
+        raise ConflictError(message=f"'{schedule.status}' durumundaki program güncellenemez (terminal durum).")
     schedule.status = payload.status
     db.commit()
     db.refresh(schedule)

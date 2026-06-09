@@ -216,7 +216,10 @@ def get_field_detail(
         region=farm.region,
         city=farm.city,
         crop=FieldCropInfo.model_validate(crop) if crop else None,
-        moisture_status=_classify_moisture(avg_moisture),
+        # AUDIT FIX (L9): rozet ile gösterilen sayı uyumlu olsun diye sınıflandırma
+        # da gösterilen YUVARLANMIŞ değer üzerinden yapılır (ör. 29.95 → 30.0% optimal,
+        # ham değerde 'dry' rozeti çelişkisi olmaz).
+        moisture_status=_classify_moisture(round(avg_moisture, 1) if avg_moisture is not None else None),
         avg_moisture_percent=round(avg_moisture, 1) if avg_moisture is not None else None,
         sensors=sensor_summaries,
         recent_irrigations=[FieldIrrigationSummary.model_validate(i) for i in irrigations],
@@ -328,6 +331,9 @@ def update_field(
     require_write(current_user)
     assert_field_ownership(db, field_id, current_user)
     field = db.query(Field).filter(Field.id == field_id).first()
+    if field is None:
+        # assert_field_ownership zaten 404 fırlattı; defensive (race — satır silinmiş olabilir).
+        raise NotFoundError("Tarla")
     updates = payload.model_dump(exclude_unset=True)
     for field_name, value in updates.items():
         setattr(field, field_name, value)
@@ -362,6 +368,9 @@ def delete_field(
     if sensor_count > 0:
         raise ConflictError(message=f"Bu tarlanın {sensor_count} sensörü var; önce sensörleri sil.")
     field = db.query(Field).filter(Field.id == field_id).first()
+    if field is None:
+        # assert_field_ownership zaten 404 fırlattı; defensive (race — satır silinmiş olabilir).
+        raise NotFoundError("Tarla")
     # Cascade: tarlanın veri-kayıtları (analiz/sulama/görsel/ekim/gübre/uyarı)
     # onunla silinir → aksi halde FK IntegrityError ile prod'da 500 (audit YÜKSEK).
     # Sensörler yukarıda guard'la bloke (önce onlar silinir).

@@ -185,7 +185,14 @@ async def analyze_plant_image(
         severity=prediction["severity"],
     )
     db.add(record)
-    db.commit()
+    # Audit fix (L19): dosya commit'ten önce diske yazıldığı için commit
+    # başarısız olursa yetim dosya kalır. Commit'i sar, hata olursa dosyayı sil.
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        save_path.unlink(missing_ok=True)
+        raise
     db.refresh(record)
 
     return {

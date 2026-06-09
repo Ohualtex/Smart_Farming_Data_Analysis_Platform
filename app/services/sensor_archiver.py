@@ -65,9 +65,11 @@ def _aggregate_group(rows: list[SoilMoistureReading]) -> dict:
 
     return {
         "reading_count": len(rows),
-        "moisture_avg": sum(moistures) / len(moistures) if moistures else 0.0,
-        "moisture_min": min(moistures) if moistures else 0.0,
-        "moisture_max": max(moistures) if moistures else 0.0,
+        # Audit fix (L21): boş grupta 0.0 ile seed etmek, sonraki min/max
+        # merge'ini bozuyordu (yapay 0.0 minimumu). None kullan; merge None-safe.
+        "moisture_avg": sum(moistures) / len(moistures) if moistures else None,
+        "moisture_min": min(moistures) if moistures else None,
+        "moisture_max": max(moistures) if moistures else None,
         "soil_temperature_avg": sum(temps) / len(temps) if temps else None,
         "soil_temperature_min": min(temps) if temps else None,
         "soil_temperature_max": max(temps) if temps else None,
@@ -96,8 +98,19 @@ def _merge_into_existing(existing: SensorReadingMonthlyAggregate, group: dict) -
         return (old_avg * existing.reading_count + new_avg * group["reading_count"]) / total_count
 
     existing.moisture_avg = _weighted(existing.moisture_avg, group["moisture_avg"])
-    existing.moisture_min = min(existing.moisture_min, group["moisture_min"])
-    existing.moisture_max = max(existing.moisture_max, group["moisture_max"])
+    # Audit fix (L21): grup min/max artık None olabilir (boş grup). None-safe birleştir.
+    if group["moisture_min"] is not None:
+        existing.moisture_min = (
+            min(existing.moisture_min, group["moisture_min"])
+            if existing.moisture_min is not None
+            else group["moisture_min"]
+        )
+    if group["moisture_max"] is not None:
+        existing.moisture_max = (
+            max(existing.moisture_max, group["moisture_max"])
+            if existing.moisture_max is not None
+            else group["moisture_max"]
+        )
     existing.soil_temperature_avg = _weighted(existing.soil_temperature_avg, group["soil_temperature_avg"])
     if group["soil_temperature_min"] is not None:
         existing.soil_temperature_min = (
@@ -131,6 +144,9 @@ def archive_old_readings(db: Session, cutoff_days: int = DEFAULT_ARCHIVE_CUTOFF_
     """
     cutoff = datetime.now(UTC) - timedelta(days=cutoff_days)
     old_readings = db.query(SoilMoistureReading).filter(SoilMoistureReading.reading_timestamp < cutoff).all()
+    # Audit fix (L20): DELETE penceresi SELECT'ten ayrı çalışıyordu; arada gelen
+    # geç kayıt aggregate'e girmeden silinebiliyordu. Sadece bu id kümesini sil.
+    archived_ids = [r.id for r in old_readings]
 
     if not old_readings:
         logger.info(f"sensor_archiver: cutoff={cutoff.isoformat()} — taşınacak kayıt yok")
@@ -171,10 +187,11 @@ def archive_old_readings(db: Session, cutoff_days: int = DEFAULT_ARCHIVE_CUTOFF_
             aggregates_written += 1
 
         # Kaynak okumaları sil (cascade FK yok, manuel delete güvenli)
-        # EN: Delete source readings; no cascading FK so manual delete is safe.
+        # EN: Delete only the exact rows we aggregated (by id), not the time
+        # window — avoids deleting late-arriving rows that were never folded in.
         deleted = (
             db.query(SoilMoistureReading)
-            .filter(SoilMoistureReading.reading_timestamp < cutoff)
+            .filter(SoilMoistureReading.id.in_(archived_ids))
             .delete(synchronize_session=False)
         )
         db.commit()

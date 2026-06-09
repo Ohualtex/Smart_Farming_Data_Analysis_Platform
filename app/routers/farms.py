@@ -188,6 +188,9 @@ def update_farm(
     require_write(current_user)
     assert_farm_ownership(db, farm_id, current_user)
     farm = db.query(Farm).filter(Farm.id == farm_id).first()
+    if farm is None:
+        # assert_farm_ownership zaten 404 fırlattı; defensive (race — satır silinmiş olabilir).
+        raise NotFoundError("Çiftlik")
     updates = payload.model_dump(exclude_unset=True)
     for field_name, value in updates.items():
         setattr(farm, field_name, value)
@@ -222,6 +225,9 @@ def delete_farm(
     if field_count > 0:
         raise ConflictError(message=f"Bu çiftliğin {field_count} tarlası var; önce tarlaları sil.")
     farm = db.query(Farm).filter(Farm.id == farm_id).first()
+    if farm is None:
+        # assert_farm_ownership zaten 404 fırlattı; defensive (race — satır silinmiş olabilir).
+        raise NotFoundError("Çiftlik")
     # Cascade: çiftliğe doğrudan bağlı hava-durumu + uyarı satırları onunla silinir
     # → aksi halde FK IntegrityError ile prod'da 500 (audit YÜKSEK). Tarlalar
     # yukarıda guard'la bloke (önce onlar silinir).

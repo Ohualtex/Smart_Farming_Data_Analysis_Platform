@@ -93,10 +93,18 @@ class WeatherService:
         rain = raw.get("rain", {})
         clouds = raw.get("clouds", {})
 
+        # Yağış: anahtar var ama değer null ise (rain={"1h": None}) get default'u
+        # devreye girmez; bu yüzden None'ları açıkça 0.0'a indir.
+        precip = rain.get("1h")
+        if precip is None:
+            precip = rain.get("3h")
+        if precip is None:
+            precip = 0.0
+
         return {
             "temperature_c": main.get("temp"),
             "humidity_percent": main.get("humidity"),
-            "precipitation_mm": rain.get("1h", rain.get("3h", 0.0)),
+            "precipitation_mm": precip,
             "wind_speed_kmh": round((wind.get("speed", 0) * 3.6), 2),  # m/s → km/h
             "solar_radiation": self._estimate_solar_radiation(clouds.get("all", 50)),
             "uv_index": None,  # Ayrı API çağrısı gerekir

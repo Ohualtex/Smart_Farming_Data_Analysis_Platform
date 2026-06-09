@@ -126,8 +126,10 @@ class ReportService:
         for w in data.get("farm_weather_comparison", []):
             name = _clean_tr(w.get("farm_name", ""))
             city = _clean_tr(w.get("city", ""))
-            temp = w.get("temperature", {}).get("avg", "N/A")
-            hum = w.get("humidity", {}).get("avg", "N/A")
+            # Audit fix (L22): get(key, "N/A") yalnızca eksik anahtarda default verir;
+            # değer None ise literal 'None' basılır. None'ı da "N/A"ya indir.
+            temp = w.get("temperature", {}).get("avg") or "N/A"
+            hum = w.get("humidity", {}).get("avg") or "N/A"
             pdf.cell(0, 8, f"- {name} ({city}): Sicaklik {temp} C, Nem {hum}%", new_x="LMARGIN", new_y="NEXT")
 
         pdf.ln(5)
@@ -137,8 +139,9 @@ class ReportService:
         pdf.cell(0, 10, "3. Sensor Ortalamalari", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("helvetica", "", 12)
         stats = data.get("sensor_reading_stats", {})
-        moisture = stats.get("moisture", {}).get("avg", "N/A")
-        soil_temp = stats.get("soil_temperature", {}).get("avg", "N/A")
+        # Audit fix (L22): None değer literal 'None' basıyordu; "N/A"ya indir.
+        moisture = stats.get("moisture", {}).get("avg") or "N/A"
+        soil_temp = stats.get("soil_temperature", {}).get("avg") or "N/A"
 
         pdf.cell(0, 8, f"- Ortalama Toprak Nemi: {moisture}%", new_x="LMARGIN", new_y="NEXT")
         pdf.cell(0, 8, f"- Ortalama Toprak Sicakligi: {soil_temp} C", new_x="LMARGIN", new_y="NEXT")

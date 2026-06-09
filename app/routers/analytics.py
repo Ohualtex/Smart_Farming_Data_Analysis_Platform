@@ -30,6 +30,7 @@ from app.models.models import (
     WeatherData,
 )
 from app.routers.auth import require_role
+from app.schemas.base import _serialize_utc
 from app.services.report_service import ReportService
 
 router = APIRouter(prefix="/api/analytics", tags=["Analitik & Görselleştirme"])
@@ -278,8 +279,18 @@ def compare_analytics(
         return round(((val2 - val1) / abs(val1)) * 100, 2)
 
     return {
-        "period_1": {"start": start_date_1, "end": end_date_1, "stats": stats_1},
-        "period_2": {"start": start_date_2, "end": end_date_2, "stats": stats_2},
+        # AUDIT FIX (L6): raw dict → datetime'ler tz'siz dönüyordu (UTC offset yok).
+        # API'nin geri kalanıyla uyumlu ISO 8601 (UTC suffix'li) için _serialize_utc.
+        "period_1": {
+            "start": _serialize_utc(start_date_1),
+            "end": _serialize_utc(end_date_1),
+            "stats": stats_1,
+        },
+        "period_2": {
+            "start": _serialize_utc(start_date_2),
+            "end": _serialize_utc(end_date_2),
+            "stats": stats_2,
+        },
         "comparison": {
             "temp_avg_diff_percent": _diff(stats_1["temp_avg"], stats_2["temp_avg"]),
             "humidity_avg_diff_percent": _diff(stats_1["humidity_avg"], stats_2["humidity_avg"]),
