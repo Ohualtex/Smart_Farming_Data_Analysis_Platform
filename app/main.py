@@ -278,9 +278,20 @@ def prometheus_metrics() -> Response:
     return metrics_response()
 
 
+class _NoCacheStatic(StaticFiles):
+    """Dashboard SPA: no-cache header — deploy/değişiklik sonrası tarayıcı ESKİ asset
+    sunmaz (ETag korunur → değişmeyen dosyada 304 hızlı, ama her zaman revalidate).
+    Önceki davranış: ETag var ama Cache-Control yok → tarayıcı heuristik cache'liyor."""
+
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return resp
+
+
 _dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.isdir(_dashboard_dir):
-    app.mount("/dashboard", StaticFiles(directory=_dashboard_dir, html=True), name="dashboard")
+    app.mount("/dashboard", _NoCacheStatic(directory=_dashboard_dir, html=True), name="dashboard")
 
 # Bitki sağlığı görsel upload'ları (plants.py içinde URL üretiliyor)
 _plant_uploads_dir = os.path.join(os.path.dirname(__file__), "ml", "plant_uploads")
