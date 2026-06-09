@@ -43,6 +43,19 @@ class TestGetWeather:
         for item in results:
             assert item["farm_id"] == 1
 
+    def test_get_weather_list_includes_wind_speed(self, client):
+        """Liste response'u wind_speed_kmh alanını içermeli ve değeri korumalı.
+
+        Regresyon: WeatherDataResponse'ta wind_speed_kmh tanımlı olmadığında
+        FastAPI alanı serialize ederken siliyordu → frontend Rüzgar grafiği hep 0.
+        """
+        client.post("/api/weather/", json=SAMPLE_WEATHER)
+        response = client.get("/api/weather/?farm_id=1")
+        results = response.json()
+        assert len(results) >= 1
+        assert "wind_speed_kmh" in results[0]
+        assert results[0]["wind_speed_kmh"] == SAMPLE_WEATHER["wind_speed_kmh"]
+
 
 # ───── POST /api/weather/ ─────────────────────────────────────────────────────
 class TestCreateWeather:

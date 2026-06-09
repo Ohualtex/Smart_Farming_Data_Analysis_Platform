@@ -29,3 +29,4 @@ class WeatherDataResponse(BaseModel):
     temperature_c: float | None
     humidity_percent: float | None
     precipitation_mm: float | None
+    wind_speed_kmh: float | None = None
