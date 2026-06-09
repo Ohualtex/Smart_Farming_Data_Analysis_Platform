@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.base import SqliteSafeInt, UtcDateTime
 
@@ -25,8 +25,10 @@ class SensorCreate(BaseModel):
     )
 
     field_id: SqliteSafeInt
-    sensor_type: str  # 'soil_moisture' | 'soil_temperature' | 'humidity' | ...
-    serial_number: str
+    # max_length DB kolonlarıyla hizalı (sensor_type=50, serial_number=100) →
+    # PG'de 500 yerine 422; serbest str olduğu için frontend ayrıca escape eder.
+    sensor_type: str = Field(..., max_length=50)  # 'soil_moisture' | 'soil_temperature' | ...
+    serial_number: str = Field(..., max_length=100)
     depth_cm: float | None = None
     lat: float | None = None
     lng: float | None = None

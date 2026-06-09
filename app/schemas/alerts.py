@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.base import SqliteSafeInt, UtcDateTime
 
@@ -25,8 +25,8 @@ class SystemAlertCreate(BaseModel):
 
     farm_id: SqliteSafeInt | None = None
     field_id: SqliteSafeInt | None = None
-    alert_type: str  # 'sensor_anomaly' | 'weather_warning' | 'system_error' | ...
-    severity: str = "low"  # 'low' | 'medium' | 'critical'
+    alert_type: str = Field(..., max_length=50)  # 'sensor_anomaly' | 'weather_warning' | ...
+    severity: str = Field("low", max_length=20)  # 'low' | 'medium' | 'critical'
     message: str
 
 
@@ -49,5 +49,5 @@ class SystemAlertUpdate(BaseModel):
     """Alert'in resolved durumunu güncellemek icin kismi update."""
 
     is_resolved: bool | None = None
-    severity: str | None = None
+    severity: str | None = Field(None, max_length=20)
     message: str | None = None

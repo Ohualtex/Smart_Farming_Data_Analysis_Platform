@@ -37,8 +37,10 @@ from app.middleware.exceptions import ConflictError, NotFoundError
 from app.middleware.rate_limiter import STRICT_RATE, limiter
 from app.middleware.rbac import assert_farm_ownership, assert_field_ownership, require_write
 from app.models.models import (
+    CropPlanting,
     CropType,
     Farm,
+    FertilizerRecommendationLog,
     Field,
     IrrigationSchedule,
     PlantHealthImage,
@@ -356,5 +358,17 @@ def delete_field(
     if sensor_count > 0:
         raise ConflictError(message=f"Bu tarlanın {sensor_count} sensörü var; önce sensörleri sil.")
     field = db.query(Field).filter(Field.id == field_id).first()
+    # Cascade: tarlanın veri-kayıtları (analiz/sulama/görsel/ekim/gübre/uyarı)
+    # onunla silinir → aksi halde FK IntegrityError ile prod'da 500 (audit YÜKSEK).
+    # Sensörler yukarıda guard'la bloke (önce onlar silinir).
+    for _model, _fk in (
+        (SoilAnalysis, SoilAnalysis.field_id),
+        (IrrigationSchedule, IrrigationSchedule.field_id),
+        (PlantHealthImage, PlantHealthImage.field_id),
+        (CropPlanting, CropPlanting.field_id),
+        (FertilizerRecommendationLog, FertilizerRecommendationLog.field_id),
+        (SystemAlert, SystemAlert.field_id),
+    ):
+        db.query(_model).filter(_fk == field_id).delete(synchronize_session=False)
     db.delete(field)
     db.commit()

@@ -24,7 +24,7 @@ Admin-only user management. Tüm endpoint'ler admin rolü gerektirir.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Path, Query, Request, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -80,11 +80,11 @@ class AdminUserCreateRequest(BaseModel):
         }
     )
 
-    name: str
-    email: str
+    name: str = Field(..., max_length=100)
+    email: str = Field(..., max_length=150)
     password: str
     role: UserRole = "farmer"
-    phone: str | None = None
+    phone: str | None = Field(None, max_length=20)
 
 
 class AdminPasswordResetRequest(BaseModel):

@@ -35,7 +35,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -91,10 +91,10 @@ class UserRegisterRequest(BaseModel):
         }
     )
 
-    name: str
-    email: str  # TODO: switch to EmailStr once pydantic[email] is in.
+    name: str = Field(..., max_length=100)
+    email: str = Field(..., max_length=150)  # TODO: EmailStr (email-validator gerekli)
     password: str  # min 8 karakter (validator alttaki register'da)
-    phone: str | None = None
+    phone: str | None = Field(None, max_length=20)
 
 
 class UserLoginRequest(BaseModel):
