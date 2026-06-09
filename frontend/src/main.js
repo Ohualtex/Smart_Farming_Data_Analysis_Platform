@@ -18,7 +18,7 @@ import { rethemeCharts } from "./lib/charts.js";
 
 // ─── Sayfa modülleri ─────────────────────────────────────────
 import {
-    loadDashboard, loadDemoData, animateHeroStats, _startHeroTipRotation,
+    loadDashboard, loadDemoData, _startHeroTipRotation,
 } from "./lib/pages/dashboard.js";
 import {
     loadFields, toggleForm, submitNewFarm, submitNewField, editFarm, deleteFarm,
@@ -222,8 +222,9 @@ async function init() {
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Hero sayılarına count-up animasyonu (sevimlilik pack)
-    animateHeroStats();
+    // Hero sayılarına count-up animasyonu artık loadDashboard()'da, veri
+    // yazıldıktan SONRA tetikleniyor (audit #28). init'te '—' okunduğu için
+    // çalışmıyordu → buradaki ölü çağrı kaldırıldı.
 
     // Filiz maskotu
     initFiliz();

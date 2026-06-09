@@ -175,6 +175,9 @@ export async function loadDashboard() {
         if (heroFarms) heroFarms.textContent = summary.farm_count;
         if (heroSensors) heroSensors.textContent = summary.sensor_count;
         if (heroReadings) heroReadings.textContent = (summary.soil_moisture_today || {}).reading_count || 0;
+        // Audit fix (#28): count-up animasyonu veri YAZILDIKTAN sonra tetiklenmeli.
+        // init()'te '—' placeholder'ı okunduğu için hiç çalışmıyordu (ölü özellik).
+        animateHeroStats();
     } else {
         cards.innerHTML = `
             <div class="empty-state" style="grid-column: 1 / -1;">

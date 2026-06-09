@@ -102,9 +102,12 @@
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     font-style: italic;
 }
-.metric-card.metric-severity-mild     { border-left-color: #facc15; }
-.metric-card.metric-severity-moderate { border-left-color: #f97316; }
-.metric-card.metric-severity-severe   { border-left-color: #ef4444; }
+/* Audit fix (#16): hastalık şiddeti enum'u low/medium/high (labels.js) —
+   dashboard `metric-severity-${severity}` üretir; eski -mild/-moderate/-severe
+   kuralları hiç eşleşmiyordu → renkli kenarlık çıkmıyordu. Gerçek değerlere hizalandı. */
+.metric-card.metric-severity-low      { border-left-color: #facc15; }
+.metric-card.metric-severity-medium   { border-left-color: #f97316; }
+.metric-card.metric-severity-high     { border-left-color: #ef4444; }
 .metric-card.metric-severity-none     { border-left-color: #22c55e; }
 
 /* ─── BUTTONS ────────────────────────────────────── */

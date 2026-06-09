@@ -143,11 +143,13 @@ export function renderPlantResult(data) {
         <h3 style="margin-top:0;">🧪 Sonuç: ${_escAttr(diagnosisLabel(data.diagnosis))}</h3>
         <p><strong>Güven:</strong> %${conf}</p>
         <p><strong>Şiddet:</strong> <span style="color:${sevColor};font-weight:600;">${_escAttr(severityLabel(sev))}</span></p>
-        <p><strong>Model:</strong> ${data.model_version}</p>
+        <p><strong>Model:</strong> ${_escAttr(data.model_version)}</p>
         <details style="margin-top:12px;"><summary style="cursor:pointer;">Tüm sınıf skorları</summary>
         <ul style="margin-top:8px;">`;
+    // Audit fix (#31): model_version ve all_scores sınıf anahtarları veri-güdümlü →
+    // innerHTML'e ham gömmek latent XSS; _escAttr ile kaçır.
     for (const [cls, score] of Object.entries(data.all_scores || {})) {
-        html += `<li>${cls}: ${(score * 100).toFixed(1)}%</li>`;
+        html += `<li>${_escAttr(cls)}: ${(score * 100).toFixed(1)}%</li>`;
     }
     html += '</ul></details></div>';
     const box = document.getElementById('plantsResultBox');

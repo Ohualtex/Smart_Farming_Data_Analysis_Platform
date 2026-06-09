@@ -14,13 +14,17 @@ export function setAuthToken(t) { localStorage.setItem(AUTH_TOKEN_KEY, t); }
 export function clearAuthToken() { localStorage.removeItem(AUTH_TOKEN_KEY); }
 
 /**
- * Auth header builder — Bearer token varsa Authorization, yoksa X-API-Key.
+ * Auth header builder — Bearer token varsa Authorization döner.
+ * Audit fix (#26): hardcoded 'dev-api-key' fallback prod bundle'a sızıyordu ve
+ * gerçek prod key ile asla eşleşmiyordu. Pano Bearer-tabanlı olduğu için artık
+ * yalnızca açıkça yapılandırılmış (window.SFDAP_API_KEY) gerçek bir key varsa
+ * X-API-Key gönderilir; aksi halde hiç auth header eklenmez.
  */
 export function _authHeaders() {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    return token
-        ? { 'Authorization': `Bearer ${token}` }
-        : { 'X-API-Key': 'dev-api-key' };
+    if (token) return { 'Authorization': `Bearer ${token}` };
+    const apiKey = window.SFDAP_API_KEY;
+    return apiKey ? { 'X-API-Key': apiKey } : {};
 }
 
 /**

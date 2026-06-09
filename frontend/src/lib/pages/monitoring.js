@@ -32,13 +32,15 @@ export async function loadSensors(page = 1) {
     _setBusy('sensorsTable', true);
     // Toplam sayıyı HER yüklemede tazele: field-detail'den sensör eklenip/silinin
     // (monitoring dışı) cache stale kalıyordu (audit ORTA #24). COUNT ucuz query.
-    const cnt = await api('/api/sensors/count');
+    // Audit fix (#10): Bearer-zorunlu endpoint → apiAuth (api() X-API-Key fallback'i tutarsız).
+    const cnt = await apiAuth('/api/sensors/count');
     sensorsTotal = cnt?.total || 0;
     const totalPages = Math.max(1, Math.ceil(sensorsTotal / PAGE_SIZE));
     sensorsPage = Math.min(Math.max(1, page), totalPages);
     const skip = (sensorsPage - 1) * PAGE_SIZE;
 
-    const sensors = await api(`/api/sensors/?skip=${skip}&limit=${PAGE_SIZE}`) || [];
+    // Audit fix (#10): Bearer-zorunlu endpoint → apiAuth.
+    const sensors = await apiAuth(`/api/sensors/?skip=${skip}&limit=${PAGE_SIZE}`) || [];
 
     // Nav buton'larini guncelle
     document.getElementById('sensorsPrevBtn').disabled = sensorsPage <= 1;
@@ -69,7 +71,8 @@ export async function loadSensors(page = 1) {
 }
 
 export async function loadSensorDetail(sensorId) {
-    const readings = await api(`/api/sensors/${sensorId}/readings?limit=30`) || [];
+    // Audit fix (#10): Bearer-zorunlu endpoint → apiAuth.
+    const readings = await apiAuth(`/api/sensors/${sensorId}/readings?limit=30`) || [];
     const sorted = [...readings].reverse();
     if (charts.sensorDetail) charts.sensorDetail.destroy();
     charts.sensorDetail = new Chart(document.getElementById('sensorDetailChart'), {
@@ -186,13 +189,22 @@ async function _myFieldOptions() {
 }
 
 export async function predictIrrigation() {
-    const body = {
-        soil_moisture: +document.getElementById('irr_moisture').value,
-        soil_temperature: +document.getElementById('irr_soil_temp').value,
-        humidity: +document.getElementById('irr_humidity').value,
-        temperature: +document.getElementById('irr_temp').value,
-        precipitation: +document.getElementById('irr_precip').value,
+    // Audit fix (#32): boş input'lar unary + ile 0'a dönüşüp model uydurma sıfırlarla
+    // tahmin yapıyordu → her alanı doğrula, boş/NaN varsa toast ile reddet.
+    const fields = {
+        soil_moisture: 'irr_moisture', soil_temperature: 'irr_soil_temp',
+        humidity: 'irr_humidity', temperature: 'irr_temp', precipitation: 'irr_precip',
     };
+    const body = {};
+    for (const [key, id] of Object.entries(fields)) {
+        const raw = document.getElementById(id).value.trim();
+        const num = Number(raw);
+        if (raw === '' || !Number.isFinite(num)) {
+            showToast('Tüm alanları geçerli sayılarla doldur', 'warning');
+            return;
+        }
+        body[key] = num;
+    }
     const result = await api('/api/irrigation/predict', { method: 'POST', body: JSON.stringify(body) });
     if (result) {
         _lastIrrigationRec = result.recommended_water_liters;
@@ -374,7 +386,8 @@ export async function loadPlants() {
     for (const r of list) {
         const sev = r.severity || '—';
         const sevColor = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f59e0b' : sev === 'low' ? '#eab308' : '#22c55e';
-        const conf = r.confidence_score ? (r.confidence_score * 100).toFixed(0) + '%' : '—';
+        // Audit fix (#18): 0.0 falsy olduğu için '—' görünüyordu → null/undefined kontrolü ile 0% göster.
+        const conf = r.confidence_score != null ? (r.confidence_score * 100).toFixed(0) + '%' : '—';
         const date = r.captured_at ? new Date(r.captured_at).toLocaleDateString('tr-TR') : '—';
         html += `<tr>
             <td style="padding:8px;border-bottom:1px solid var(--border);">${date}</td>

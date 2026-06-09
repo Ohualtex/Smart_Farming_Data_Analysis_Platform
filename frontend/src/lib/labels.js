@@ -32,7 +32,9 @@ export const sensorStatusLabel = _map({
 });
 
 // Hastalık tanısı (ML sınıfları)
+// Audit fix (#17): hata durumu teşhisi 'unknown' ham İngilizce sızıyordu (map'te yoktu) → Türkçe karşılık ekle.
 export const diagnosisLabel = _map({
     healthy: 'Sağlıklı', leaf_spot: 'Yaprak lekesi', powdery_mildew: 'Külleme', rust: 'Pas',
     blight: 'Yanıklık', mosaic_virus: 'Mozaik virüsü', bacterial_wilt: 'Bakteriyel solgunluk', anthracnose: 'Antraknoz',
+    unknown: 'Belirsiz',
 });
