@@ -168,23 +168,30 @@ def get_analytics_summary(
         daily_trends.append(farm_trend)
 
     # ─── SENSÖR OKUMA İSTATİSTİKLERİ ──────────────────────────────
-    recent_readings = db.query(SoilMoistureReading).filter(SoilMoistureReading.reading_timestamp >= since).all()
+    # AUDIT #22: tüm okumaları belleğe çekmek yerine SQL aggregate (365 güne kadar,
+    # potansiyel on binlerce satır). AVG/MIN/MAX NULL'ları yok sayar (Python'daki
+    # non-null filtresiyle aynı sonuç); COUNT tüm satırları sayar. Değerler değişmez.
+    reading_agg = (
+        db.query(
+            func.count(SoilMoistureReading.id),
+            func.avg(SoilMoistureReading.moisture_percent),
+            func.min(SoilMoistureReading.moisture_percent),
+            func.max(SoilMoistureReading.moisture_percent),
+            func.avg(SoilMoistureReading.soil_temperature_c),
+            func.min(SoilMoistureReading.soil_temperature_c),
+            func.max(SoilMoistureReading.soil_temperature_c),
+        )
+        .filter(SoilMoistureReading.reading_timestamp >= since)
+        .one()
+    )
 
-    moisture_values = [r.moisture_percent for r in recent_readings if r.moisture_percent is not None]
-    soil_temps = [r.soil_temperature_c for r in recent_readings if r.soil_temperature_c is not None]
+    def _r1(v: float | None) -> float | None:
+        return round(v, 1) if v is not None else None
 
     sensor_reading_stats = {
-        "total_readings": len(recent_readings),
-        "moisture": {
-            "avg": round(sum(moisture_values) / len(moisture_values), 1) if moisture_values else None,
-            "min": round(min(moisture_values), 1) if moisture_values else None,
-            "max": round(max(moisture_values), 1) if moisture_values else None,
-        },
-        "soil_temperature": {
-            "avg": round(sum(soil_temps) / len(soil_temps), 1) if soil_temps else None,
-            "min": round(min(soil_temps), 1) if soil_temps else None,
-            "max": round(max(soil_temps), 1) if soil_temps else None,
-        },
+        "total_readings": int(reading_agg[0] or 0),
+        "moisture": {"avg": _r1(reading_agg[1]), "min": _r1(reading_agg[2]), "max": _r1(reading_agg[3])},
+        "soil_temperature": {"avg": _r1(reading_agg[4]), "min": _r1(reading_agg[5]), "max": _r1(reading_agg[6])},
     }
 
     # ─── NPK BİTKİ PROFİLLERİ (statik - radar chart için) ────────
@@ -234,13 +241,18 @@ def compare_analytics(
     """
 
     def _get_stats(start: datetime, end: datetime):
-        weather_records = (
-            db.query(WeatherData).filter(WeatherData.recorded_at >= start, WeatherData.recorded_at <= end).all()
+        # AUDIT #22: SQL aggregate (belleğe satır çekmeden). AVG NULL'ları yok sayar
+        # (Python non-null filtresiyle aynı); SUM tümü NULL/boşsa None → 0.0'a düşülür.
+        weather_agg = (
+            db.query(
+                func.avg(WeatherData.temperature_c),
+                func.avg(WeatherData.humidity_percent),
+                func.sum(WeatherData.precipitation_mm),
+            )
+            .filter(WeatherData.recorded_at >= start, WeatherData.recorded_at <= end)
+            .one()
         )
-
-        temps = [r.temperature_c for r in weather_records if r.temperature_c is not None]
-        hums = [r.humidity_percent for r in weather_records if r.humidity_percent is not None]
-        precip = sum([r.precipitation_mm for r in weather_records if r.precipitation_mm is not None])
+        temp_avg_v, humidity_avg_v, precip = weather_agg[0], weather_agg[1], (weather_agg[2] or 0.0)
 
         readings = (
             db.query(func.count(SoilMoistureReading.id))
@@ -259,8 +271,8 @@ def compare_analytics(
         return {
             # AUDIT FIX (#5): boş periyotta ortalama 0 yerine None döner;
             # aksi halde _diff 0'ı gerçek baseline sanıp sahte %100 üretiyordu.
-            "temp_avg": round(sum(temps) / len(temps), 2) if temps else None,
-            "humidity_avg": round(sum(hums) / len(hums), 2) if hums else None,
+            "temp_avg": round(temp_avg_v, 2) if temp_avg_v is not None else None,
+            "humidity_avg": round(humidity_avg_v, 2) if humidity_avg_v is not None else None,
             "precipitation_mm": round(precip, 2),
             "sensor_readings": readings,
             "irrigations": irrigations,
