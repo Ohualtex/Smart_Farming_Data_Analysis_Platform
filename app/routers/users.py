@@ -216,13 +216,16 @@ def admin_create_user(
     db: Session = Depends(get_db),
 ) -> User:
     """Admin rol seçerek kullanıcı yaratır."""
-    if db.query(User).filter(User.email == payload.email).first():
+    # Audit fix: e-posta normalize (strip + lower) — auth.register ile tutarlı;
+    # case/whitespace varyantı mükerrer hesap yaratmasın, dup-check ile insert eşleşsin.
+    email = payload.email.strip().lower()
+    if db.query(User).filter(User.email == email).first():
         raise ConflictError(message="Bu e-posta zaten kayıtlı.")
     if len(payload.password) < 8:
         raise ValidationError(message="Şifre en az 8 karakter olmalı.")
     user = User(
         name=payload.name,
-        email=payload.email,
+        email=email,
         password_hash=_hash_password(payload.password),
         role=payload.role,
         phone=payload.phone,

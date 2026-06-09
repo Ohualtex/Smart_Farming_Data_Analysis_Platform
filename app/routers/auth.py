@@ -307,7 +307,10 @@ def require_role(*allowed_roles: str) -> Callable[..., User]:
 )
 @limiter.limit(AUTH_RATE)
 def register(request: Request, payload: UserRegisterRequest, db: Session = Depends(get_db)) -> User:
-    if db.query(User).filter(User.email == payload.email).first():
+    # Audit fix: e-posta normalize (strip + lower) — case/whitespace varyantları
+    # mükerrer hesap yaratmasın ve dup-check ile insert aynı değeri kullansın.
+    email = payload.email.strip().lower()
+    if db.query(User).filter(User.email == email).first():
         raise ConflictError(message="Bu e-posta zaten kayıtlı.")
     if len(payload.password) < 8:
         # 400 — FastAPI'nin auto-generated 422 şeması list[ValidationError]
@@ -318,7 +321,7 @@ def register(request: Request, payload: UserRegisterRequest, db: Session = Depen
         raise ValidationError(message="Şifre en az 8 karakter olmalı.")
     user = User(
         name=payload.name,
-        email=payload.email,
+        email=email,
         password_hash=_hash_password(payload.password),
         role="farmer",
         phone=payload.phone,
@@ -344,7 +347,10 @@ def register(request: Request, payload: UserRegisterRequest, db: Session = Depen
 )
 @limiter.limit(AUTH_RATE)
 def login(request: Request, payload: UserLoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    user = db.query(User).filter(User.email == payload.email).first()
+    # Audit fix: register ile aynı normalize (strip + lower) — case/whitespace
+    # varyantı login'i bloklamasın, stored e-posta ile eşleşsin.
+    email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
     if user is None or not _verify_password(payload.password, user.password_hash or ""):
         raise UnauthorizedError(detail="E-posta veya şifre hatalı.")
     token, expires_in = _create_token(user.id)
