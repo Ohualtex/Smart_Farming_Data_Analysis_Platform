@@ -14,7 +14,10 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from loguru import logger
 from sqlalchemy.exc import IntegrityError
+
+from app.config import settings
 
 # ─── CUSTOM EXCEPTION SINIFLARI ─────────────────────────────────
 
@@ -146,12 +149,16 @@ def register_exception_handlers(app: FastAPI) -> None:
         UNIQUE/FK ihlallerini 409 Conflict olarak normalize eder; aksi
         halde 500 olarak yansır ve client hatası gibi davranmaz.
         """
+        # Ham DB hata metni (str(exc.orig)) tablo/kolon/constraint adlarını —
+        # bazen değerleri — sızdırır → prod'da gizle, sunucuda logla (audit YÜKSEK).
+        raw = str(exc.orig) if exc.orig else str(exc)
+        logger.warning(f"IntegrityError: {raw}")
         return JSONResponse(
             status_code=409,
             content={
                 "error_code": "CONFLICT",
                 "message": "Veri çakışması: kayıt zaten mevcut veya ilişki kuralı ihlal edildi.",
-                "detail": str(exc.orig) if exc.orig else str(exc),
+                "detail": raw if settings.ENVIRONMENT != "production" else None,
             },
         )
 
@@ -181,12 +188,17 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
-        """Beklenmeyen hataları yakalar ve tutarlı format döndürür."""
+        """Beklenmeyen hataları yakalar ve tutarlı format döndürür.
+
+        Ham exception metni (str(exc)) path/SQL/secret sızdırabilir → prod'da
+        client'a dönmez, tam traceback sunucuda loglanır (audit YÜKSEK).
+        """
+        logger.exception(f"Beklenmeyen hata: {exc}")
         return JSONResponse(
             status_code=500,
             content={
                 "error_code": "INTERNAL_ERROR",
                 "message": "Beklenmeyen bir sunucu hatası oluştu.",
-                "detail": str(exc) if exc.args else None,
+                "detail": (str(exc) if exc.args else None) if settings.ENVIRONMENT != "production" else None,
             },
         )

@@ -1,6 +1,18 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -22,6 +34,16 @@ class User(Base):
     """ORM model for `users` table."""
 
     __tablename__ = "users"
+    # RBAC bütünlüğü: `role` yalnız 4 geçerli değerden biri olabilir. Alembic
+    # migration (b1c2d3e4f5a6) prod'da aynı CHECK'i kurar; model'de de tanımlı
+    # olması create_all yolunun (dev/test) prod ile AYNI constraint'i üretmesini
+    # sağlar (audit: iki şema yolu ayrışmasın).
+    __table_args__ = (
+        CheckConstraint(
+            "role IN (" + ", ".join(f"'{_r}'" for _r in USER_ROLES) + ")",
+            name="ck_users_role_valid",
+        ),
+    )
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, nullable=False, index=True)

@@ -46,7 +46,10 @@ def _build_engine_kwargs() -> dict:
     multi-thread arg, server DBs get pool tuning.
     """
     is_sqlite = settings.DATABASE_URL.startswith("sqlite")
-    kwargs: dict = {"echo": settings.API_DEBUG}
+    # echo prod'da ZORLA kapalı: SQLAlchemy echo tüm SQL + parametreleri (şifre
+    # hash, PII) log'a yazar. API_DEBUG yanlışlıkla True bırakılsa bile prod'da
+    # sızıntı olmaz (audit YÜKSEK).
+    kwargs: dict = {"echo": settings.API_DEBUG and settings.ENVIRONMENT != "production"}
 
     if is_sqlite:
         kwargs["connect_args"] = {"check_same_thread": False}

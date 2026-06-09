@@ -64,7 +64,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging()
     # Sentry — active when SENTRY_DSN env is set, otherwise no-op.
     init_sentry()
-    init_db()
+    # Prod'da şema YALNIZ alembic migration'larıyla kurulur — create_all DEĞİL.
+    # create_all alembic_version'ı stamp'lemez, RBAC CHECK constraint'i + FK
+    # index'leri atlar ve belgelenen `alembic upgrade head` adımını DuplicateTable
+    # ile bozar (audit KRİTİK). Dev/test'te hızlı şema için create_all yeterli;
+    # production'da docker-entrypoint.sh `alembic upgrade head` çalıştırır.
+    if settings.ENVIRONMENT != "production":
+        init_db()
     start_scheduler()
     if settings.MQTT_ENABLED:
         mqtt_listener.start()

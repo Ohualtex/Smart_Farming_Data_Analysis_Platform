@@ -49,7 +49,9 @@ class Settings(BaseSettings):
     # Default: localhost. Container/prod için env üzerinden 0.0.0.0 verilebilir.
     API_HOST: str = "127.0.0.1"
     API_PORT: int = 8000
-    API_DEBUG: bool = True
+    # echo'yu sürer → prod'da tüm SQL + parametreler (şifre hash/PII) log'a sızar
+    # (audit YÜKSEK). Güvenli default = False; dev'de .env ile True yapılabilir.
+    API_DEBUG: bool = False
     API_TITLE: str = "SFDAP - Akilli Tarim Veri Analizi Platformu API"
     API_VERSION: str = "1.0.0"
 
@@ -134,6 +136,13 @@ class Settings(BaseSettings):
             if self.API_HOST == "127.0.0.1":
                 warnings.warn(
                     "ENVIRONMENT=production ama API_HOST=127.0.0.1; container icinde 0.0.0.0 olmali.",
+                    stacklevel=2,
+                )
+            if self.API_DEBUG:
+                warnings.warn(
+                    "ENVIRONMENT=production ama API_DEBUG=True; SQLAlchemy echo SQL+parametreleri "
+                    "(sifre hash/PII) log'a yazar. .env'de API_DEBUG=False yapin "
+                    "(echo yine de prod'da zorla kapatilir, bkz. database.py).",
                     stacklevel=2,
                 )
         return self
