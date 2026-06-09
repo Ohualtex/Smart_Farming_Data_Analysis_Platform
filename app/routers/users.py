@@ -37,10 +37,12 @@ from app.middleware.exceptions import (
 from app.middleware.rate_limiter import AUTH_RATE, limiter
 from app.models.models import Farm, User
 from app.routers.auth import (
+    _BCRYPT_MAX_BYTES,
     CurrentUserResponse,
     PasswordChangeResponse,
     UserRole,
     _hash_password,
+    _is_email_sane,
     require_role,
 )
 from app.schemas.schemas import UtcDateTime
@@ -80,7 +82,7 @@ class AdminUserCreateRequest(BaseModel):
         }
     )
 
-    name: str = Field(..., max_length=100)
+    name: str = Field(..., min_length=1, max_length=100)
     email: str = Field(..., max_length=150)
     password: str
     role: UserRole = "farmer"
@@ -219,10 +221,18 @@ def admin_create_user(
     # Audit fix: e-posta normalize (strip + lower) — auth.register ile tutarlı;
     # case/whitespace varyantı mükerrer hesap yaratmasın, dup-check ile insert eşleşsin.
     email = payload.email.strip().lower()
-    if db.query(User).filter(User.email == email).first():
-        raise ConflictError(message="Bu e-posta zaten kayıtlı.")
+    # Audit fix (L1): hafif e-posta sağlık kontrolü — auth.register ile tutarlı.
+    if not _is_email_sane(email):
+        raise ValidationError(message="Geçerli bir e-posta adresi girin.")
+    # Audit fix (L4): şifre uzunluğu kontrolü dup-email'den önce — geçersiz şifre
+    # 409 yerine 400 döner, user enumeration azalır.
     if len(payload.password) < 8:
         raise ValidationError(message="Şifre en az 8 karakter olmalı.")
+    # Audit fix (L3): bcrypt 72 BYTE'ta sessizce keser; açıkça reddet.
+    if len(payload.password.encode("utf-8")) > _BCRYPT_MAX_BYTES:
+        raise ValidationError(message=f"Şifre en fazla {_BCRYPT_MAX_BYTES} bayt olmalı.")
+    if db.query(User).filter(User.email == email).first():
+        raise ConflictError(message="Bu e-posta zaten kayıtlı.")
     user = User(
         name=payload.name,
         email=email,
