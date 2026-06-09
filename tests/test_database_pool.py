@@ -67,7 +67,7 @@ class TestEngineKwargsForPostgres:
         assert kwargs["pool_pre_ping"] is True
         assert kwargs["pool_recycle"] == 3600
         # SQLite arg'ı OLMAMALI
-        assert "connect_args" not in kwargs
+        assert kwargs["connect_args"] == {"options": "-c timezone=utc"}  # L7: PG oturum UTC TZ
 
     def test_postgres_url_honours_overridden_pool_settings(self):
         """Settings üzerinden override edilen pool değerleri kwargs'a yansır."""

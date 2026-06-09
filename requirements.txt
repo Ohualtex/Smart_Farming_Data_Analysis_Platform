@@ -51,9 +51,9 @@ openpyxl==3.1.5
 
 # Cycle 7 — IoT Stream & ML Görüntü Analizi
 # Emirhan: MQTT broker üzerinden gerçek zamanlı sensör verisi alımı
-paho-mqtt>=2.1.0
+paho-mqtt==2.1.0
 # Ayşe: CNN bitki sağlığı modeli (lightweight inference; tensorflow yerine)
-onnxruntime>=1.18.0
+onnxruntime==1.18.0
 pillow==12.2.0
 
 # shiftFinal — Observability (Sentry + Prometheus + structured logging)
