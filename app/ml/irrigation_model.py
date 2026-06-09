@@ -38,7 +38,8 @@ class IrrigationOptimizer:
     OPTIMAL_MOISTURE_PERCENT: float = 50.0  # ideal toprak nemi
     CONFIDENCE_BASE: float = 0.7
     CONFIDENCE_CAP: float = 0.95
-    CONFIDENCE_MOISTURE_DIVISOR: float = 200.0
+    # Ağaçlar arası tahmin std'sini (litre) confidence düşüşüne ölçekler (audit #20).
+    CONFIDENCE_SPREAD_DIVISOR: float = 100.0
 
     # Synthetic training parametreleri
     N_TRAINING_SAMPLES: int = 1000
@@ -110,10 +111,15 @@ class IrrigationOptimizer:
         predicted_water = max(0, round(predicted_water, 2))
 
         irrigation_needed = predicted_water > self.IRRIGATION_THRESHOLD_LITERS
-        confidence = min(
-            self.CONFIDENCE_CAP,
-            self.CONFIDENCE_BASE
-            + (abs(self.OPTIMAL_MOISTURE_PERCENT - soil_moisture) / self.CONFIDENCE_MOISTURE_DIVISOR),
+        # Confidence = RandomForest ağaçları arası tahmin UYUMUNDAN türetilir (audit #20).
+        # Eski formül |optimal-moisture|/200 idi: optimal'de en DÜŞÜK, uçlarda en yüksek
+        # confidence veriyordu (ters) ve modelin gerçek belirsizliğinden kopuktu. Şimdi
+        # ağaçlar hemfikirse (düşük std) model emin → CAP'e yakın, dağınıksa BASE'e iner.
+        tree_preds = np.array([est.predict(features_scaled)[0] for est in self.model.estimators_])
+        spread = float(tree_preds.std())
+        confidence = max(
+            self.CONFIDENCE_BASE,
+            min(self.CONFIDENCE_CAP, self.CONFIDENCE_CAP - spread / self.CONFIDENCE_SPREAD_DIVISOR),
         )
 
         if not irrigation_needed:
