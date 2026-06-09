@@ -20,8 +20,9 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from slowapi.errors import RateLimitExceeded
@@ -269,7 +270,12 @@ app.include_router(users.router)
 
 
 @app.get("/", tags=["Root"])
-def root() -> dict:
+def root(request: Request):
+    # Tarayıcı (Accept: text/html) → doğrudan uygulamaya yönlendir; böylece çıplak
+    # kök URL bile dashboard'a düşer. API client (curl/test; Accept: */* veya
+    # application/json) eskisi gibi bilgi JSON'ı alır → test/sözleşme bozulmaz.
+    if "text/html" in request.headers.get("accept", ""):
+        return RedirectResponse(url="/dashboard/")
     return {
         "message": "SFDAP - Akilli Tarim Veri Analizi Platformu API",
         "docs": "/docs",
